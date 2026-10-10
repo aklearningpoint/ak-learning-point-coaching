@@ -171,14 +171,14 @@
   <div id="dynamicView"></div>
 
   <!-- Standard Scripts Load Order -->
-  <script src="js/api.js"></script>
-  <script src="js/security.js"></script>
-  <script src="js/quiz.js"></script>
-  <script src="js/content-modules.js"></script>
-  <script src="js/admin-portal.js"></script>
-  <script src="js/teacher-portal.js"></script>
-  <script src="js/school-portal.js"></script>
-  <script>
+<!-- Standard Scripts with Cache Buster -->
+  <script src="js/api.js?v=2.0"></script>
+  <script src="js/security.js?v=2.0"></script>
+  <script src="js/quiz.js?v=2.0"></script>
+  <script src="js/content-modules.js?v=2.0"></script>
+  <script src="js/admin-portal.js?v=2.0"></script>
+  <script src="js/teacher-portal.js?v=2.0"></script>
+  <script src="js/school-portal.js?v=2.0"></script>
     function toggleDrawer() {
       const d = document.getElementById("drawerOverlay");
       d.classList.toggle("open");
