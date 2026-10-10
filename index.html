@@ -179,14 +179,17 @@
   <script src="js/admin-portal.js?v=2.0"></script>
   <script src="js/teacher-portal.js?v=2.0"></script>
   <script src="js/school-portal.js?v=2.0"></script>
+<script>
     function toggleDrawer() {
-      const d = document.getElementById("drawerOverlay");
-      d.classList.toggle("open");
+      var d = document.getElementById("drawerOverlay");
+      if (d) {
+        d.classList.toggle("open");
+      }
     }
     function goHome() {
-      const dv = document.getElementById("dynamicView");
+      var dv = document.getElementById("dynamicView");
       if (dv) dv.innerHTML = "";
-      const d = document.getElementById("drawerOverlay");
+      var d = document.getElementById("drawerOverlay");
       if (d) d.classList.remove("open");
       window.scrollTo(0, 0);
     }
