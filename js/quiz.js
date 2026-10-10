@@ -1,4 +1,4 @@
-// Student Examination Engine, Board-Class Selectors & Scorecard
+// Student Examination Engine, Board-Class Strict Filters, One-Time Lock & Ultra-Stylish Scorecard
 
 var selectedBoard = "";
 var selectedClass = "";
@@ -10,6 +10,7 @@ var quizTimerInterval = null;
 var remainingSeconds = 0;
 var perQuestionTimerInterval = null;
 var perQuestionRemaining = 0;
+var isTeacherTestingMode = false;
 
 function getQuizStorageData(key, fallback) {
   try {
@@ -29,6 +30,7 @@ function setQuizStorageData(key, data) {
 function closeDynamicView() {
   clearInterval(quizTimerInterval);
   clearInterval(perQuestionTimerInterval);
+  isTeacherTestingMode = false;
   var dv = document.getElementById("dynamicView");
   if (dv) dv.innerHTML = "";
 }
@@ -131,7 +133,7 @@ function selectClass(className) {
   document.getElementById("dynamicView").innerHTML = html;
 }
 
-// 4. Live Quiz Listing (Local + Cloud Sync)
+// 4. Strict Matching & Loading (Loophole Fixed)
 function loadQuizListing(subject) {
   selectedSubject = subject;
 
@@ -140,9 +142,9 @@ function loadQuizListing(subject) {
 
   for (var i = 0; i < allTeacherQuizzes.length; i++) {
     var q = allTeacherQuizzes[i];
-    var bMatch = (!q.board || q.board.toLowerCase() === selectedBoard.toLowerCase());
-    var cMatch = (!q.className || q.className.toLowerCase() === selectedClass.toLowerCase());
-    var sMatch = (!q.subject || q.subject.toLowerCase() === selectedSubject.toLowerCase());
+    var bMatch = (String(q.board || "").trim().toLowerCase() === String(selectedBoard).trim().toLowerCase());
+    var cMatch = (String(q.className || "").trim().toLowerCase() === String(selectedClass).trim().toLowerCase());
+    var sMatch = (String(q.subject || "").trim().toLowerCase() === String(selectedSubject).trim().toLowerCase());
     if (bMatch && cMatch && sMatch) {
       matchedQuizzes.push(q);
     }
@@ -150,7 +152,7 @@ function loadQuizListing(subject) {
 
   renderQuizCardsView(matchedQuizzes);
 
-  // Background Cloud Check
+  // Background Cloud Sync with Strict Filters
   if (typeof API !== "undefined" && API.get) {
     API.get("getQuizzes", { board: selectedBoard, className: selectedClass, subject: selectedSubject })
       .then(function(res) {
@@ -161,7 +163,13 @@ function loadQuizListing(subject) {
             map[matchedQuizzes[j].id || matchedQuizzes[j].title] = matchedQuizzes[j];
           }
           for (var k = 0; k < cloudQuizzes.length; k++) {
-            map[cloudQuizzes[k].id || cloudQuizzes[k].title] = cloudQuizzes[k];
+            var cq = cloudQuizzes[k];
+            var bValid = (String(cq.board || "").trim().toLowerCase() === String(selectedBoard).trim().toLowerCase());
+            var cValid = (String(cq.className || "").trim().toLowerCase() === String(selectedClass).trim().toLowerCase());
+            var sValid = (String(cq.subject || "").trim().toLowerCase() === String(selectedSubject).trim().toLowerCase());
+            if (bValid && cValid && sValid) {
+              map[cq.id || cq.title] = cq;
+            }
           }
           var combined = Object.values(map);
           renderQuizCardsView(combined);
@@ -209,7 +217,7 @@ function renderQuizCardsView(quizzes) {
       (isDraft ? '<span style="display:inline-block; font-size:0.75rem; background:#cbd5e1; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">Coming Soon</span>' : '') +
       '<div style="margin-top:8px; display:flex; gap:8px;">' +
       (!isDraft ? '<button class="btn-primary" style="padding:6px 12px; font-size:0.85rem; width:auto; margin:0;" onclick=\'openQuizEntryModalByIndex(' + i + ')\'>Start Test</button>' : '<span style="font-size:0.8rem; color:#64748b; font-weight:600;">Teacher dwara jald publish hoga</span>') +
-      '<button onclick="shareQuizWhatsApp(\'' + q.title + '\')" style="background:#25d366; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>' +
+      '<button onclick="shareQuizWhatsAppByIndex(' + i + ')" style="background:#25d366; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i></button>' +
       '</div>' +
       '</div>' +
       '</div>';
@@ -234,9 +242,17 @@ function renderQuizCardsView(quizzes) {
     '</div></div>';
 }
 
-function shareQuizWhatsApp(title) {
+// WhatsApp Share with Live App Link
+function shareQuizWhatsAppByIndex(idx) {
+  var q = window.activeLoadedQuizzes[idx];
+  var liveUrl = window.location.origin + window.location.pathname;
   var text = encodeURIComponent(
-    "🎯 *AK Learning Point Test Alert!*\nTopic: " + title + "\nClass: " + selectedClass + " (" + selectedBoard + ")\nAbhi attempt karein:\n" + window.location.origin + window.location.pathname
+    "🎯 *AK Learning Point Coaching - Test Alert!*\n" +
+    "📝 Topic: " + q.title + "\n" +
+    "🎓 Class: " + q.className + " (" + q.board + ")\n" +
+    "📚 Subject: " + q.subject + "\n\n" +
+    "👉 Test Link: " + liveUrl + "\n" +
+    "Apna score aur rank turant check karein!"
   );
   window.open("https://api.whatsapp.com/send?text=" + text, "_blank");
 }
@@ -266,7 +282,7 @@ function openQuizEntryModalByIndex(idx) {
     '<input type="text" id="qzStudentName" required placeholder="Aapka pura naam">' +
     '</div>' +
     '<div class="form-group">' +
-    '<label>WhatsApp Number</label>' +
+    '<label>WhatsApp Number (Only 1 Attempt Allowed)</label>' +
     '<input type="tel" id="qzMobile" required pattern="[0-9]{10}" placeholder="10-digit number">' +
     '</div>' +
     (currentQuiz.isRewarding ? '<div class="form-group"><label>🎁 Rewarding Passkey</label><input type="text" id="qzPasskey" required placeholder="Enter passkey given by teacher"></div>' : '') +
@@ -286,6 +302,17 @@ function handleStartQuiz(e) {
   var name = document.getElementById("qzStudentName").value.trim();
   var mob = document.getElementById("qzMobile").value.trim();
 
+  // 1-Time Attempt Check (Teacher Testing Mode Bypass)
+  if (!isTeacherTestingMode) {
+    var previousAttempts = getQuizStorageData("ak_student_attempts", []);
+    for (var i = 0; i < previousAttempts.length; i++) {
+      if (previousAttempts[i].quizId === currentQuiz.id && String(previousAttempts[i].mobile).trim() === mob) {
+        alert("⚠️ Aap yeh quiz pehle hi de chuke hain! Har student sirf ek baar test de sakta hai.");
+        return;
+      }
+    }
+  }
+
   if (currentQuiz.isRewarding) {
     var inputKey = document.getElementById("qzPasskey").value.trim();
     if (inputKey !== String(currentQuiz.passkey).trim()) {
@@ -303,7 +330,7 @@ function startActualExam() {
   currentQuestionIndex = 0;
   userAnswers = {};
 
-  if (typeof SecurityShield !== "undefined" && SecurityShield.activate) {
+  if (!isTeacherTestingMode && typeof SecurityShield !== "undefined" && SecurityShield.activate) {
     SecurityShield.activate(function() {
       submitQuizNow(true);
     });
@@ -379,7 +406,10 @@ function renderExamScreen() {
 
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:white; z-index:3000; display:flex; flex-direction:column;">' +
     '<div style="height:55px; background:var(--primary-navy); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
+    '<div style="display:flex; align-items:center; gap:8px;">' +
+    (isTeacherTestingMode ? '<span style="background:#dc2626; color:white; font-size:0.75rem; padding:2px 6px; border-radius:4px; font-weight:bold;">TEACHER PREVIEW</span>' : '') +
     '<strong style="color:#fbbf24;">' + currentQuiz.title + '</strong>' +
+    '</div>' +
     '<div style="display:flex; align-items:center; gap:12px;">' +
     '<span style="background:rgba(255,255,255,0.15); padding:4px 8px; border-radius:4px; font-weight:700;">' + timerDisplayHtml + '</span>' +
     '<button onclick="submitQuizNow(false)" style="background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:600; cursor:pointer;">Submit</button>' +
@@ -426,7 +456,7 @@ function nextQuestion() {
 function submitQuizNow(isAutoSubmit) {
   clearInterval(quizTimerInterval);
   clearInterval(perQuestionTimerInterval);
-  if (typeof SecurityShield !== "undefined" && SecurityShield.deactivate) {
+  if (!isTeacherTestingMode && typeof SecurityShield !== "undefined" && SecurityShield.deactivate) {
     SecurityShield.deactivate();
   }
 
@@ -448,55 +478,89 @@ function submitQuizNow(isAutoSubmit) {
   var netScore = Math.max(0, (correctCount - deduction)).toFixed(2);
   var pct = ((netScore / totalQ) * 100).toFixed(1);
 
-  var attemptRecord = {
-    id: "att_" + Date.now(),
-    quizId: currentQuiz.id,
-    quizTitle: currentQuiz.title,
-    studentName: currentQuiz.participantName || "Anonymous",
-    mobile: currentQuiz.participantMobile || "",
-    correctCount: correctCount,
-    wrongCount: wrongCount,
-    score: netScore,
-    totalMarks: totalQ,
-    percentage: pct,
-    answers: userAnswers,
-    timestamp: new Date().toISOString()
-  };
+  // Teacher preview mode me score save nahi hoga
+  if (!isTeacherTestingMode) {
+    var attemptRecord = {
+      id: "att_" + Date.now(),
+      quizId: currentQuiz.id,
+      quizTitle: currentQuiz.title,
+      studentName: currentQuiz.participantName || "Anonymous",
+      mobile: currentQuiz.participantMobile || "",
+      correctCount: correctCount,
+      wrongCount: wrongCount,
+      score: netScore,
+      totalMarks: totalQ,
+      percentage: pct,
+      answers: userAnswers,
+      timestamp: new Date().toISOString()
+    };
 
-  // Local Save
-  var allAttempts = getQuizStorageData("ak_student_attempts", []);
-  allAttempts.unshift(attemptRecord);
-  setQuizStorageData("ak_student_attempts", allAttempts);
+    var allAttempts = getQuizStorageData("ak_student_attempts", []);
+    allAttempts.unshift(attemptRecord);
+    setQuizStorageData("ak_student_attempts", allAttempts);
 
-  // Background Cloud Sync to Spreadsheet
-  if (typeof API !== "undefined" && API.post) {
-    API.post("submitQuizAttempt", attemptRecord);
+    if (typeof API !== "undefined" && API.post) {
+      API.post("submitQuizAttempt", attemptRecord);
+    }
   }
 
   renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
 }
 
+// 3. Ultra-Stylish Scorecard (Cursive Name, Trophy / Big Sad Emoji & Quotes)
 function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deduction) {
+  var pctVal = parseFloat(pct);
+  var badgeIcon = "";
+  var appreciationTitle = "";
+  var appreciationQuote = "";
+  var bannerBg = "";
+
+  if (pctVal >= 80) {
+    badgeIcon = '<div style="font-size:3.5rem; margin-bottom:5px; animation: bounce 1s infinite;">🏆</div>';
+    appreciationTitle = '🌟 Adbhut! Outstanding Topper!';
+    appreciationQuote = '"Aapne kamaal kar diya! Aapki mehnat aur lagan ne aapko top rank par pahunchaya hai. Shaabash!"';
+    bannerBg = 'linear-gradient(135deg, #1e3a8a, #065f46)';
+  } else if (pctVal >= 50) {
+    badgeIcon = '<div style="font-size:3.2rem; margin-bottom:5px;">👍</div>';
+    appreciationTitle = 'Bahut Accha Prayas!';
+    appreciationQuote = '"Aap sahi disha me hain! Agli baar 90%+ ka target rakhein aur thoda aur revision karein."';
+    bannerBg = 'linear-gradient(135deg, #1e3a8a, #3b82f6)';
+  } else {
+    badgeIcon = '<div style="font-size:3.8rem; margin-bottom:5px;">🥺</div>';
+    appreciationTitle = 'Nirash Na Hon, Aur Mehnat Karein!';
+    appreciationQuote = '"Asafalta ek chunauti hai, ise sweekar karo! Kahan kami reh gayi dekho aur sudhaar karo. Mehnat kijiye, agli baar top karein!"';
+    bannerBg = 'linear-gradient(135deg, #7f1d1d, #b91c1c)';
+  }
+
   var html = '<div class="modal-overlay" style="display:flex;">' +
-    '<div class="modal-card" style="text-align:center; max-width:480px;">' +
-    '<div class="modal-header">' +
-    '<h3>Test Result & Scorecard</h3>' +
+    '<div class="modal-card" style="text-align:center; max-width:480px; border-radius:24px; padding:24px;">' +
+    '<div class="modal-header" style="border:none; margin-bottom:8px;">' +
+    '<h3 style="font-size:1.1rem; color:#0f172a;">Official Examination Result</h3>' +
     '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
     '</div>' +
-    '<div style="background:var(--primary-navy); color:white; padding:20px; border-radius:12px; margin-bottom:15px;">' +
-    '<h2 style="color:#fbbf24; margin-bottom:4px;">AK Learning Point Coaching</h2>' +
-    '<p style="font-size:0.85rem; opacity:0.8;">Student: <strong>' + currentQuiz.participantName + '</strong></p>' +
-    '<hr style="border:none; border-top:1px solid rgba(255,255,255,0.2); margin:12px 0;">' +
-    '<div style="font-size:2.2rem; font-weight:800; color:#4ade80;">' + netScore + ' / ' + totalMarks + '</div>' +
-    '<div style="font-size:0.95rem; font-weight:600; margin-top:4px;">Accuracy: ' + pct + '%</div>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:12px; font-size:0.8rem; background:rgba(255,255,255,0.1); padding:8px; border-radius:6px;">' +
+    (isTeacherTestingMode ? '<div style="background:#fee2e2; color:#dc2626; padding:6px; border-radius:8px; font-weight:bold; font-size:0.85rem; margin-bottom:10px;">⚠️ TEACHER TESTING MODE: Score NOT saved in Database</div>' : '') +
+    '<div style="background:' + bannerBg + '; color:white; padding:22px; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.15); margin-bottom:16px;">' +
+    badgeIcon +
+    '<h2 style="color:#fbbf24; margin:0 0 4px; font-size:1.3rem; letter-spacing:0.5px;">AK Learning Point Coaching</h2>' +
+    '<div style="margin-top:6px; font-size:0.9rem; opacity:0.9;">Student Candidate:</div>' +
+    '<div style="font-family:\'Brush Script MT\', \'Dancing Script\', cursive, serif; font-size:2.2rem; color:#ffffff; text-shadow:1px 2px 4px rgba(0,0,0,0.4); margin:2px 0 8px;">' +
+    (currentQuiz.participantName || "Anonymous") +
+    '</div>' +
+    '<div style="font-size:0.85rem; opacity:0.85; margin-bottom:12px;">' + currentQuiz.title + '</div>' +
+    '<div style="background:rgba(255,255,255,0.15); backdrop-filter:blur(5px); border-radius:14px; padding:12px; margin:10px 0;">' +
+    '<div style="font-size:2.4rem; font-weight:900; color:#4ade80;">' + netScore + ' / ' + totalMarks + '</div>' +
+    '<div style="font-size:1rem; font-weight:700; color:#f8fafc;">Accuracy: ' + pct + '%</div>' +
+    '</div>' +
+    '<div style="font-size:0.95rem; font-weight:700; color:#fde047; margin-top:8px;">' + appreciationTitle + '</div>' +
+    '<p style="font-style:italic; font-size:0.85rem; color:#e2e8f0; margin-top:6px; line-height:1.4;">' + appreciationQuote + '</p>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:14px; font-size:0.8rem; background:rgba(0,0,0,0.25); padding:8px; border-radius:10px;">' +
     '<div style="color:#86efac;">✅ Correct: ' + correct + '</div>' +
     '<div style="color:#fca5a5;">❌ Wrong: ' + wrong + '</div>' +
     '<div style="color:#fde047;">⚠️ Penalty: -' + deduction.toFixed(2) + '</div>' +
     '</div>' +
     '</div>' +
     '<div style="display:flex; flex-direction:column; gap:10px;">' +
-    '<button class="btn-primary" style="background:#25d366;" onclick="shareResultWhatsApp(\'' + netScore + '\', \'' + totalMarks + '\', \'' + pct + '\')"><i class="fab fa-whatsapp"></i> Share on WhatsApp</button>' +
+    '<button class="btn-primary" style="background:#25d366; font-size:1rem;" onclick="shareResultWhatsApp(\'' + netScore + '\', \'' + totalMarks + '\', \'' + pct + '\')"><i class="fab fa-whatsapp"></i> Share Scorecard on WhatsApp</button>' +
     '<button class="btn-primary" style="background:#2563eb;" onclick="openSolutionVerification()"><i class="fas fa-check-circle"></i> Verify Answers & Solutions</button>' +
     '<button class="btn-primary" style="background:#64748b;" onclick="goHome()"><i class="fas fa-home"></i> Back to Home</button>' +
     '</div>' +
@@ -506,8 +570,13 @@ function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deductio
 }
 
 function shareResultWhatsApp(score, total, pct) {
+  var liveUrl = window.location.origin + window.location.pathname;
   var text = encodeURIComponent(
-    "🏆 *AK Learning Point Scorecard!*\nTopic: " + currentQuiz.title + "\nScore: " + score + "/" + total + " (" + pct + "% Accuracy)\nApp: " + window.location.origin + window.location.pathname
+    "🏆 *AK Learning Point Coaching - Scorecard*\n" +
+    "👤 Student: " + (currentQuiz.participantName || "Anonymous") + "\n" +
+    "📝 Test: " + currentQuiz.title + "\n" +
+    "🎯 Score: " + score + "/" + total + " (" + pct + "% Accuracy)\n\n" +
+    "👉 Practice Link: " + liveUrl
   );
   window.open("https://api.whatsapp.com/send?text=" + text, "_blank");
 }
