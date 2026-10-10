@@ -1,4 +1,4 @@
-// Teacher Portal: Smart Parser, Leaderboards, Answer Correction & Auto-Recalculation
+// Teacher Portal: Smart Parser, Test Preview Mode, Live Leaderboards & Actual A4 Quiz Print Engine
 
 function getTeacherData(key, fallback) {
   try {
@@ -94,7 +94,7 @@ function showTeacherSection(sec) {
       '</select>' +
       '</div>' +
       '</div>' +
-      '<div style="background:#f1f5f9; padding:12px; border-radius:8px; margin:12px 0; border:1px solid #cbd5e1;">' +
+      '<div style="background:#f1f5f9; padding:12px; border-radius:8px; margin-left:0; margin-right:0; margin-top:12px; margin-bottom:12px; border:1px solid #cbd5e1;">' +
       '<h4 style="color:var(--primary-navy); margin-bottom:10px; font-size:0.95rem;"><i class="fas fa-stopwatch" style="color:#d97706;"></i> Exam Settings</h4>' +
       '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">' +
       '<div class="form-group">' +
@@ -185,12 +185,13 @@ function renderTeacherQuizList() {
       '</div>' +
       '</div>' +
       '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
+      '<button onclick="startTeacherTestPreview(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#4f46e5;" title="Test without saving marks"><i class="fas fa-play-circle"></i> Test / Preview</button>' +
       '<button onclick="togglePublishStatus(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:' + (isDraft ? '#16a34a' : '#64748b') + ';">' +
       (isDraft ? 'Publish' : 'Unpublish') +
       '</button>' +
       '<button onclick="openQuizLeaderboard(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#0284c7;">Leaderboard</button>' +
       '<button onclick="openQuizEditorModal(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#d97706;">Edit Keys</button>' +
-      '<button onclick="printEcoFriendlyQuiz(\'' + q.title + '\')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#059669;">Print</button>' +
+      '<button onclick="printActualQuizByIndex(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#059669;" title="Print A4 Question Paper"><i class="fas fa-print"></i> Print</button>' +
       '<button onclick="deleteQuizPermanently(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#dc2626;"><i class="fas fa-trash"></i></button>' +
       '</div>' +
       '</div>' +
@@ -198,6 +199,22 @@ function renderTeacherQuizList() {
   }
 
   container.innerHTML = html;
+}
+
+// 2. Teacher Testing / Preview Mode
+function startTeacherTestPreview(idx) {
+  var quiz = activeTeacherQuizzes[idx];
+  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+    alert("Is quiz me koi question nahi hai!");
+    return;
+  }
+
+  isTeacherTestingMode = true;
+  currentQuiz = JSON.parse(JSON.stringify(quiz));
+  currentQuiz.participantName = "Teacher (Preview Mode)";
+  currentQuiz.participantMobile = "0000000000";
+
+  startActualExam();
 }
 
 function handleTimerTypeChange() {
@@ -531,7 +548,6 @@ function saveEditedQuizChanges(idx) {
   activeTeacherQuizzes[idx] = editingQuizBuffer;
   setTeacherData("ak_teacher_quizzes", activeTeacherQuizzes);
 
-  // Auto Recalculate Scores Across All Submissions
   var allAttempts = getTeacherData("ak_student_attempts", []);
   var negMark = parseFloat(editingQuizBuffer.negativeMarking || 0);
   var totalQ = editingQuizBuffer.questions.length;
@@ -562,33 +578,76 @@ function saveEditedQuizChanges(idx) {
     API.post("updateQuizAndRecalculate", { quiz: editingQuizBuffer });
   }
 
-  alert("Quiz updated successfully! Sabhi bacchon ke scores nayi answer key ke mutabiq recalculate ho chuke hain.");
+  alert("Quiz updated successfully! Sabhi bacchon ke scores recalculate ho chuke hain.");
   renderTeacherDashboard();
 }
 
-function printEcoFriendlyQuiz(title) {
+// 5. Actual Dynamic Quiz A4 Print (2 Columns + Sub-Columns + Separate Answer Key)
+function printActualQuizByIndex(idx) {
+  var quiz = activeTeacherQuizzes[idx];
+  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+    alert("Is quiz me print karne ke liye questions nahi hain!");
+    return;
+  }
+
+  var questions = quiz.questions;
+  var qHtml = "";
+  var keyHtml = "";
+
+  var optLabels = ["(A)", "(B)", "(C)", "(D)"];
+
+  for (var i = 0; i < questions.length; i++) {
+    var q = questions[i];
+    var optGrid = "";
+    for (var o = 0; o < q.options.length; o++) {
+      optGrid += '<div><strong>' + optLabels[o] + '</strong> ' + q.options[o] + '</div>';
+    }
+
+    qHtml += '<div class="q-box">' +
+      '<div class="q-title"><strong>Q' + (i + 1) + '.</strong> ' + q.question + '</div>' +
+      '<div class="opt-grid">' + optGrid + '</div>' +
+      '</div>';
+
+    keyHtml += '<div style="font-size:10pt; padding:4px 0; border-bottom:1px dotted #ccc;">' +
+      '<strong>Q' + (i + 1) + ':</strong> ' + optLabels[q.correctAnswer] + ' ' + (q.options[q.correctAnswer] || '') +
+      '</div>';
+  }
+
   var printWindow = window.open("", "_blank");
   printWindow.document.write(
-    '<html><head><title>' + title + ' - Print Paper</title>' +
+    '<html><head><title>' + quiz.title + ' - Examination Paper</title>' +
     '<style>' +
-    '@page { size: A4; margin: 12mm; }' +
-    'body { font-family: "Times New Roman", serif; font-size: 11pt; }' +
-    '.header { text-align: center; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 10px; }' +
-    '.meta-grid { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #666; padding-bottom: 4px; }' +
-    '.two-column-body { column-count: 2; column-gap: 20px; }' +
-    '.q-item { break-inside: avoid; margin-bottom: 10px; }' +
-    '.opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10pt; margin-top: 3px; }' +
-    '.watermark { position: fixed; top: 40%; left: 25%; font-size: 60pt; color: rgba(0,0,0,0.06); transform: rotate(-30deg); z-index: -1; font-weight: bold; }' +
+    '@page { size: A4 portrait; margin: 10mm; }' +
+    'body { font-family: "Times New Roman", serif; font-size: 10.5pt; color: #111; margin: 0; padding: 0; }' +
+    '.header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }' +
+    '.header h2 { margin: 0; font-size: 16pt; font-weight: bold; }' +
+    '.header p { margin: 2px 0 0; font-size: 10pt; }' +
+    '.meta-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 9.5pt; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 4px; }' +
+    '.two-columns { column-count: 2; column-gap: 20px; column-rule: 1px solid #cbd5e1; }' +
+    '.q-box { break-inside: avoid; margin-bottom: 12px; }' +
+    '.q-title { font-size: 10pt; margin-bottom: 4px; line-height: 1.3; }' +
+    '.opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 9.5pt; padding-left: 12px; }' +
+    '.watermark { position: fixed; top: 40%; left: 20%; font-size: 55pt; color: rgba(0,0,0,0.04); transform: rotate(-30deg); font-weight: bold; pointer-events: none; }' +
     '.page-break { page-break-before: always; }' +
     '</style></head><body>' +
     '<div class="watermark">AK LEARNING POINT</div>' +
-    '<div class="header"><h2 style="margin:0;">AK LEARNING POINT EXAMINATION</h2><div style="font-size:10pt;">' + title + '</div></div>' +
-    '<div class="meta-grid"><span>Name: ____________________</span><span>Class: _____</span><span>Roll: _____</span><span>Date: _________</span></div>' +
-    '<div class="two-column-body">' +
-    '<div class="q-item"><strong>1. What is the process of food making in plants?</strong><div class="opt-grid"><span>(A) Respiration</span><span>(B) Photosynthesis</span><span>(C) Transpiration</span><span>(D) Nutrition</span></div></div>' +
+    '<div class="header">' +
+    '<h2>AK LEARNING POINT COACHING / ASSENT PUBLIC SCHOOL</h2>' +
+    '<p><strong>' + quiz.title + '</strong> • ' + quiz.className + ' (' + quiz.board + ') • Subject: ' + quiz.subject + '</p>' +
     '</div>' +
+    '<div class="meta-bar">' +
+    '<span>Name: ____________________</span>' +
+    '<span>Roll No: _____</span>' +
+    '<span>Time: ' + (quiz.timerType === "full" ? quiz.timerValue + " Mins" : "Standard") + '</span>' +
+    '<span>F.M: ' + questions.length + '</span>' +
+    '</div>' +
+    '<div class="two-columns">' + qHtml + '</div>' +
     '<div class="page-break"></div>' +
-    '<div class="header"><h3>ANSWER KEY & SOLUTIONS (FOR TEACHER)</h3></div><p>1. (B) Photosynthesis</p>' +
+    '<div class="header">' +
+    '<h2>CONFIDENTIAL TEACHER ANSWER KEY & SOLUTIONS</h2>' +
+    '<p>' + quiz.title + ' • ' + quiz.className + '</p>' +
+    '</div>' +
+    '<div style="max-width:550px; margin:0 auto; padding-top:10px;">' + keyHtml + '</div>' +
     '<script>window.print();<\/script>' +
     '</body></html>'
   );
