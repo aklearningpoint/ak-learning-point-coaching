@@ -612,3 +612,47 @@ function openSolutionVerification() {
 
   document.getElementById("dynamicView").innerHTML = html;
 }
+// URL Deep-Linking: Link click karte hi direct Entry Screen open karna
+function checkAndOpenDirectQuizFromUrl() {
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    var targetQuizId = urlParams.get("quizId");
+    if (!targetQuizId) return;
+
+    // 1. Local quizzes me search karein
+    var allQuizzes = getQuizStorageData("ak_teacher_quizzes", []);
+    var foundQuiz = null;
+
+    for (var i = 0; i < allQuizzes.length; i++) {
+      if (String(allQuizzes[i].id).trim() === String(targetQuizId).trim()) {
+        foundQuiz = allQuizzes[i];
+        break;
+      }
+    }
+
+    if (foundQuiz) {
+      window.activeLoadedQuizzes = [foundQuiz];
+      openQuizEntryModalByIndex(0);
+    } else if (typeof API !== "undefined" && API.get) {
+      // 2. Agar local me nahi mila toh cloud se load karein
+      API.get("getQuizzes", { allStatus: "true" }).then(function(res) {
+        if (res && res.data) {
+          for (var j = 0; j < res.data.length; j++) {
+            if (String(res.data[j].id).trim() === String(targetQuizId).trim()) {
+              window.activeLoadedQuizzes = [res.data[j]];
+              openQuizEntryModalByIndex(0);
+              break;
+            }
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("Error in deep link handler", err);
+  }
+}
+
+// Jab bhi page open ho, turant URL check karein
+window.addEventListener("DOMContentLoaded", function() {
+  setTimeout(checkAndOpenDirectQuizFromUrl, 300);
+});
