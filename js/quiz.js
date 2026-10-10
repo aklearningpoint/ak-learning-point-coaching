@@ -245,14 +245,16 @@ function renderQuizCardsView(quizzes) {
 // WhatsApp Share with Live App Link
 function shareQuizWhatsAppByIndex(idx) {
   var q = window.activeLoadedQuizzes[idx];
-  var liveUrl = window.location.origin + window.location.pathname;
+  // Direct Quiz Link with quizId Parameter
+  var quizLink = window.location.origin + window.location.pathname + "?quizId=" + encodeURIComponent(q.id);
   var text = encodeURIComponent(
-    "🎯 *AK Learning Point Coaching - Test Alert!*\n" +
-    "📝 Topic: " + q.title + "\n" +
-    "🎓 Class: " + q.className + " (" + q.board + ")\n" +
-    "📚 Subject: " + q.subject + "\n\n" +
-    "👉 Test Link: " + liveUrl + "\n" +
-    "Apna score aur rank turant check karein!"
+    "🎯 *AK Learning Point Coaching - Test Alert!*\n\n" +
+    "📝 *Topic:* " + q.title + "\n" +
+    "🎓 *Class:* " + q.className + " (" + q.board + ")\n" +
+    "📚 *Subject:* " + q.subject + "\n" +
+    "⏱️ *Duration:* " + (q.timerType === "full" ? q.timerValue + " Minutes" : "Standard") + "\n\n" +
+    "👉 *Test Shuru Karne Ke Liye Yahan Click Karein:*\n" + quizLink + "\n\n" +
+    "⚠️ *Note:* Ek student sirf ek hi baar test de sakta hai!"
   );
   window.open("https://api.whatsapp.com/send?text=" + text, "_blank");
 }
