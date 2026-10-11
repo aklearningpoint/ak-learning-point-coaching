@@ -391,7 +391,20 @@ function openQuizLeaderboard(idx) {
     '</div>' +
     '</div></div>';
 
-  var localAttempts = (getTeacherData("ak_student_attempts", [])).filter(function(a) { return a.quizId === quiz.id; });
+// Direct Safe Storage Reader (LocalStorage + Fallback)
+  var allStored = [];
+  try {
+    allStored = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+    if (!allStored.length && typeof getTeacherData === "function") {
+      allStored = getTeacherData("ak_student_attempts", []) || [];
+    }
+  } catch(e) {
+    allStored = [];
+  }
+
+  var localAttempts = allStored.filter(function(a) { 
+    return String(a.quizId).trim() === String(quiz.id).trim(); 
+  });
   currentLeaderboardParticipants = localAttempts;
 
   var container = document.getElementById("leaderboardListContainer");
