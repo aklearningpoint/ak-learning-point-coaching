@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Panel - Assent Public School</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="school-bg">
+
+  <!-- Master Password Protection Gate -->
+  <div id="teacherAuthGate" class="auth-gate-box">
+    <div class="auth-card">
+      <i class="fa fa-user-shield auth-icon-lock"></i>
+      <h2>Teacher / Admin Login</h2>
+      <p>Enter administrative access key</p>
+      <div class="form-group">
+        <input type="password" id="teacherPassInput" class="input-ctrl" placeholder="Password" autocomplete="new-password">
+      </div>
+      <button onclick="verifyTeacherAccess()" class="btn-gold-wide">Access Panel</button>
+      <a href="index.html" class="text-link mt-2"><i class="fa fa-arrow-left"></i> Back to School Home</a>
+    </div>
+  </div>
+
+  <!-- Teacher Workspace Container -->
+  <div id="teacherWorkspace" style="display:none;" class="admin-workspace-container">
+    <header class="panel-top-bar">
+      <div>
+        <h2><i class="fa fa-chalkboard-teacher"></i> Teacher Control Panel</h2>
+        <small>Assent Public School Administration</small>
+      </div>
+      <div class="header-actions">
+        <a href="marks-tabulation.html" class="btn-nav-socket"><i class="fa fa-table"></i> Marks Register</a>
+        <a href="question-paper.html" class="btn-nav-socket"><i class="fa fa-file-alt"></i> Question Paper</a>
+        <button onclick="logoutTeacher()" class="btn-sm-danger"><i class="fa fa-sign-out-alt"></i> Exit</button>
+      </div>
+    </header>
+
+    <!-- Navigation Strip -->
+    <nav class="teacher-nav-tabs">
+      <button class="t-tab active" onclick="switchAdminTab('tabAddRapid')"><i class="fa fa-user-plus"></i> Rapid Admission</button>
+      <button class="t-tab" onclick="switchAdminTab('tabManage')"><i class="fa fa-users-cog"></i> Manage Students</button>
+      <button class="t-tab" onclick="switchAdminTab('tabFee')"><i class="fa fa-money-check-alt"></i> Update Fees</button>
+      <button class="t-tab" onclick="switchAdminTab('tabPlanner')"><i class="fa fa-calendar-alt"></i> Exam Planner</button>
+      <button class="t-tab" onclick="switchAdminTab('tabAds')"><i class="fa fa-bullhorn"></i> Ads & Notices</button>
+      <button class="t-tab" onclick="switchAdminTab('tabMedia')"><i class="fa fa-photo-video"></i> Videos & Faculty</button>
+    </nav>
+
+    <!-- SECTION 1: RAPID ADMISSION (ADD STUDENTS) -->
+    <section id="tabAddRapid" class="admin-tab-pane active">
+      <div class="control-box-gold">
+        <h3><i class="fa fa-bolt"></i> Rapid Student Admission</h3>
+        <p>Select class once, lock it, and rapidly add student names. Roll numbers increment automatically.</p>
+        <div class="rapid-controls-row">
+          <div class="form-group-inline">
+            <label>Select Class:</label>
+            <select id="rapidClassSelect" class="input-ctrl">
+              <option value="Nur & Play">Nur & Play</option>
+              <option value="LKG">LKG</option>
+              <option value="UKG">UKG</option>
+              <option value="1">Class 1</option>
+              <option value="2">Class 2</option>
+              <option value="3">Class 3</option>
+              <option value="4">Class 4</option>
+              <option value="5">Class 5</option>
+            </select>
+          </div>
+          <button id="btnLockClass" onclick="toggleLockClass()" class="btn-action-lock"><i class="fa fa-lock"></i> Lock Class</button>
+        </div>
+
+        <div id="rapidEntryInputRow" style="display:none;" class="rapid-input-container">
+          <div class="next-roll-badge">Allocating Roll: <b id="nextRollDisp">1</b></div>
+          <input type="text" id="rapidStudentName" class="input-ctrl-large" placeholder="Type student full name and press Enter..." onkeydown="handleRapidNameKey(event)">
+          <button onclick="submitRapidStudent()" class="btn-gold"><i class="fa fa-plus"></i> Add Student</button>
+        </div>
+      </div>
+
+      <div class="roster-view-card">
+        <h4>Recent Students in <span id="currentLockedClassText">Selected Class</span></h4>
+        <div class="table-responsive">
+          <table class="styled-table">
+            <thead>
+              <tr><th>Roll No</th><th>Student Name</th><th>Class</th><th>Action</th></tr>
+            </thead>
+            <tbody id="rapidClassStudentList">
+              <!-- Populated Dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: MANAGE STUDENTS & SOFT DELETE -->
+    <section id="tabManage" class="admin-tab-pane">
+      <div class="filter-header">
+        <label>Filter By Class:</label>
+        <select id="manageClassFilter" class="input-ctrl" onchange="renderManageStudents()">
+          <option value="Nur & Play">Nur & Play</option>
+          <option value="LKG">LKG</option>
+          <option value="UKG">UKG</option>
+          <option value="1">Class 1</option>
+          <option value="2">Class 2</option>
+          <option value="3">Class 3</option>
+          <option value="4">Class 4</option>
+          <option value="5">Class 5</option>
+        </select>
+      </div>
+      <div class="student-cards-grid" id="manageStudentsGrid">
+        <!-- Student Cards with Tap-To-View and Soft Delete -->
+      </div>
+    </section>
+
+    <!-- SECTION 3: UPDATE FEES (ROLL VS SIBLINGS REGISTER NO) -->
+    <section id="tabFee" class="admin-tab-pane">
+      <div class="fee-search-container card-p4">
+        <h3><i class="fa fa-coins"></i> Student Fee Collection & Ledger</h3>
+        <div class="fee-search-options">
+          <!-- Mode A -->
+          <div class="search-box-sub">
+            <h4>Option A: Class & Roll Number</h4>
+            <div class="form-group-inline">
+              <select id="feeSearchClass" class="input-ctrl">
+                <option value="Nur & Play">Nur & Play</option>
+                <option value="LKG">LKG</option>
+                <option value="UKG">UKG</option>
+                <option value="1">Class 1</option>
+                <option value="2">Class 2</option>
+                <option value="3">Class 3</option>
+                <option value="4">Class 4</option>
+                <option value="5">Class 5</option>
+              </select>
+              <input type="number" id="feeSearchRoll" class="input-ctrl" placeholder="Roll No">
+              <button onclick="searchFeeByRoll()" class="btn-gold"><i class="fa fa-search"></i> Search</button>
+            </div>
+          </div>
+          <!-- Mode B -->
+          <div class="search-box-sub">
+            <h4>Option B: Universal Register ID (Siblings Search)</h4>
+            <div class="form-group-inline">
+              <input type="text" id="feeSearchReg" class="input-ctrl" placeholder="e.g. REG-101">
+              <button onclick="searchFeeByRegister()" class="btn-gold"><i class="fa fa-users"></i> Search Siblings</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sibling Multiple Profiles Notice Box -->
+      <div id="siblingNoticeBox" style="display:none;" class="sibling-alert-card">
+        <h4><i class="fa fa-users"></i> Siblings Linked with this Register Number:</h4>
+        <div id="siblingListButtons" class="sibling-button-group"></div>
+      </div>
+
+      <!-- Active Student Fee Form -->
+      <div id="activeFeeFormBox" style="display:none;" class="fee-update-workspace card-p4 mt-3">
+        <h4 id="feeStudentTitle">Candidate Fee Profile</h4>
+        <div class="grid-3col">
+          <div class="fee-stat-badge">Total Fee: <b id="statTotalFee">₹0</b></div>
+          <div class="fee-stat-badge">Paid: <b id="statPaidFee">₹0</b></div>
+          <div class="fee-stat-badge due-badge">Remaining Due: <b id="statDueFee">₹0</b></div>
+        </div>
+        <div class="fee-action-row mt-3">
+          <div>
+            <label>Add Fee Charge (₹):</label>
+            <input type="number" id="inputAddFee" class="input-ctrl" placeholder="Amount">
+            <button onclick="applyFeeChange('add')" class="btn-action-dark mt-2">Add to Due</button>
+          </div>
+          <div>
+            <label>Record Paid Payment (₹):</label>
+            <input type="number" id="inputPayFee" class="input-ctrl" placeholder="Paid Amount">
+            <button onclick="applyFeeChange('pay')" class="btn-gold mt-2">Deposit & Clear</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: EXAM PLANNER (DUAL-CUT A4 NOTICE PRINT) -->
+    <section id="tabPlanner" class="admin-tab-pane">
+      <div class="card-p4">
+        <h3><i class="fa fa-calendar-check"></i> Examination Schedule & Notice Planner</h3>
+        <div class="form-group">
+          <label>General Guidelines & Instructions:</label>
+          <textarea id="plannerInstructions" class="input-ctrl-text" rows="3" placeholder="Enter student exam guidelines, reporting time, stationery rules..."></textarea>
+        </div>
+        <div class="grid-2col">
+          <div>
+            <label>Select Examination Term:</label>
+            <select id="plannerTerm" class="input-ctrl">
+              <option value="Term 1">Term 1 Examination</option>
+              <option value="Term 2">Term 2 Examination</option>
+              <option value="Term 3">Term 3 Examination</option>
+            </select>
+          </div>
+          <div>
+            <label>Select Target Class:</label>
+            <select id="plannerClass" class="input-ctrl" onchange="loadPlannerSubjectFields()">
+              <option value="Nur & Play">Nur & Play</option>
+              <option value="LKG">LKG</option>
+              <option value="UKG">UKG</option>
+              <option value="1">Class 1</option>
+              <option value="2">Class 2</option>
+              <option value="3">Class 3</option>
+              <option value="4">Class 4</option>
+              <option value="5">Class 5</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic Class Subject Date Pickers -->
+        <h4 class="mt-3">Assign Subject Exam Dates:</h4>
+        <div id="plannerSubjectsGrid" class="planner-subjects-container">
+          <!-- Calendar inputs populated dynamically -->
+        </div>
+
+        <div class="action-btn-row mt-3">
+          <button onclick="saveExamPlannerNotice()" class="btn-gold"><i class="fa fa-save"></i> Save Notice & Unlock Admit Cards</button>
+          <button onclick="printDualExamNotice()" class="btn-action-dark"><i class="fa fa-print"></i> Print Exam Notice (2-in-1 A4 Sheet)</button>
+        </div>
+      </div>
+
+      <!-- Hidden Print Area for 2-in-1 Horizontal Cut A4 Layout -->
+      <div id="dualNoticePrintArea" class="dual-notice-a4-sheet" style="display:none;">
+        <div class="notice-half top-half" id="noticeHalfTop"></div>
+        <div class="cut-divider">✂ - - - - - - - - - - - - - - - Cut Here - - - - - - - - - - - - - - - ✂</div>
+        <div class="notice-half bottom-half" id="noticeHalfBottom"></div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: ADS WALL & NOTICE MANAGEMENT -->
+    <section id="tabAds" class="admin-tab-pane">
+      <div class="card-p4">
+        <h3><i class="fa fa-bullhorn"></i> Live School Notice & Slide Banner</h3>
+        <div class="form-group">
+          <label>Notice Marquee Text (Shows on Dashboard):</label>
+          <input type="text" id="inputNoticeMarquee" class="input-ctrl" placeholder="e.g. Admissions open for session 2026-2027!">
+        </div>
+        <div class="form-group">
+          <label>Upload Banner Image / Slide:</label>
+          <input type="file" id="inputAdsSlideFile" accept="image/*" class="input-ctrl">
+        </div>
+        <button onclick="saveAdsSettings()" class="btn-gold mt-2"><i class="fa fa-cloud-upload-alt"></i> Publish to Dashboard Wall</button>
+      </div>
+    </section>
+
+    <!-- SECTION 6: VIDEOS & FACULTY DIRECTORY -->
+    <section id="tabMedia" class="admin-tab-pane">
+      <div class="grid-2col">
+        <!-- Faculty Management -->
+        <div class="card-p4">
+          <h3><i class="fa fa-id-card"></i> Add Faculty Member</h3>
+          <div class="form-group"><label>Teacher Name:</label><input type="text" id="facName" class="input-ctrl"></div>
+          <div class="form-group"><label>Designation:</label><input type="text" id="facDesig" class="input-ctrl" placeholder="e.g. Senior Math Teacher"></div>
+          <div class="form-group"><label>Assigned Classes:</label><input type="text" id="facClasses" class="input-ctrl" placeholder="e.g. Class 1 to 5"></div>
+          <div class="form-group"><label>Specific Subject:</label><input type="text" id="facSubject" class="input-ctrl" placeholder="e.g. Mathematics, Science"></div>
+          <div class="form-group"><label>Teacher Photo:</label><input type="file" id="facPhoto" accept="image/*" class="input-ctrl"></div>
+          <button onclick="addFacultyMember()" class="btn-gold mt-2">Save Teacher Profile</button>
+        </div>
+
+        <!-- Video Lectures Management -->
+        <div class="card-p4">
+          <h3><i class="fab fa-youtube text-red"></i> Post Concept Video</h3>
+          <div class="form-group"><label>Video Title / Concept:</label><input type="text" id="vidTitle" class="input-ctrl"></div>
+          <div class="form-group"><label>Class Group:</label>
+            <select id="vidClass" class="input-ctrl">
+              <option value="All Classes">All Classes</option>
+              <option value="Nur & Play">Nur & Play</option>
+              <option value="LKG">LKG</option>
+              <option value="UKG">UKG</option>
+              <option value="Class 1-2">Class 1-2</option>
+              <option value="Class 3-5">Class 3-5</option>
+            </select>
+          </div>
+          <div class="form-group"><label>YouTube Video Link or ID:</label><input type="text" id="vidUrl" class="input-ctrl" placeholder="https://youtu.be/... or embed ID"></div>
+          <button onclick="addStudyVideo()" class="btn-gold mt-2">Post Video Lecture</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Student Personal Details Inspection Modal -->
+  <div id="studentDetailModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <h3 id="modalStudentName">Student Profile</h3>
+        <button onclick="closeStudentModal()" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body-details" id="modalStudentBody"></div>
+    </div>
+  </div>
+
+  <script src="js/school-db.js"></script>
+  <script src="js/teacher-panel.js"></script>
+</body>
+</html>
