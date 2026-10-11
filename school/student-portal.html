@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Portal - Assent Public School</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="school-bg">
+
+  <!-- Gatekeeper: Class + Roll Number Gateway -->
+  <div id="studentAuthOverlay" class="auth-gate-box">
+    <div class="auth-card">
+      <h2><i class="fa fa-graduation-cap"></i> Student Login</h2>
+      <div class="form-group">
+        <label>Select Class:</label>
+        <select id="loginClass" class="input-ctrl">
+          <option value="Nur & Play">Nur & Play</option>
+          <option value="LKG">LKG</option>
+          <option value="UKG">UKG</option>
+          <option value="1">Class 1</option>
+          <option value="2">Class 2</option>
+          <option value="3">Class 3</option>
+          <option value="4">Class 4</option>
+          <option value="5">Class 5</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Enter Roll Number:</label>
+        <input type="number" id="loginRoll" class="input-ctrl" placeholder="e.g. 1, 2, 3">
+      </div>
+      <button onclick="verifyStudentCandidate()" class="btn-gold-wide">Proceed</button>
+      <a href="index.html" class="text-link mt-2"><i class="fa fa-arrow-left"></i> Back to School Home</a>
+    </div>
+  </div>
+
+  <!-- Workspace Container (Post-Verification) -->
+  <div id="studentWorkspace" style="display:none;" class="student-workspace-container">
+    <div class="workspace-header">
+      <h2 id="welcomeBanner">Welcome, Student</h2>
+      <button onclick="logoutStudent()" class="btn-sm-danger"><i class="fa fa-sign-out-alt"></i> Exit</button>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-strip">
+      <button class="tab-btn active" onclick="switchTab('profileTab')"><i class="fa fa-user-edit"></i> Profile Details</button>
+      <button class="tab-btn" onclick="switchTab('resultTab')"><i class="fa fa-poll"></i> Results</button>
+      <button class="tab-btn" onclick="switchTab('idCardTab')"><i class="fa fa-id-card"></i> Student ID Card</button>
+      <button class="tab-btn" onclick="switchTab('admitCardTab')"><i class="fa fa-ticket-alt"></i> Admit Card</button>
+      <button class="tab-btn" onclick="switchTab('feeTab')"><i class="fa fa-receipt"></i> Fee Status</button>
+    </div>
+
+    <!-- Tab 1: Profile View & Self-Update -->
+    <div id="profileTab" class="tab-pane active">
+      <form id="studentDetailForm" onsubmit="saveStudentSelfDetails(event)" class="card-p4">
+        <h3>Personal & Transport Information</h3>
+        <div class="grid-2col">
+          <div><label>Register No (Admission ID):</label><input type="text" id="stuRegNo" class="input-ctrl"></div>
+          <div><label>Father's Name:</label><input type="text" id="stuFather" class="input-ctrl" required></div>
+          <div><label>Mother's Name:</label><input type="text" id="stuMother" class="input-ctrl" required></div>
+          <div><label>Gender:</label>
+            <select id="stuGender" class="input-ctrl">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div><label>Transport Mode:</label>
+            <select id="stuTransport" class="input-ctrl">
+              <option value="School Transport">School Transport</option>
+              <option value="Own Private Mode">Own Private Mode</option>
+            </select>
+          </div>
+          <div><label>Primary Mobile (Mobile 1):</label><input type="tel" id="stuMob1" class="input-ctrl" required></div>
+          <div><label>Secondary Mobile (Mobile 2):</label><input type="tel" id="stuMob2" class="input-ctrl"></div>
+          <div><label>Date of Birth:</label><input type="date" id="stuDOB" class="input-ctrl" required></div>
+        </div>
+        <div class="form-group mt-3">
+          <label>Upload Photograph:</label>
+          <input type="file" id="stuPhotoInput" accept="image/*" onchange="previewStudentPhoto(this)">
+        </div>
+        <button type="submit" class="btn-gold-wide mt-3">Update & Save Profile</button>
+      </form>
+    </div>
+
+    <!-- Tab 3: Official 7cm x 10cm ID Card Container -->
+    <div id="idCardTab" class="tab-pane">
+      <div class="center-content">
+        <div class="official-id-card-7x10" id="idCardPrintArea">
+          <div class="id-header">
+            <span class="id-sch-title">ASSENT PUBLIC SCHOOL</span>
+            <img src="../logo.png" class="id-logo-corner" alt="Logo">
+          </div>
+          <div class="id-photo-frame">
+            <img id="idCardPhoto" src="assets/avatar.png" alt="Student">
+          </div>
+          <h4 id="idCardName" class="id-cand-name">Aarav Kumar</h4>
+          <div class="id-details-table">
+            <div><span>Class:</span> <b id="idCardClass">3</b> | <span>Roll:</span> <b id="idCardRoll">5</b></div>
+            <div><span>Reg No:</span> <b id="idCardReg">APS-104</b></div>
+            <div><span>Father:</span> <b id="idCardFather">Rajesh Kumar</b></div>
+            <div><span>Contact:</span> <b id="idCardContact">9876543210</b></div>
+            <div><span>Transport:</span> <b id="idCardTrans">School Transport</b></div>
+            <div><span>Session:</span> <b>2026-2027</b></div>
+          </div>
+          <div class="id-footer">
+            <div><small>Director</small><br><b id="idDirName">M. K. Aryan</b></div>
+            <div><small>Principal</small><br><b id="idPrincName">S. K. Singh</b></div>
+          </div>
+        </div>
+        <button onclick="window.print()" class="btn-print mt-3"><i class="fa fa-print"></i> Print ID Card (7cm x 10cm)</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/school-db.js"></script>
+  <script src="js/student-portal.js"></script>
+</body>
+</html>
