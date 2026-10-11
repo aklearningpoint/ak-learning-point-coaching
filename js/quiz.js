@@ -459,103 +459,96 @@ function submitQuiz(e) {
   if (e && e.preventDefault) e.preventDefault();
 
   try {
-    // 1. Student details fetch karein (Fallback ke sath)
-    const name = (document.getElementById("studentName")?.value || 
-                  document.getElementById("quizStudentName")?.value || 
-                  "Student").trim();
-    const mobile = (document.getElementById("studentMobile")?.value || 
-                    document.getElementById("quizStudentMobile")?.value || 
-                    "").trim();
+    // 1. Participant Details Fetch
+    var studentName = (document.getElementById("studentName")?.value || 
+                       document.getElementById("quizStudentName")?.value || 
+                       (typeof currentQuiz !== "undefined" && currentQuiz?.participantName) || 
+                       "Student").trim();
 
-    // 2. Score Calculate karein
-    let score = 0;
-    const questions = window.currentQuizQuestions || [];
-    const total = questions.length || 1;
+    var studentMobile = (document.getElementById("studentMobile")?.value || 
+                         document.getElementById("quizStudentMobile")?.value || 
+                         (typeof currentQuiz !== "undefined" && currentQuiz?.participantMobile) || 
+                         "").trim();
 
-    questions.forEach((q, idx) => {
-      const selected = window.userAnswers ? window.userAnswers[idx] : null;
-      if (selected !== null && selected !== undefined && selected === q.correctAnswer) {
-        score++;
+    // 2. Score & Answers Calculation
+    var correctCount = 0;
+    var wrongCount = 0;
+    var deduction = 0;
+    var questions = window.currentQuizQuestions || (typeof currentQuiz !== "undefined" && currentQuiz?.questions) || [];
+    var totalQ = questions.length || 1;
+
+    questions.forEach(function(q, idx) {
+      var selected = (window.userAnswers && window.userAnswers[idx] !== undefined) ? window.userAnswers[idx] : null;
+      if (selected !== null && selected !== undefined) {
+        if (selected === q.correctAnswer) {
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
       }
     });
 
-    const activeQuizId = window.activeQuizId || "default_quiz";
+    var netScore = correctCount;
+    var pct = ((netScore / totalQ) * 100).toFixed(1);
+    var activeQuizId = (typeof currentQuiz !== "undefined" && currentQuiz?.id) || window.activeQuizId || "default_quiz";
+    var quizTitle = (typeof currentQuiz !== "undefined" && currentQuiz?.title) || "Practice Test";
 
-    // 3. Local Attempts me Push karein (Ensures Data Exists)
-    let attempts = [];
-    try {
-      attempts = JSON.parse(localStorage.getItem("ak_quiz_results") || "[]");
-      if (!Array.isArray(attempts)) attempts = [];
-    } catch (err) {
-      attempts = [];
-    }
-
-    const newResult = {
-      id: "res_" + Date.now(),
+    // 3. Save to Local Storage (Instant Leaderboard & Scorecard)
+    var attemptRecord = {
+      id: "att_" + Date.now(),
       quizId: activeQuizId,
-      name: name,
-      mobile: mobile,
-      score: score,
-      total: total,
-      percentage: ((score / total) * 100).toFixed(1),
-      timestamp: new Date().toLocaleString()
+      quizTitle: quizTitle,
+      name: studentName,
+      studentName: studentName,
+      mobile: studentMobile,
+      correctCount: correctCount,
+      wrongCount: wrongCount,
+      score: netScore,
+      total: totalQ,
+      totalMarks: totalQ,
+      percentage: pct,
+      answers: window.userAnswers || {},
+      timestamp: new Date().toISOString()
     };
 
-    attempts.push(newResult);
-    localStorage.setItem("ak_quiz_results", JSON.stringify(attempts));
-    localStorage.setItem("ak_student_attempts", JSON.stringify(attempts));
+    var allAttempts = [];
+    try {
+      allAttempts = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+      if (!Array.isArray(allAttempts)) allAttempts = [];
+    } catch (err) {
+      allAttempts = [];
+    }
 
-    console.log("Result saved successfully:", newResult);
+    allAttempts.unshift(attemptRecord);
+    localStorage.setItem("ak_student_attempts", JSON.stringify(allAttempts));
+    localStorage.setItem("ak_quiz_results", JSON.stringify(allAttempts));
 
-    // 4. Security Deactivate karein
+    console.log("Result saved successfully:", attemptRecord);
+
+    // 4. API Backend Push (agar available ho)
+    if (typeof API !== "undefined" && API.post) {
+      API.post("submitQuizAttempt", attemptRecord);
+    }
+
+    // 5. Security Shield Deactivate
     if (window.SecurityShield && typeof window.SecurityShield.deactivate === "function") {
       window.SecurityShield.deactivate();
     }
 
-    // 5. Leaderboard / Score Screen display karein
-    if (typeof showScorecardModal === "function") {
-      showScorecardModal(newResult);
+    // 6. Scorecard Modal Render
+    if (typeof renderScorecardView === "function") {
+      renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
+    } else if (typeof showScorecardModal === "function") {
+      showScorecardModal(attemptRecord);
     } else {
-      alert(`Test Submitted!\nName: ${name}\nScore: ${score}/${total}`);
+      alert("Test Submitted!\nName: " + studentName + "\nScore: " + netScore + "/" + totalQ);
     }
 
   } catch (error) {
     console.error("Critical Quiz Submit Error:", error);
     alert("Submission error: " + error.message);
- }
-
-    // Teacher preview mode me score save nahi hoga
-if (typeof isTeacherTestingMode === "undefined" || !isTeacherTestingMode) {
-      var cQuiz = (typeof currentQuiz !== "undefined" && currentQuiz) ? currentQuiz : {};
-      var sCount = typeof score !== "undefined" ? score : 0;
-      var tCount = typeof total !== "undefined" ? total : 1;
-      var wCount = Math.max(0, tCount - sCount);
-      var pVal = ((sCount / tCount) * 100).toFixed(1);
-
-      var attemptRecord = {
-        id: "att_" + Date.now(),
-        quizId: cQuiz.id || (window.activeQuizId || "quiz_default"),
-        quizTitle: cQuiz.title || "Practice Test",
-        studentName: cQuiz.participantName || (typeof name !== "undefined" ? name : "Anonymous"),
-        mobile: cQuiz.participantMobile || (typeof mobile !== "undefined" ? mobile : ""),
-        correctCount: sCount,
-        wrongCount: wCount,
-        score: sCount,
-        totalMarks: tCount,
-        percentage: pVal,
-        answers: typeof userAnswers !== "undefined" ? userAnswers : {},
-        timestamp: new Date().toISOString()
-      };
-    var allAttempts = getQuizStorageData("ak_student_attempts", []);
-    allAttempts.unshift(attemptRecord);
-    setQuizStorageData("ak_student_attempts", allAttempts);
-
-if (typeof API !== "undefined" && API.post) {
-      API.post("submitQuizAttempt", attemptRecord);
-    }
-
-    renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
   }
+}
 
 // 3. Ultra-Stylish Scorecard (Cursive Name, Trophy / Big Sad Emoji & Quotes)
 function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deduction) {
