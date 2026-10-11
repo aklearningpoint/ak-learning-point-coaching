@@ -544,13 +544,12 @@ function submitQuiz(e) {
     allAttempts.unshift(attemptRecord);
     setQuizStorageData("ak_student_attempts", allAttempts);
 
-    if (typeof API !== "undefined" && API.post) {
+if (typeof API !== "undefined" && API.post) {
       API.post("submitQuizAttempt", attemptRecord);
     }
-  }
 
-  renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
-}
+    renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
+  }
 
 // 3. Ultra-Stylish Scorecard (Cursive Name, Trophy / Big Sad Emoji & Quotes)
 function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deduction) {
