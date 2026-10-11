@@ -605,6 +605,7 @@ function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deductio
     '<div style="display:flex; flex-direction:column; gap:10px;">' +
     '<button class="btn-primary" style="background:#25d366; font-size:1rem;" onclick="shareResultWhatsApp(\'' + netScore + '\', \'' + totalMarks + '\', \'' + pct + '\')"><i class="fab fa-whatsapp"></i> Share Scorecard on WhatsApp</button>' +
     '<button class="btn-primary" style="background:#2563eb;" onclick="openSolutionVerification()"><i class="fas fa-check-circle"></i> Verify Answers & Solutions</button>' +
+    '<button class="btn-primary" style="background:#0284c7; font-size:1rem;" onclick="downloadScoreCardAsImage()"><i class="fas fa-image"></i> Download Score Card (Image)</button>' +
     '<button class="btn-primary" style="background:#64748b;" onclick="goHome()"><i class="fas fa-home"></i> Back to Home</button>' +
     '</div>' +
     '</div></div>';
@@ -647,6 +648,7 @@ function openSolutionVerification() {
     solHtml +
     '<div style="margin-top:15px; display:flex; justify-content:space-between;">' +
     '<button class="nav-pill-btn nav-back-btn" onclick="closeDynamicView()"><i class="fas fa-arrow-left"></i> Back</button>' +
+    '<button class="nav-pill-btn" onclick="downloadScoreCardAsImage()" style="background:#16a34a; color:#fff; border:none;"><i class="fas fa-image"></i> Download Score Card</button>' +
     '<button class="nav-pill-btn nav-home-btn" onclick="goHome()"><i class="fas fa-home"></i> Home</button>' +
     '</div>' +
     '</div></div>';
@@ -705,3 +707,127 @@ window.submitQuizNow = function(e) {
     console.error("submitQuiz function not found");
   }
 };
+// Function: Score Card ko direct Image (PNG) ke roop me download karna
+function downloadScoreCardAsImage() {
+  var lastAttempt = null;
+  try {
+    var attempts = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+    if (attempts.length > 0) {
+      lastAttempt = attempts[attempts.length - 1];
+    }
+  } catch(e) {
+    lastAttempt = null;
+  }
+
+  var studentName = (lastAttempt && (lastAttempt.studentName || lastAttempt.name)) || 
+                    (document.getElementById("studentNameInput") ? document.getElementById("studentNameInput").value : "Student");
+  var mobile = (lastAttempt && lastAttempt.mobile) || "N/A";
+  var quizTitle = (lastAttempt && lastAttempt.quizTitle) || (typeof currentQuiz !== "undefined" && currentQuiz ? currentQuiz.title : "Practice Test");
+  var score = (lastAttempt && lastAttempt.score !== undefined) ? lastAttempt.score : (typeof userScore !== "undefined" ? userScore : 0);
+  var total = (lastAttempt && (lastAttempt.totalMarks || lastAttempt.total)) || (typeof totalQuestions !== "undefined" ? totalQuestions : 0);
+  var percentage = (lastAttempt && lastAttempt.percentage) || (total > 0 ? ((score / total) * 100).toFixed(1) : "0.0");
+  var dateStr = lastAttempt && lastAttempt.timestamp ? new Date(lastAttempt.timestamp).toLocaleDateString() : new Date().toLocaleDateString();
+
+  // Canvas banayein
+  var canvas = document.createElement("canvas");
+  canvas.width = 800;
+  canvas.height = 520;
+  var ctx = canvas.getContext("2d");
+
+  // Background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 800, 520);
+
+  // Outer Border & Card
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#1e3a8a";
+  ctx.strokeRect(15, 15, 770, 490);
+
+  // Header Bar
+  ctx.fillStyle = "#1e3a8a";
+  ctx.fillRect(20, 20, 760, 85);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 26px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("AK LEARNING POINT COACHING", 400, 58);
+
+  ctx.font = "14px Arial, sans-serif";
+  ctx.fillStyle = "#93c5fd";
+  ctx.fillText("Official Examination Score Card & Certificate", 400, 84);
+
+  // Quiz Title Box
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(40, 125, 720, 45);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.strokeRect(40, 125, 720, 45);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 17px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Quiz: " + quizTitle, 400, 153);
+
+  // Details (Left Column)
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#475569";
+  ctx.font = "15px Arial, sans-serif";
+  ctx.fillText("Student Name:", 60, 210);
+  ctx.fillText("Mobile / Roll:", 60, 250);
+  ctx.fillText("Date of Test:", 60, 290);
+  ctx.fillText("Portal Status:", 60, 330);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 16px Arial, sans-serif";
+  ctx.fillText(studentName, 190, 210);
+  ctx.fillText(mobile, 190, 250);
+  ctx.fillText(dateStr, 190, 290);
+  ctx.fillStyle = "#16a34a";
+  ctx.fillText("Verified & Submitted", 190, 330);
+
+  // Score Highlight Box (Right Column)
+  ctx.fillStyle = "#eff6ff";
+  ctx.fillRect(480, 195, 270, 150);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#bfdbfe";
+  ctx.strokeRect(480, 195, 270, 150);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#64748b";
+  ctx.font = "13px Arial, sans-serif";
+  ctx.fillText("MARKS OBTAINED", 615, 225);
+
+  ctx.fillStyle = "#1d4ed8";
+  ctx.font = "bold 42px Arial, sans-serif";
+  ctx.fillText(score + " / " + total, 615, 275);
+
+  ctx.fillStyle = "#16a34a";
+  ctx.font = "bold 18px Arial, sans-serif";
+  ctx.fillText("Accuracy: " + percentage + "%", 615, 315);
+
+  // Footer
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 385);
+  ctx.lineTo(760, 385);
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "12px Arial, sans-serif";
+  ctx.fillText("This certificate is digitally generated by AK Learning Point Testing System.", 400, 420);
+
+  ctx.fillStyle = "#0284c7";
+  ctx.font = "bold 13px Arial, sans-serif";
+  ctx.fillText("aklearningpoint.github.io", 400, 445);
+
+  // Image Download Trigger
+  var imgURI = canvas.toDataURL("image/png");
+  var dlLink = document.createElement("a");
+  dlLink.download = (studentName.replace(/\s+/g, "_") || "ScoreCard") + "_Result.png";
+  dlLink.href = imgURI;
+  document.body.appendChild(dlLink);
+  dlLink.click();
+  document.body.removeChild(dlLink);
+}
