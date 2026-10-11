@@ -522,16 +522,17 @@ function submitQuiz(e) {
   } catch (error) {
     console.error("Critical Quiz Submit Error:", error);
     alert("Submission error: " + error.message);
-  }
-}  // Teacher preview mode me score save nahi hoga
-  if (!isTeacherTestingMode) {
-    var attemptRecord = {
-      id: "att_" + Date.now(),
-      quizId: currentQuiz.id,
-      quizTitle: currentQuiz.title,
-      studentName: currentQuiz.participantName || "Anonymous",
-      mobile: currentQuiz.participantMobile || "",
-      correctCount: correctCount,
+ }
+
+    // Teacher preview mode me score save nahi hoga
+    if (typeof isTeacherTestingMode === "undefined" || !isTeacherTestingMode) {
+      var cQuiz = (typeof currentQuiz !== "undefined" && currentQuiz) ? currentQuiz : {};
+      var attemptRecord = {
+        id: "att_" + Date.now(),
+        quizId: cQuiz.id || (window.activeQuizId || "quiz_default"),
+        quizTitle: cQuiz.title || "Practice Test",
+        studentName: cQuiz.participantName || (document.getElementById("studentName")?.value || "Anonymous"),
+        mobile: cQuiz.participantMobile || (document.getElementById("studentMobile")?.value || ""),
       wrongCount: wrongCount,
       score: netScore,
       totalMarks: totalQ,
