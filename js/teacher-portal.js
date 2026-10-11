@@ -424,8 +424,12 @@ function openQuizLeaderboard(idx) {
     allStored = [];
   }
 
+var targetTitleClean = (quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   var localAttempts = allStored.filter(function(a) { 
-    return String(a.quizId).trim() === String(quiz.id).trim(); 
+    var idMatch = a.quizId && quiz.id && (String(a.quizId).trim() === String(quiz.id).trim());
+    var aTitleClean = (a.quizTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    var titleMatch = targetTitleClean && aTitleClean && (targetTitleClean.includes(aTitleClean) || aTitleClean.includes(targetTitleClean));
+    return idMatch || titleMatch;
   });
   currentLeaderboardParticipants = localAttempts;
 
