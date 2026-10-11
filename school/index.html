@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assent Public School - Dashboard</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="school-bg">
+
+  <!-- Top Action Navigation -->
+  <header class="top-nav-bar">
+    <a href="../index.html" class="nav-btn-home"><i class="fa fa-arrow-left"></i> Coaching Home</a>
+    <span class="managed-tag">Website is managed by AK Learning Point</span>
+  </header>
+
+  <!-- PPT Card Shining Header -->
+  <div class="school-hero-card">
+    <div class="school-hero-content">
+      <div class="school-title-group">
+        <h1 class="school-name-shimmer">ASSENT PUBLIC SCHOOL</h1>
+        <p class="school-location"><i class="fa fa-map-marker-alt"></i> Singhiya Khurd, Samastipur, Bihar - 848101</p>
+        <div class="authority-badge-row">
+          <span class="auth-pill"><i class="fa fa-user-tie"></i> Director: <b id="dspDirector">M. K. Aryan</b> (<a id="dspDirMob" href="tel:9199xxxxxx">9199xxxxxx</a>)</span>
+          <span class="auth-pill"><i class="fa fa-chalkboard-teacher"></i> Principal: <b id="dspPrincipal">S. K. Singh</b> (<a id="dspPrincMob" href="tel:9835xxxxxx">9835xxxxxx</a>)</span>
+        </div>
+      </div>
+      <div class="school-logo-frame">
+        <img id="schoolLogo" src="../logo.png" alt="School Logo" class="brand-logo-shine">
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification & Ads Wall Carousel -->
+  <section class="ads-wall-container">
+    <div class="ads-wall-header">
+      <span><i class="fa fa-bullhorn text-gold"></i> Live School Notice & Ads Wall</span>
+    </div>
+    <div class="ads-marquee-box" id="adsMarquee">
+      <!-- Auto-populated from Exam Planner and Teacher Ads PPT -->
+      <p id="liveNoticeText">Welcome to Assent Public School Session 2026-2027. Admissions are open!</p>
+    </div>
+    <div class="ads-slider-frame" id="adsSlider">
+      <img id="adsSlideImage" src="assets/banner1.jpg" alt="Notice Banner" class="ads-slide-img">
+    </div>
+  </section>
+
+  <!-- Interactive Hub Portals -->
+  <main class="dashboard-grid">
+    <a href="student-portal.html" class="hub-card gold-border">
+      <i class="fa fa-user-graduate hub-icon"></i>
+      <h3>Student Portal</h3>
+      <p>Login with Class & Roll to check Profile, Result, Fee & ID Card</p>
+    </a>
+    <a href="#teachersSec" class="hub-card">
+      <i class="fa fa-id-badge hub-icon"></i>
+      <h3>Teacher Directory</h3>
+      <p>View our respected faculties, qualifications and classes</p>
+    </a>
+    <a href="teacher-panel.html" class="hub-card lock-accent">
+      <i class="fa fa-user-shield hub-icon"></i>
+      <h3>Teacher Panel</h3>
+      <p>Administrative Control (Admissions, Marks, Exams & Notices)</p>
+    </a>
+    <a href="#studyVideosSec" class="hub-card">
+      <i class="fa fa-play-circle hub-icon"></i>
+      <h3>Online Study Videos</h3>
+      <p>Class-wise conceptual lectures and syllabus video feeds</p>
+    </a>
+  </main>
+
+  <!-- Online Video Lectures Player Hub -->
+  <section id="studyVideosSec" class="content-shelf">
+    <h2 class="section-heading"><i class="fab fa-youtube text-red"></i> Online Concept Classes & Video Feed</h2>
+    <div class="video-grid" id="videoFeedContainer">
+      <!-- Dynamic YouTube Embed Cards -->
+    </div>
+  </section>
+
+  <!-- Our Respected Teachers Directory -->
+  <section id="teachersSec" class="content-shelf">
+    <h2 class="section-heading"><i class="fa fa-chalkboard-teacher"></i> Our Respected Teachers</h2>
+    <div class="teacher-grid" id="teacherCardsContainer">
+      <!-- Dynamic Teacher Cards (Right Photo, Left Details) -->
+    </div>
+  </section>
+
+  <script src="js/school-db.js"></script>
+  <script src="js/dashboard-app.js"></script>
+</body>
+</html>
