@@ -197,7 +197,7 @@ var attCount = getQuizAttemptCount(q);
     html += '<div class="modal-card" style="max-width:100%; margin-bottom:12px; border-left: 5px solid ' + borderColor + ';">' +
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">' +
       '<div>' +
-      '<h3 style="color:var(--primary-navy); margin-bottom:4px;">' + q.title + '</h3>' +
+      '<h3 style="color:var(--primary-navy); margin-bottom:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' + q.title + ' <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;"><i class="fas fa-users"></i> ' + attCount + ' Attempts</span></h3>' +
       '<div style="font-size:0.85rem; color:#64748b;">' +
       '<strong>' + q.board + '</strong> | <strong>' + q.className + '</strong> | <strong>' + q.subject + '</strong> • ' + qCount + ' Questions ' +
       (q.isRewarding ? '<span style="background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-weight:700; margin-left:6px;">🎁 Code: ' + (q.passkey || '') + '</span>' : '') +
