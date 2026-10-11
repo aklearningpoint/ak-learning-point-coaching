@@ -1,3 +1,24 @@
+// Function: Har quiz ke actual attempts count karna (ID + Title Smart Match)
+function getQuizAttemptCount(quiz) {
+  if (!quiz) return 0;
+  var allStored = [];
+  try {
+    allStored = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+  } catch(e) {
+    allStored = [];
+  }
+
+  var targetTitle = (quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  var matches = allStored.filter(function(a) {
+    var idMatch = a.quizId && quiz.id && (String(a.quizId).trim() === String(quiz.id).trim());
+    var aTitle = (a.quizTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    var titleMatch = targetTitle && aTitle && (targetTitle.includes(aTitle) || aTitle.includes(targetTitle));
+    return idMatch || titleMatch;
+  });
+
+  return matches.length;
+}
 // Teacher Portal: Smart Parser, Test Preview Mode, Live Leaderboards & Actual A4 Quiz Print Engine
 
 function getTeacherData(key, fallback) {
