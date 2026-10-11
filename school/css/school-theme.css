@@ -1,0 +1,68 @@
+/* Gold PPT Card Shimmer */
+.school-hero-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  border: 2px solid #d4af37;
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.25);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 15px auto;
+  max-width: 1200px;
+}
+
+.school-name-shimmer {
+  font-size: 2.2rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #d4af37, #fff6cc, #aa7c11, #d4af37);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  animation: shine 4s linear infinite;
+  letter-spacing: 1px;
+}
+
+@keyframes shine {
+  to { background-position: 200% center; }
+}
+
+/* 7cm x 10cm Printable Identity Card */
+.official-id-card-7x10 {
+  width: 7cm;
+  height: 10cm;
+  background: #ffffff;
+  border: 2px solid #1e3a8a;
+  border-radius: 8px;
+  padding: 6mm;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.official-id-card-7x10 .id-photo-frame img {
+  width: 2.2cm;
+  height: 2.5cm;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #1e3a8a;
+}
+
+/* Question Paper A4 Single Page Print Media */
+@media print {
+  body * { visibility: hidden; }
+  .official-id-card-7x10, .official-id-card-7x10 * { visibility: visible; }
+  .official-id-card-7x10 { position: absolute; left: 0; top: 0; }
+  
+  .print-question-paper, .print-question-paper * { visibility: visible; }
+  .print-question-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    margin: 8mm;
+    page-break-inside: avoid;
+  }
+}
