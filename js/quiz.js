@@ -519,11 +519,27 @@ function submitQuiz(e) {
       allAttempts = [];
     }
 
+  // 1. Har attempt ko unique ID aur timestamp dein (Single item delete ke liye)
+  var nowTime = Date.now();
+  attemptRecord.attemptId = "att_" + nowTime + "_" + Math.floor(Math.random() * 1000);
+  attemptRecord.timestamp = attemptRecord.timestamp || nowTime;
+
+  // 2. Duplicate Check: pichhle 5 second me same student + quiz ka attempt aaya ho toh rok dein
+  var isAlreadySaved = allAttempts.some(function(prev) {
+    var sameName = (prev.studentName || prev.name) === (attemptRecord.studentName || attemptRecord.name);
+    var sameQuiz = prev.quizId === attemptRecord.quizId;
+    var timeDiff = Math.abs(nowTime - (prev.timestamp || 0));
+    return sameName && sameQuiz && timeDiff < 5000;
+  });
+
+  if (!isAlreadySaved) {
     allAttempts.unshift(attemptRecord);
     localStorage.setItem("ak_student_attempts", JSON.stringify(allAttempts));
     localStorage.setItem("ak_quiz_results", JSON.stringify(allAttempts));
-
-    console.log("Result saved successfully:", attemptRecord);
+    console.log("Result saved successfully (Single):", attemptRecord);
+  } else {
+    console.warn("Duplicate attempt prevented from saving!");
+  }
 
     // 4. API Backend Push (agar available ho)
     if (typeof API !== "undefined" && API.post) {
