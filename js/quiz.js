@@ -613,13 +613,12 @@ function openSolutionVerification() {
   document.getElementById("dynamicView").innerHTML = html;
 }
 // URL Deep-Linking: Link click karte hi direct Entry Screen open karna
-function checkAndOpenDirectQuizFromUrl() {
+window.checkAndOpenDirectQuizFromUrl = function() {
   try {
     var urlParams = new URLSearchParams(window.location.search);
     var targetQuizId = urlParams.get("quizId");
     if (!targetQuizId) return;
 
-    // 1. Local quizzes me search karein
     var allQuizzes = getQuizStorageData("ak_teacher_quizzes", []);
     var foundQuiz = null;
 
@@ -634,7 +633,6 @@ function checkAndOpenDirectQuizFromUrl() {
       window.activeLoadedQuizzes = [foundQuiz];
       openQuizEntryModalByIndex(0);
     } else if (typeof API !== "undefined" && API.get) {
-      // 2. Agar local me nahi mila toh cloud se load karein
       API.get("getQuizzes", { allStatus: "true" }).then(function(res) {
         if (res && res.data) {
           for (var j = 0; j < res.data.length; j++) {
@@ -648,9 +646,9 @@ function checkAndOpenDirectQuizFromUrl() {
       });
     }
   } catch (err) {
-    console.warn("Error in deep link handler", err);
+    console.warn("Deep-link error:", err);
   }
-}
+};
 
 // Jab bhi page open ho, turant URL check karein
 window.addEventListener("DOMContentLoaded", function() {
