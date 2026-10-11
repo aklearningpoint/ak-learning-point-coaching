@@ -4,41 +4,195 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Marks Register & Tabulation - Assent Public School</title>
-  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="css/school-theme.css?v=3.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Marks Tabulation Embedded Self-Contained Styles */
+    .tabulation-wrapper {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+    .top-action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .panel-card {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .form-ctrl {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.95rem;
+      margin-top: 5px;
+    }
+    .sub-input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .sub-input-card {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .btn-gold-action {
+      background: #d4af37;
+      color: #000;
+      font-weight: 700;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    .btn-gold-action:hover { background: #c59b27; }
+    
+    /* Master Tabulation Table Styles */
+    .table-box {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 15px;
+    }
+    .tabulation-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 0.9rem;
+      background: #fff;
+    }
+    .tabulation-table th, .tabulation-table td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 12px;
+    }
+    .tabulation-table th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .tabulation-table tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .rank-pill {
+      background: #fef08a;
+      color: #854d0e;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .btn-publish-draft {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-publish-live {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .screen-ledger-head {
+      margin-bottom: 12px;
+    }
+    .signature-row {
+      display: none; /* Screen par invisible rahega, sirf print par dikhega */
+    }
+
+    /* Print Setup (Landscape A4) */
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 10mm;
+      }
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      body * {
+        visibility: hidden;
+      }
+      #ledgerPrintWrapper, #ledgerPrintWrapper * {
+        visibility: visible;
+      }
+      #ledgerPrintWrapper {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .signature-row {
+        display: flex !important;
+        justify-content: space-between;
+        margin-top: 50px;
+        padding: 0 40px;
+        font-weight: bold;
+      }
+      .tabulation-table th {
+        background: #e2e8f0 !important;
+        color: #000 !important;
+      }
+    }
+  </style>
 </head>
 <body class="school-bg">
 
-  <!-- Top Action Navigation -->
-  <header class="top-nav-bar">
-    <div class="nav-left">
-      <a href="teacher-panel.html" class="nav-btn-home"><i class="fa fa-arrow-left"></i> Teacher Panel</a>
-      <a href="index.html" class="nav-btn-home"><i class="fa fa-school"></i> School Hub</a>
-    </div>
-    <span class="managed-tag">Tabulation & Marks Engine</span>
-  </header>
-
-  <div class="admin-workspace-container">
-    <div class="panel-header-row">
+  <div class="tabulation-wrapper">
+    <!-- Top Bar -->
+    <header class="top-action-bar no-print">
       <div>
-        <h2><i class="fa fa-calculator text-gold"></i> Marks Entry & Tabulation Register</h2>
-        <small>Academic Session 2026-2027 • Dual-Mode Scoring Engine</small>
+        <a href="teacher-panel.html" style="text-decoration:none; color:#0f172a; font-weight:700;"><i class="fa fa-arrow-left"></i> Teacher Panel</a>
+        <span style="margin: 0 8px; color:#cbd5e1;">|</span>
+        <a href="index.html" style="text-decoration:none; color:#0f172a; font-weight:700;"><i class="fa fa-school"></i> School Home</a>
       </div>
-      <!-- Result Publishing Controller (Fee Protection) -->
-      <div class="publish-control-box">
-        <label><b>Student Portal Visibility:</b></label>
+      <div>
         <button id="btnPublishToggle" onclick="toggleResultPublish()" class="btn-publish-draft">
           <i class="fa fa-eye-slash"></i> Result Status: DRAFT (Locked)
         </button>
       </div>
-    </div>
+    </header>
 
-    <!-- Mode Selector & Filter Strip -->
-    <div class="control-box-gold mt-3">
-      <div class="grid-3col">
+    <!-- Filter Configuration -->
+    <div class="panel-card no-print">
+      <h3 style="margin-bottom:12px; color:#0f172a;"><i class="fa fa-sliders-h text-gold"></i> Score Entry Settings</h3>
+      <div class="filter-grid">
         <div>
-          <label>Select Class:</label>
-          <select id="marksClassSelect" class="input-ctrl" onchange="handleClassTermChange()">
+          <label><b>Class:</b></label>
+          <select id="marksClassSelect" class="form-ctrl" onchange="handleClassTermChange()">
             <option value="Nur & Play">Nur & Play</option>
             <option value="LKG">LKG</option>
             <option value="UKG">UKG</option>
@@ -50,52 +204,49 @@
           </select>
         </div>
         <div>
-          <label>Select Term:</label>
-          <select id="marksTermSelect" class="input-ctrl" onchange="handleClassTermChange()">
+          <label><b>Term:</b></label>
+          <select id="marksTermSelect" class="form-ctrl" onchange="handleClassTermChange()">
             <option value="Term 1">Term 1</option>
-            <option value="Term 2">Term 2 (With Drawing 50)</option>
-            <option value="Term 3">Term 3 (Final / With Drawing 50)</option>
+            <option value="Term 2">Term 2 (+ Drawing 50)</option>
+            <option value="Term 3">Term 3 (Final / + Drawing 50)</option>
           </select>
         </div>
         <div>
-          <label>Entry Methodology:</label>
-          <select id="entryModeSelect" class="input-ctrl" onchange="switchEntryModeUI()">
-            <option value="modeA">Mode A: Student-Wise Matrix (All Subjects)</option>
-            <option value="modeB">Mode B: Rapid Subject-Wise Column</option>
+          <label><b>Entry Mode:</b></label>
+          <select id="entryModeSelect" class="form-ctrl" onchange="switchEntryModeUI()">
+            <option value="modeA">Mode A: Student-Wise (All Subjects)</option>
+            <option value="modeB">Mode B: Rapid Subject Column</option>
           </select>
         </div>
       </div>
     </div>
 
-    <!-- ENTRY INTERFACE: MODE A (Student-Wise Matrix) -->
-    <div id="uiModeA" class="card-p4 mt-3">
-      <div class="mode-header">
-        <h4><i class="fa fa-user-edit"></i> Mode A: Student-Wise Marks Entry</h4>
-        <div class="student-navigator">
-          <label>Select Student Roll:</label>
-          <select id="modeAStudentSelect" class="input-ctrl-inline" onchange="loadStudentMarksForModeA()"></select>
+    <!-- Mode A: Student-Wise Entry -->
+    <div id="uiModeA" class="panel-card no-print">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h4 style="color:#0f172a;"><i class="fa fa-user-edit"></i> Mode A: Student-Wise Marks Entry</h4>
+        <div>
+          <label><b>Select Student Roll:</b> </label>
+          <select id="modeAStudentSelect" class="form-ctrl" style="width:auto; display:inline-block;" onchange="loadStudentMarksForModeA()"></select>
         </div>
       </div>
-      <div id="modeASubjectsForm" class="subject-inputs-grid mt-3">
-        <!-- Dynamic Subject input boxes populated here -->
+      <div id="modeASubjectsForm" class="sub-input-grid">
+        <!-- Subject Input Cards -->
       </div>
-      <div class="action-btn-row mt-3">
-        <button onclick="saveAndNextModeA()" class="btn-gold"><i class="fa fa-save"></i> Save & Move to Next Roll</button>
-      </div>
+      <button onclick="saveAndNextModeA()" class="btn-gold-action"><i class="fa fa-save"></i> Save & Next Roll</button>
     </div>
 
-    <!-- ENTRY INTERFACE: MODE B (Rapid Subject-Wise Column) -->
-    <div id="uiModeB" class="card-p4 mt-3" style="display:none;">
-      <div class="mode-header">
-        <h4><i class="fa fa-bolt"></i> Mode B: Rapid Subject Column Entry</h4>
-        <div class="student-navigator">
-          <label>Lock Target Subject:</label>
-          <select id="modeBSubjectSelect" class="input-ctrl-inline" onchange="renderModeBTable()"></select>
+    <!-- Mode B: Rapid Subject-Wise Entry -->
+    <div id="uiModeB" class="panel-card no-print" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h4 style="color:#0f172a;"><i class="fa fa-bolt"></i> Mode B: Rapid Subject-Wise Column</h4>
+        <div>
+          <label><b>Target Subject:</b> </label>
+          <select id="modeBSubjectSelect" class="form-ctrl" style="width:auto; display:inline-block;" onchange="renderModeBTable()"></select>
         </div>
       </div>
-      <p class="subtext">Type marks and press Tab/Enter to rapidly move down the roll sheet.</p>
-      <div class="table-responsive mt-2">
-        <table class="styled-table">
+      <div class="table-box">
+        <table class="tabulation-table">
           <thead>
             <tr>
               <th style="width:100px;">Roll No</th>
@@ -104,46 +255,37 @@
               <th>Max Marks</th>
             </tr>
           </thead>
-          <tbody id="modeBTableBody">
-            <!-- Dynamic rapid column rows -->
-          </tbody>
+          <tbody id="modeBTableBody"></tbody>
         </table>
       </div>
-      <button onclick="saveModeBAllMarks()" class="btn-gold mt-3"><i class="fa fa-save"></i> Save All Column Marks</button>
+      <button onclick="saveModeBAllMarks()" class="btn-gold-action"><i class="fa fa-save"></i> Save Column Marks</button>
     </div>
 
-    <!-- TABULATION REGISTER (MASTER LEDGER) -->
-    <div class="ledger-container card-p4 mt-4">
-      <div class="ledger-header-row">
+    <!-- Master Tabulation Ledger -->
+    <div class="panel-card" id="ledgerPrintWrapper">
+      <div class="screen-ledger-head" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <h3><i class="fa fa-file-invoice"></i> Master Tabulation Register</h3>
-          <p id="ledgerSubTitle">Class: Class 1 • Term 1</p>
+          <h2 style="color:#0f172a; margin:0;">ASSENT PUBLIC SCHOOL</h2>
+          <p style="margin:2px 0; color:#64748b; font-size:0.9rem;">Singhiya Khurd, Samastipur, Bihar - 848101</p>
+          <h4 id="ledgerSubTitle" style="color:#0f172a; margin-top:4px;">TABULATION REGISTER - Class: Nur & Play • Term 1</h4>
         </div>
-        <button onclick="printLandscapeLedger()" class="btn-action-dark"><i class="fa fa-print"></i> Print Tabulation Sheet (Landscape)</button>
+        <button onclick="window.print()" class="btn-gold-action no-print" style="margin-top:0;"><i class="fa fa-print"></i> Print Landscape Sheet</button>
       </div>
 
-      <div class="table-responsive mt-3" id="ledgerPrintWrapper">
-        <div class="print-landscape-header">
-          <h2>ASSENT PUBLIC SCHOOL</h2>
-          <p>Singhiya Khurd, Samastipur, Bihar - 848101</p>
-          <h4 id="printLedgerTitle">TABULATION REGISTER - ACADEMIC YEAR 2026-2027</h4>
-        </div>
+      <div class="table-box">
         <table class="tabulation-table" id="masterTabulationTable">
-          <thead id="tabulationHead">
-            <!-- Dynamic headers with Subjects, Total, %, Rank -->
-          </thead>
-          <tbody id="tabulationBody">
-            <!-- Calculated Ledger Rows -->
-          </tbody>
+          <thead id="tabulationHead"></thead>
+          <tbody id="tabulationBody"></tbody>
         </table>
-        <div class="print-landscape-footer">
-          <div><br><b>Class Teacher Signature</b></div>
-          <div><br><b>Checked By</b></div>
-          <div><br><b>Director / Principal Signature</b></div>
-        </div>
+      </div>
+
+      <!-- Signature Row for Print Output -->
+      <div class="signature-row">
+        <div>Class Teacher Signature</div>
+        <div>Checked By</div>
+        <div>Director / Principal Signature</div>
       </div>
     </div>
-
   </div>
 
   <script src="js/school-db.js"></script>
