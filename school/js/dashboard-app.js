@@ -31,7 +31,7 @@ function loadRespectedTeachers() {
       name: "A. K. Singh",
       designation: "Principal",
       classes: "All Classes",
-      subject: "Science & Administration",
+      subject: "Administration",
       photo: "assets/avatar.png"
     }
   ]);
