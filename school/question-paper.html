@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Question Paper Generator - Assent Public School</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Question Paper Print Layout Styling */
+    .qp-sheet {
+      background: #ffffff;
+      color: #000000;
+      padding: 12mm 15mm;
+      width: 100%;
+      max-width: 820px;
+      margin: 20px auto;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      border: 1px solid #cbd5e1;
+      font-family: "Times New Roman", Times, serif;
+    }
+    .qp-header {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .qp-header h2 {
+      font-size: 1.6rem;
+      margin: 0;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .qp-header p {
+      margin: 2px 0;
+      font-size: 0.9rem;
+    }
+    .qp-header .exam-term-badge {
+      font-size: 1.05rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+    .qp-meta-grid {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      font-weight: bold;
+      border-bottom: 1px solid #000;
+      padding: 4px 0 6px 0;
+    }
+    .qp-candidate-strip {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 2px solid #000;
+      padding: 6px 0;
+      font-size: 0.92rem;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+    .qp-instructions {
+      font-style: italic;
+      font-size: 0.88rem;
+      margin-bottom: 12px;
+      border-bottom: 1px dashed #666;
+      padding-bottom: 4px;
+    }
+    .qp-body {
+      font-size: 0.96rem;
+      line-height: 1.45;
+    }
+    .qp-parent-q {
+      margin-bottom: 10px;
+      page-break-inside: avoid;
+    }
+    .qp-parent-title {
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+    }
+    .qp-sub-list {
+      margin: 4px 0 6px 20px;
+      padding-left: 0;
+    }
+    .qp-sub-list.two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 20px;
+      list-style-position: inside;
+      margin-left: 10px;
+    }
+    .qp-sub-item {
+      margin-bottom: 3px;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 10mm;
+      }
+      body {
+        background: #fff !important;
+        margin: 0;
+        padding: 0;
+      }
+      body * {
+        visibility: hidden;
+      }
+      #printablePaperArea, #printablePaperArea * {
+        visibility: visible;
+      }
+      #printablePaperArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="school-bg">
+
+  <!-- Navigation Bar -->
+  <header class="top-nav-bar no-print">
+    <div class="nav-left">
+      <a href="teacher-panel.html" class="nav-btn-home"><i class="fa fa-arrow-left"></i> Teacher Panel</a>
+      <a href="index.html" class="nav-btn-home"><i class="fa fa-school"></i> School Hub</a>
+    </div>
+    <span class="managed-tag">Print-Ready Question Paper Engine</span>
+  </header>
+
+  <div class="admin-workspace-container no-print">
+    <div class="panel-header-row">
+      <div>
+        <h2><i class="fa fa-file-signature text-gold"></i> Question Paper Generator</h2>
+        <small>Automatic Sequence Parser • Strict Formatting • Print-Ready A4</small>
+      </div>
+      <div>
+        <button onclick="window.print()" class="btn-gold"><i class="fa fa-print"></i> Print Paper (A4 Portrait)</button>
+      </div>
+    </div>
+
+    <!-- Paper Controls -->
+    <div class="control-box-gold mt-3">
+      <div class="grid-4col">
+        <div>
+          <label>Class:</label>
+          <select id="qpClass" class="input-ctrl" onchange="syncPaperMeta()">
+            <option value="Nur & Play">Nur & Play</option>
+            <option value="LKG">LKG</option>
+            <option value="UKG">UKG</option>
+            <option value="1">Class 1</option>
+            <option value="2">Class 2</option>
+            <option value="3">Class 3</option>
+            <option value="4">Class 4</option>
+            <option value="5">Class 5</option>
+          </select>
+        </div>
+        <div>
+          <label>Subject:</label>
+          <select id="qpSubject" class="input-ctrl" onchange="syncPaperMeta()">
+            <!-- Dynamic Subjects -->
+          </select>
+        </div>
+        <div>
+          <label>Term:</label>
+          <select id="qpTerm" class="input-ctrl" onchange="syncPaperMeta()">
+            <option value="Term 1">Term 1</option>
+            <option value="Term 2">Term 2</option>
+            <option value="Term 3">Term 3 (Final)</option>
+          </select>
+        </div>
+        <div>
+          <label>Time Allowed:</label>
+          <input type="text" id="qpTime" class="input-ctrl" value="2:30 Hours" oninput="syncPaperMeta()">
+        </div>
+      </div>
+
+      <div class="grid-2col mt-3">
+        <div>
+          <label>Exam Date (Auto-fetched from Planner or manual):</label>
+          <input type="text" id="qpDate" class="input-ctrl" placeholder="DD-MM-YYYY" oninput="syncPaperMeta()">
+        </div>
+        <div>
+          <label>Full Marks (Auto-Detected):</label>
+          <input type="number" id="qpFullMarks" class="input-ctrl" value="100" readonly>
+        </div>
+      </div>
+    </div>
+
+    <!-- Text Input Area for Parsing -->
+    <div class="card-p4 mt-3">
+      <h4><i class="fa fa-paste"></i> Paste Question Paper Text</h4>
+      <p class="subtext">Paste standard questions below. The system automatically groups sub-questions (e.g. (a), (b) or (i), (ii)) without breaking or shuffling sequences.</p>
+      <textarea id="rawQuestionText" class="input-ctrl-text" rows="8" placeholder="Question 1. Fill in the blanks: [7 x 1 = 7]&#10;(a) The sun rises in the _______.&#10;(b) Plants take in _______ gas.&#10;&#10;Question 2. Answer the following questions: [5 x 2 = 10]&#10;(a) What is photosynthesis?&#10;(b) Define carnivores."></textarea>
+      <div class="mt-2">
+        <button onclick="parseAndRenderPaper()" class="btn-action-dark"><i class="fa fa-sync-alt"></i> Format & Generate Paper Preview</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRINT-READY A4 CANVAS (Target for Screen Preview & Print) -->
+  <div class="qp-sheet" id="printablePaperArea">
+    <!-- Formal School Header -->
+    <div class="qp-header">
+      <h2>ASSENT PUBLIC SCHOOL</h2>
+      <p>Singhiya Khurd, Samastipur, Bihar - 848101</p>
+      <div class="exam-term-badge" id="previewTermBadge">EXAMINATION: TERM 1 (2026-2027)</div>
+    </div>
+
+    <!-- Metadata Strip -->
+    <div class="qp-meta-grid">
+      <div>Class: <span id="previewClass">Class 1</span></div>
+      <div>Subject: <span id="previewSubject">Hindi</span></div>
+      <div>Full Marks: <span id="previewFM">100</span></div>
+      <div>Time: <span id="previewTime">2:30 Hours</span></div>
+    </div>
+
+    <!-- Candidate Fill Strip -->
+    <div class="qp-candidate-strip">
+      <div>Student's Name: __________________________________</div>
+      <div>Roll No: ________</div>
+      <div>Date: <span id="previewDate">___________</span></div>
+    </div>
+
+    <div class="qp-instructions">
+      * All questions are compulsory. Write answers neatly in good handwriting.
+    </div>
+
+    <!-- Generated Question Hierarchy Body -->
+    <div class="qp-body" id="previewBody">
+      <!-- Formatted Questions Inserted Here -->
+    </div>
+  </div>
+
+  <script src="js/school-db.js"></script>
+  <script src="js/question-paper.js"></script>
+</body>
+</html>
