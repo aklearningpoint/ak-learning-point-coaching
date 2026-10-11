@@ -21,14 +21,14 @@ function loadRespectedTeachers() {
 
   const teachers = SchoolDB.get(SchoolDB.KEYS.TEACHERS, [
     {
-      name: "M. K. Aryan",
+      name: "G. K. Thakur",
       designation: "Director & Senior Faculty",
       classes: "Classes 1 to 5",
       subject: "Mathematics & Guidance",
       photo: "assets/avatar.png"
     },
     {
-      name: "S. K. Singh",
+      name: "A. K. Singh",
       designation: "Principal",
       classes: "All Classes",
       subject: "Science & Administration",
