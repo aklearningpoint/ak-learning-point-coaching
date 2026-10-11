@@ -697,3 +697,4 @@ window.checkAndOpenDirectQuizFromUrl = function() {
 window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkAndOpenDirectQuizFromUrl, 300);
 });
+}
