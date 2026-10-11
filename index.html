@@ -171,21 +171,42 @@
   <div id="dynamicView"></div>
 
   <!-- Standard Scripts Load Order -->
-<!-- Standard Scripts with Cache Buster -->
-  <script src="js/api.js?v=2.0"></script>
-  <script src="js/security.js?v=2.0"></script>
-  <script src="js/quiz.js?v=2.0"></script>
-  <script src="js/content-modules.js?v=2.0"></script>
-  <script src="js/admin-portal.js?v=2.0"></script>
-  <script src="js/teacher-portal.js?v=2.0"></script>
-  <script src="js/school-portal.js?v=2.0"></script>
-<script>
+<!-- Automatic Fresh Cache-Buster Loader -->
+  <script>
+    (function() {
+      // Har load par naya timestamp generate hoga
+      var cacheVersion = new Date().getTime();
+      
+      var scriptFiles = [
+        "js/api.js",
+        "js/security.js",
+        "js/quiz.js",
+        "js/content-modules.js",
+        "js/admin-portal.js",
+        "js/teacher-portal.js",
+        "js/school-portal.js"
+      ];
+
+      // Sequential loading to ensure correct dependency execution
+      function loadNextScript(index) {
+        if (index >= scriptFiles.length) return;
+        var s = document.createElement("script");
+        s.src = scriptFiles[index] + "?v=" + cacheVersion;
+        s.async = false;
+        s.onload = function() {
+          loadNextScript(index + 1);
+        };
+        document.body.appendChild(s);
+      }
+
+      loadNextScript(0);
+    })();
+
     function toggleDrawer() {
       var d = document.getElementById("drawerOverlay");
-      if (d) {
-        d.classList.toggle("open");
-      }
+      if (d) d.classList.toggle("open");
     }
+
     function goHome() {
       var dv = document.getElementById("dynamicView");
       if (dv) dv.innerHTML = "";
