@@ -171,12 +171,10 @@
   <div id="dynamicView"></div>
 
   <!-- Standard Scripts Load Order -->
-<!-- Automatic Fresh Cache-Buster Loader -->
+<!-- Automatic Fresh Cache-Buster Loader with Deep-Link Trigger -->
   <script>
     (function() {
-      // Har load par naya timestamp generate hoga
       var cacheVersion = new Date().getTime();
-      
       var scriptFiles = [
         "js/api.js",
         "js/security.js",
@@ -187,9 +185,14 @@
         "js/school-portal.js"
       ];
 
-      // Sequential loading to ensure correct dependency execution
       function loadNextScript(index) {
-        if (index >= scriptFiles.length) return;
+        if (index >= scriptFiles.length) {
+          // Saari scripts load hone ke baad direct trigger
+          if (typeof checkAndOpenDirectQuizFromUrl === "function") {
+            checkAndOpenDirectQuizFromUrl();
+          }
+          return;
+        }
         var s = document.createElement("script");
         s.src = scriptFiles[index] + "?v=" + cacheVersion;
         s.async = false;
@@ -215,5 +218,3 @@
       window.scrollTo(0, 0);
     }
   </script>
-</body>
-</html>
