@@ -533,14 +533,13 @@ function submitQuiz(e) {
         quizTitle: cQuiz.title || "Practice Test",
         studentName: cQuiz.participantName || (document.getElementById("studentName")?.value || "Anonymous"),
         mobile: cQuiz.participantMobile || (document.getElementById("studentMobile")?.value || ""),
-      wrongCount: wrongCount,
-      score: netScore,
-      totalMarks: totalQ,
-      percentage: pct,
-      answers: userAnswers,
-      timestamp: new Date().toISOString()
-    };
-
+        wrongCount: wrongCount,
+        score: netScore,
+        totalMarks: totalQ,
+        percentage: pct,
+        answers: userAnswers,
+        timestamp: new Date().toISOString()
+      };
     var allAttempts = getQuizStorageData("ak_student_attempts", []);
     allAttempts.unshift(attemptRecord);
     setQuizStorageData("ak_student_attempts", allAttempts);
