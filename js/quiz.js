@@ -525,19 +525,25 @@ function submitQuiz(e) {
  }
 
     // Teacher preview mode me score save nahi hoga
-    if (typeof isTeacherTestingMode === "undefined" || !isTeacherTestingMode) {
+if (typeof isTeacherTestingMode === "undefined" || !isTeacherTestingMode) {
       var cQuiz = (typeof currentQuiz !== "undefined" && currentQuiz) ? currentQuiz : {};
+      var sCount = typeof score !== "undefined" ? score : 0;
+      var tCount = typeof total !== "undefined" ? total : 1;
+      var wCount = Math.max(0, tCount - sCount);
+      var pVal = ((sCount / tCount) * 100).toFixed(1);
+
       var attemptRecord = {
         id: "att_" + Date.now(),
         quizId: cQuiz.id || (window.activeQuizId || "quiz_default"),
         quizTitle: cQuiz.title || "Practice Test",
-        studentName: cQuiz.participantName || (document.getElementById("studentName")?.value || "Anonymous"),
-        mobile: cQuiz.participantMobile || (document.getElementById("studentMobile")?.value || ""),
-        wrongCount: wrongCount,
-        score: netScore,
-        totalMarks: totalQ,
-        percentage: pct,
-        answers: userAnswers,
+        studentName: cQuiz.participantName || (typeof name !== "undefined" ? name : "Anonymous"),
+        mobile: cQuiz.participantMobile || (typeof mobile !== "undefined" ? mobile : ""),
+        correctCount: sCount,
+        wrongCount: wCount,
+        score: sCount,
+        totalMarks: tCount,
+        percentage: pVal,
+        answers: typeof userAnswers !== "undefined" ? userAnswers : {},
         timestamp: new Date().toISOString()
       };
     var allAttempts = getQuizStorageData("ak_student_attempts", []);
