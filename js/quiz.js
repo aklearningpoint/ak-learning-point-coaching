@@ -455,32 +455,75 @@ function nextQuestion() {
   }
 }
 
-function submitQuizNow(isAutoSubmit) {
-  clearInterval(quizTimerInterval);
-  clearInterval(perQuestionTimerInterval);
-  if (!isTeacherTestingMode && typeof SecurityShield !== "undefined" && SecurityShield.deactivate) {
-    SecurityShield.deactivate();
-  }
+function submitQuiz(e) {
+  if (e && e.preventDefault) e.preventDefault();
 
-  var correctCount = 0;
-  var wrongCount = 0;
-  var totalQ = currentQuiz.questions.length;
-  var negMark = parseFloat(currentQuiz.negativeMarking || 0);
+  try {
+    // 1. Student details fetch karein (Fallback ke sath)
+    const name = (document.getElementById("studentName")?.value || 
+                  document.getElementById("quizStudentName")?.value || 
+                  "Student").trim();
+    const mobile = (document.getElementById("studentMobile")?.value || 
+                    document.getElementById("quizStudentMobile")?.value || 
+                    "").trim();
 
-  for (var idx = 0; idx < currentQuiz.questions.length; idx++) {
-    var q = currentQuiz.questions[idx];
-    var ans = userAnswers[idx];
-    if (ans !== undefined) {
-      if (ans === q.correctAnswer) correctCount++;
-      else wrongCount++;
+    // 2. Score Calculate karein
+    let score = 0;
+    const questions = window.currentQuizQuestions || [];
+    const total = questions.length || 1;
+
+    questions.forEach((q, idx) => {
+      const selected = window.userAnswers ? window.userAnswers[idx] : null;
+      if (selected !== null && selected !== undefined && selected === q.correctAnswer) {
+        score++;
+      }
+    });
+
+    const activeQuizId = window.activeQuizId || "default_quiz";
+
+    // 3. Local Attempts me Push karein (Ensures Data Exists)
+    let attempts = [];
+    try {
+      attempts = JSON.parse(localStorage.getItem("ak_quiz_results") || "[]");
+      if (!Array.isArray(attempts)) attempts = [];
+    } catch (err) {
+      attempts = [];
     }
+
+    const newResult = {
+      id: "res_" + Date.now(),
+      quizId: activeQuizId,
+      name: name,
+      mobile: mobile,
+      score: score,
+      total: total,
+      percentage: ((score / total) * 100).toFixed(1),
+      timestamp: new Date().toLocaleString()
+    };
+
+    attempts.push(newResult);
+    localStorage.setItem("ak_quiz_results", JSON.stringify(attempts));
+    localStorage.setItem("ak_student_attempts", JSON.stringify(attempts));
+
+    console.log("Result saved successfully:", newResult);
+
+    // 4. Security Deactivate karein
+    if (window.SecurityShield && typeof window.SecurityShield.deactivate === "function") {
+      window.SecurityShield.deactivate();
+    }
+
+    // 5. Leaderboard / Score Screen display karein
+    if (typeof showScorecardModal === "function") {
+      showScorecardModal(newResult);
+    } else {
+      alert(`Test Submitted!\nName: ${name}\nScore: ${score}/${total}`);
+    }
+
+  } catch (error) {
+    console.error("Critical Quiz Submit Error:", error);
+    alert("Submission error: " + error.message);
   }
-
-  var deduction = (wrongCount * negMark);
-  var netScore = Math.max(0, (correctCount - deduction)).toFixed(2);
-  var pct = ((netScore / totalQ) * 100).toFixed(1);
-
-  // Teacher preview mode me score save nahi hoga
+}  // Teacher preview mode me score save nahi hoga
   if (!isTeacherTestingMode) {
     var attemptRecord = {
       id: "att_" + Date.now(),
