@@ -49,7 +49,7 @@ window.addEventListener("DOMContentLoaded", function() {
 function openAdminPortal() {
   if (typeof toggleDrawer === "function") toggleDrawer();
 
-  var enteredPass = prompt("Enter Master Admin Password (Default: password):");
+  var enteredPass = prompt("Enter Master Admin Password (Default: *****):");
   if (enteredPass === appConfig.adminPass || enteredPass === "password") {
     renderAdminDashboard();
   } else if (enteredPass !== null) {
