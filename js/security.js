@@ -1,17 +1,17 @@
-// Production-Grade Malpractice Shield with Grace Period & Warning Buffer
+// Production-Grade Malpractice Shield (Optimized for Mobile & Button Clicks)
 
 const SecurityShield = {
   isActive: false,
   isReady: false,
   warningCount: 0,
-  maxWarnings: 1, // 1 warning milegi, dusri baar me submit hoga
+  maxWarnings: 1,
 
   activate(onViolationCallback) {
     this.isActive = true;
     this.isReady = false;
     this.warningCount = 0;
 
-    // 1. Force Fullscreen
+    // 1. Fullscreen request
     const elem = document.documentElement;
     try {
       if (elem.requestFullscreen) {
@@ -29,7 +29,7 @@ const SecurityShield = {
     document.body.style.userSelect = "none";
     document.body.style.webkitUserSelect = "none";
 
-    // 3. Block Context Menu & Copy Paste
+    // 3. Block Context Menu, Selection & Copy-Paste
     document.addEventListener("contextmenu", this.blockAction, true);
     document.addEventListener("copy", this.blockAction, true);
     document.addEventListener("cut", this.blockAction, true);
@@ -37,24 +37,21 @@ const SecurityShield = {
     document.addEventListener("selectstart", this.blockAction, true);
     window.addEventListener("keydown", this.handleKeyBlock, true);
 
-    // 4. Grace Period: Pehle 4 second tak koi switch detection trigger nahi hoga
-    // (Taaki keyboard dismiss aur fullscreen prompt settle ho jaye)
+    // 4. Grace Period: 4 seconds warmup
     setTimeout(() => {
       if (this.isActive) {
         this.isReady = true;
       }
     }, 4000);
 
-    // 5. Tab Switch & Minimize Detection (Only after Grace Period)
-    window.addEventListener("blur", () => {
-      this.handleThreat("Screen switch ya tab switch detect hua hai!", onViolationCallback);
-    }, true);
-
-    document.addEventListener("visibilitychange", () => {
+    // 5. Pure Tab Switch & Minimize Detection ONLY
+    // NOTE: 'blur' event completely removed - it misfires on button clicks, DOM updates & mobile keyboard dismiss
+    this.visibilityHandler = () => {
       if (document.hidden) {
-        this.handleThreat("Tab switch ya app minimize detect hua hai!", onViolationCallback);
+        this.handleThreat("Tab switch ya screen minimize detect hui hai!", onViolationCallback);
       }
-    }, true);
+    };
+    document.addEventListener("visibilitychange", this.visibilityHandler, true);
   },
 
   blockAction(e) {
@@ -77,15 +74,14 @@ const SecurityShield = {
   },
 
   handleThreat(reason, callback) {
-    // Agar test start hue 4 second nahi hue hain, toh ignore karein
     if (!this.isActive || !this.isReady) return;
 
     this.warningCount++;
     if (this.warningCount <= this.maxWarnings) {
-      alert("⚠️ WARNING (" + this.warningCount + "/2): " + reason + "\nDubara switch karne par test auto-submit ho jayega!");
+      alert("⚠️ WARNING (" + this.warningCount + "/2): " + reason + "\nDubara screen chhodne par test auto-submit ho jayega!");
     } else {
       this.isActive = false;
-      alert("🚨 TEST TERMINATED: Baar-baar switch karne ki wajah se aapka test submit kiya ja raha hai.");
+      alert("🚨 TEST TERMINATED: Cheating detect hone ke karan test submit kiya ja raha hai.");
       if (callback) callback();
     }
   },
@@ -106,6 +102,10 @@ const SecurityShield = {
     document.removeEventListener("paste", this.blockAction, true);
     document.removeEventListener("selectstart", this.blockAction, true);
     window.removeEventListener("keydown", this.handleKeyBlock, true);
+
+    if (this.visibilityHandler) {
+      document.removeEventListener("visibilitychange", this.visibilityHandler, true);
+    }
 
     if (document.fullscreenElement && document.exitFullscreen) {
       document.exitFullscreen().catch(() => {});
