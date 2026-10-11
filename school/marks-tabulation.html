@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marks Register & Tabulation - Assent Public School</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="school-bg">
+
+  <!-- Top Action Navigation -->
+  <header class="top-nav-bar">
+    <div class="nav-left">
+      <a href="teacher-panel.html" class="nav-btn-home"><i class="fa fa-arrow-left"></i> Teacher Panel</a>
+      <a href="index.html" class="nav-btn-home"><i class="fa fa-school"></i> School Hub</a>
+    </div>
+    <span class="managed-tag">Tabulation & Marks Engine</span>
+  </header>
+
+  <div class="admin-workspace-container">
+    <div class="panel-header-row">
+      <div>
+        <h2><i class="fa fa-calculator text-gold"></i> Marks Entry & Tabulation Register</h2>
+        <small>Academic Session 2026-2027 • Dual-Mode Scoring Engine</small>
+      </div>
+      <!-- Result Publishing Controller (Fee Protection) -->
+      <div class="publish-control-box">
+        <label><b>Student Portal Visibility:</b></label>
+        <button id="btnPublishToggle" onclick="toggleResultPublish()" class="btn-publish-draft">
+          <i class="fa fa-eye-slash"></i> Result Status: DRAFT (Locked)
+        </button>
+      </div>
+    </div>
+
+    <!-- Mode Selector & Filter Strip -->
+    <div class="control-box-gold mt-3">
+      <div class="grid-3col">
+        <div>
+          <label>Select Class:</label>
+          <select id="marksClassSelect" class="input-ctrl" onchange="handleClassTermChange()">
+            <option value="Nur & Play">Nur & Play</option>
+            <option value="LKG">LKG</option>
+            <option value="UKG">UKG</option>
+            <option value="1">Class 1</option>
+            <option value="2">Class 2</option>
+            <option value="3">Class 3</option>
+            <option value="4">Class 4</option>
+            <option value="5">Class 5</option>
+          </select>
+        </div>
+        <div>
+          <label>Select Term:</label>
+          <select id="marksTermSelect" class="input-ctrl" onchange="handleClassTermChange()">
+            <option value="Term 1">Term 1</option>
+            <option value="Term 2">Term 2 (With Drawing 50)</option>
+            <option value="Term 3">Term 3 (Final / With Drawing 50)</option>
+          </select>
+        </div>
+        <div>
+          <label>Entry Methodology:</label>
+          <select id="entryModeSelect" class="input-ctrl" onchange="switchEntryModeUI()">
+            <option value="modeA">Mode A: Student-Wise Matrix (All Subjects)</option>
+            <option value="modeB">Mode B: Rapid Subject-Wise Column</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENTRY INTERFACE: MODE A (Student-Wise Matrix) -->
+    <div id="uiModeA" class="card-p4 mt-3">
+      <div class="mode-header">
+        <h4><i class="fa fa-user-edit"></i> Mode A: Student-Wise Marks Entry</h4>
+        <div class="student-navigator">
+          <label>Select Student Roll:</label>
+          <select id="modeAStudentSelect" class="input-ctrl-inline" onchange="loadStudentMarksForModeA()"></select>
+        </div>
+      </div>
+      <div id="modeASubjectsForm" class="subject-inputs-grid mt-3">
+        <!-- Dynamic Subject input boxes populated here -->
+      </div>
+      <div class="action-btn-row mt-3">
+        <button onclick="saveAndNextModeA()" class="btn-gold"><i class="fa fa-save"></i> Save & Move to Next Roll</button>
+      </div>
+    </div>
+
+    <!-- ENTRY INTERFACE: MODE B (Rapid Subject-Wise Column) -->
+    <div id="uiModeB" class="card-p4 mt-3" style="display:none;">
+      <div class="mode-header">
+        <h4><i class="fa fa-bolt"></i> Mode B: Rapid Subject Column Entry</h4>
+        <div class="student-navigator">
+          <label>Lock Target Subject:</label>
+          <select id="modeBSubjectSelect" class="input-ctrl-inline" onchange="renderModeBTable()"></select>
+        </div>
+      </div>
+      <p class="subtext">Type marks and press Tab/Enter to rapidly move down the roll sheet.</p>
+      <div class="table-responsive mt-2">
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th style="width:100px;">Roll No</th>
+              <th>Student Name</th>
+              <th style="width:180px;">Marks Obtained</th>
+              <th>Max Marks</th>
+            </tr>
+          </thead>
+          <tbody id="modeBTableBody">
+            <!-- Dynamic rapid column rows -->
+          </tbody>
+        </table>
+      </div>
+      <button onclick="saveModeBAllMarks()" class="btn-gold mt-3"><i class="fa fa-save"></i> Save All Column Marks</button>
+    </div>
+
+    <!-- TABULATION REGISTER (MASTER LEDGER) -->
+    <div class="ledger-container card-p4 mt-4">
+      <div class="ledger-header-row">
+        <div>
+          <h3><i class="fa fa-file-invoice"></i> Master Tabulation Register</h3>
+          <p id="ledgerSubTitle">Class: Class 1 • Term 1</p>
+        </div>
+        <button onclick="printLandscapeLedger()" class="btn-action-dark"><i class="fa fa-print"></i> Print Tabulation Sheet (Landscape)</button>
+      </div>
+
+      <div class="table-responsive mt-3" id="ledgerPrintWrapper">
+        <div class="print-landscape-header">
+          <h2>ASSENT PUBLIC SCHOOL</h2>
+          <p>Singhiya Khurd, Samastipur, Bihar - 848101</p>
+          <h4 id="printLedgerTitle">TABULATION REGISTER - ACADEMIC YEAR 2026-2027</h4>
+        </div>
+        <table class="tabulation-table" id="masterTabulationTable">
+          <thead id="tabulationHead">
+            <!-- Dynamic headers with Subjects, Total, %, Rank -->
+          </thead>
+          <tbody id="tabulationBody">
+            <!-- Calculated Ledger Rows -->
+          </tbody>
+        </table>
+        <div class="print-landscape-footer">
+          <div><br><b>Class Teacher Signature</b></div>
+          <div><br><b>Checked By</b></div>
+          <div><br><b>Director / Principal Signature</b></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/school-db.js"></script>
+  <script src="js/marks-tabulation.js"></script>
+</body>
+</html>
