@@ -192,7 +192,8 @@ function renderTeacherQuizList() {
     var isDraft = (q.status === 'draft');
     var borderColor = isDraft ? '#94a3b8' : '#16a34a';
     var qCount = q.questions ? q.questions.length : 0;
-
+var attCount = getQuizAttemptCount(q);
+    
     html += '<div class="modal-card" style="max-width:100%; margin-bottom:12px; border-left: 5px solid ' + borderColor + ';">' +
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">' +
       '<div>' +
