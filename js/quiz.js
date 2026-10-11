@@ -695,10 +695,9 @@ window.checkAndOpenDirectQuizFromUrl = function() {
 window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkAndOpenDirectQuizFromUrl, 300);
 });
-}
+
 // Bridge for HTML button click compatibility
 window.submitQuizNow = function(e) {
-  if (typeof submitQuiz === "function") {
     submitQuiz(e);
   } else {
     console.error("submitQuiz function not found");
