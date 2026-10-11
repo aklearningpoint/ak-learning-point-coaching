@@ -93,7 +93,7 @@ function renderStudentIdCard() {
   document.getElementById("idCardName").innerText = activeLoggedStudent.name;
   document.getElementById("idCardClass").innerText = activeLoggedStudent.className;
   document.getElementById("idCardRoll").innerText = activeLoggedStudent.rollNo;
-  document.getElementById("idCardReg").innerText = activeLoggedStudent.regNo || "N/A";
+  document.getElementById("idCardReg").innerText = (activeLoggedStudent.regNo && activeLoggedStudent.regNo !== "REG-101") ? activeLoggedStudent.regNo : "—";
   document.getElementById("idCardFather").innerText = activeLoggedStudent.father || "Parent Record";
   document.getElementById("idCardContact").innerText = activeLoggedStudent.mobile1 || "N/A";
   document.getElementById("idCardTrans").innerText = activeLoggedStudent.transport || "Self";
