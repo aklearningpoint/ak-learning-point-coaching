@@ -359,3 +359,94 @@ function saveAdsSettings() {
     alert("Live notice posted to school dashboard wall.");
   }
 }
+
+// ==========================================
+// 8. FACULTY & VIDEO MANAGEMENT CONTROLLERS
+// ==========================================
+
+function addFacultyMember() {
+  const name = document.getElementById("facName").value.trim();
+  const designation = document.getElementById("facDesig").value.trim();
+  const classes = document.getElementById("facClasses").value.trim();
+  const subject = document.getElementById("facSubject").value.trim();
+  const photoInput = document.getElementById("facPhoto");
+
+  if (!name) {
+    alert("Please enter Faculty Member Name.");
+    document.getElementById("facName").focus();
+    return;
+  }
+
+  // Handle Photo: Optional (Uses default avatar if no image selected)
+  if (photoInput && photoInput.files && photoInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      saveFacultyRecord(name, designation, classes, subject, e.target.result);
+    };
+    reader.readAsDataURL(photoInput.files[0]);
+  } else {
+    // Default system avatar
+    saveFacultyRecord(name, designation, classes, subject, "https://via.placeholder.com/150");
+  }
+}
+
+function saveFacultyRecord(name, designation, classes, subject, photoUrl) {
+  const teachers = SchoolDB.get(SchoolDB.KEYS.TEACHERS, []);
+  
+  const newTeacher = {
+    id: "fac_" + Date.now(),
+    name: name,
+    designation: designation || "Teacher",
+    classes: classes || "All Classes",
+    subject: subject || "All Subjects",
+    photo: photoUrl
+  };
+
+  teachers.push(newTeacher);
+  SchoolDB.set(SchoolDB.KEYS.TEACHERS, teachers);
+
+  // Clear Form
+  document.getElementById("facName").value = "";
+  document.getElementById("facDesig").value = "";
+  document.getElementById("facClasses").value = "";
+  document.getElementById("facSubject").value = "";
+  if (document.getElementById("facPhoto")) {
+    document.getElementById("facPhoto").value = "";
+  }
+
+  alert("✅ Faculty Profile Saved Successfully!\nThis will now show on the School Dashboard.");
+}
+
+function addStudyVideo() {
+  const title = document.getElementById("vidTitle").value.trim();
+  const group = document.getElementById("vidClass").value;
+  let url = document.getElementById("vidUrl").value.trim();
+
+  if (!title || !url) {
+    alert("Please provide both Video Title and YouTube Link/ID.");
+    return;
+  }
+
+  // Extract clean YouTube Video ID if full URL is pasted
+  let videoId = url;
+  if (url.includes("v=")) {
+    videoId = url.split("v=")[1].split("&")[0];
+  } else if (url.includes("youtu.be/")) {
+    videoId = url.split("youtu.be/")[1].split("?")[0];
+  }
+
+  const videos = SchoolDB.get(SchoolDB.KEYS.STUDY_VIDEOS, []);
+  videos.push({
+    id: "vid_" + Date.now(),
+    title: title,
+    group: group,
+    videoId: videoId
+  });
+
+  SchoolDB.set(SchoolDB.KEYS.STUDY_VIDEOS, videos);
+
+  document.getElementById("vidTitle").value = "";
+  document.getElementById("vidUrl").value = "";
+
+  alert("✅ Video Lecture Saved & Published to School Feed!");
+}
