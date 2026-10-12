@@ -71,6 +71,7 @@ function renderTeacherDashboard() {
     '<div style="background:white; border-bottom:1px solid #e2e8f0; display:flex; overflow-x:auto; padding:8px 12px; gap:8px;">' +
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0;" onclick="showTeacherSection(\'maker\')">+ Create Quiz (Smart Parser)</button>' +
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#0284c7;" onclick="showTeacherSection(\'list\')">Manage Quizzes & Leaderboards</button>' +
+   '<a href="learning-hub.html" class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#d97706; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:#fff;"><i class="fas fa-upload"></i> Post Material</a>' +
     '</div>' +
     '<div id="teacherContentBody" style="flex:1; overflow-y:auto; padding:16px; max-width:850px; margin:0 auto; width:100%;"></div>' +
     '</div>';
