@@ -1,5 +1,5 @@
 // Central School Database Socket & Storage Engine with Cloud Sheet Sync
-const CLOUD_SYNC_URL = "APNA_DEPLOYED_WEB_APP_URL_YAHAN_PASTE_KAREIN";
+const CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxURSkEdeKaakEwF-brduB6hKXbeFQcIU9hNRcAJlXseNSQQO-1uqIKN0eeqA7PTKIAXA/exec";
 
 const SchoolDB = {
   KEYS: {
