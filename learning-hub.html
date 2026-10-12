@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning Hub & Study Center - AK Learning Point</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --accent: #2563eb;
+      --gold: #d97706;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 50px; }
+
+    /* Top Navigation Header */
+    .hub-header {
+      background: linear-gradient(135deg, #0f172a, var(--primary));
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .hub-title h2 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+    .hub-title p { font-size: 12px; color: #93c5fd; }
+    .header-actions { display: flex; gap: 10px; }
+    .btn-header {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-header:hover { background: rgba(255,255,255,0.3); }
+
+    /* Container & Tabs */
+    .main-container { max-width: 1100px; margin: 25px auto; padding: 0 15px; }
+    .hub-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; flex-wrap: wrap; }
+    .hub-tab-btn {
+      background: transparent;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: 0.2s;
+    }
+    .hub-tab-btn.active { background: var(--accent); color: #fff; }
+
+    /* Admin Manager Box */
+    .admin-box {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+      display: none;
+    }
+    .admin-box h3 { margin-bottom: 15px; font-size: 17px; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .input-group label { display: block; font-size: 12.5px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .btn-submit {
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      padding: 11px 22px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-submit:hover { background: #b45309; }
+
+    /* Resource Cards Grid */
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .res-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    .res-card:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.1); }
+    .res-card-top { padding: 15px; flex: 1; }
+    .badge-type {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .badge-video { background: #fee2e2; color: #dc2626; }
+    .badge-text { background: #fef3c7; color: #b45309; }
+    .badge-pdf { background: #e0e7ff; color: #4338ca; }
+    .badge-ppt { background: #fae8ff; color: #a21caf; }
+    .res-title { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .res-meta { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+    .res-card-actions {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 10px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-open {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 7px 15px;
+      border-radius: 5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-del { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 15px; }
+
+    /* Fullscreen Modal Viewers */
+    .viewer-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .viewer-content {
+      background: #fff;
+      width: 92%;
+      max-width: 950px;
+      height: 85vh;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .viewer-header {
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .viewer-header h3 { font-size: 16px; }
+    .btn-close-viewer { background: transparent; border: none; color: #fff; font-size: 22px; cursor: pointer; }
+    .viewer-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; }
+
+    /* SMART SLIDE TEXT & QUIZ VIEWER */
+    .slide-box {
+      background: #fff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 26px 30px;
+      flex: 1;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow-y: auto;
+    }
+    .slide-type-tag { font-size: 12px; font-weight: bold; color: var(--accent); margin-bottom: 12px; text-transform: uppercase; }
+    .slide-body-text { font-size: 16.5px; line-height: 1.75; color: #1e293b; white-space: pre-wrap; }
+    .slide-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 15px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .btn-slide-nav {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-slide-nav:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    /* Interactive Quiz Option */
+    .quiz-option {
+      background: #f1f5f9;
+      border: 1.5px solid #cbd5e1;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 8px 0;
+      cursor: pointer;
+      font-weight: 500;
+      transition: 0.2s;
+    }
+    .quiz-option:hover { background: #e2e8f0; }
+    .quiz-option.correct { background: #dcfce7; border-color: #22c55e; color: #15803d; font-weight: bold; }
+    .quiz-option.wrong { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+
+    /* Topic Index List Items */
+    .index-item-card {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 8px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: 0.2s;
+    }
+    .index-item-card:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      transform: translateX(4px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <div class="hub-header">
+    <div class="hub-title">
+      <h2><i class="fas fa-book-reader"></i> AK Learning Hub</h2>
+      <p>Videos, Smart Notes & Interactive Slide Decks</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-header" onclick="toggleAdminPanel()"><i class="fas fa-cog"></i> Post Material</button>
+      <a href="index.html" class="btn-header"><i class="fas fa-home"></i> Home</a>
+    </div>
+  </div>
+
+  <div class="main-container">
+
+    <!-- ADMIN POSTING PANEL -->
+    <div id="adminPanelBox" class="admin-box">
+      <h3><i class="fas fa-plus-circle"></i> Add Online Study Resource</h3>
+      
+      <div class="form-grid">
+        <div class="input-group">
+          <label>Resource Category:</label>
+          <select id="resCategory" class="input-field" onchange="adjustFormInputs()">
+            <option value="video">YouTube Video</option>
+            <option value="text">Smart Slide Text (Auto Index & Quiz Extractor)</option>
+            <option value="pdf">PDF Document Link</option>
+            <option value="ppt">PPT / Presentation Link</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Target Class:</label>
+          <input type="text" id="resClass" class="input-field" placeholder="e.g. Class 10, Class 8">
+        </div>
+        <div class="input-group">
+          <label>Subject:</label>
+          <input type="text" id="resSubject" class="input-field" placeholder="e.g. Science, Math, English">
+        </div>
+        <div class="input-group">
+          <label>Title / Chapter Name:</label>
+          <input type="text" id="resTitle" class="input-field" placeholder="e.g. Chemical Reactions & Equations">
+        </div>
+      </div>
+
+      <!-- Video / URL Input -->
+      <div class="input-group" id="urlInputContainer" style="margin-bottom:15px;">
+        <label id="urlInputLabel">YouTube Video URL:</label>
+        <input type="url" id="resUrl" class="input-field" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+
+      <!-- Advanced Text / Notes / Quiz Input -->
+      <div class="input-group" id="textInputContainer" style="margin-bottom:15px; display:none;">
+        <label>Enter Notes (Use '---' to split topics/slides, aur Quiz ke liye format use karein: Q1: ... A) ... B) ... Ans: B):</label>
+        <textarea id="resRawText" class="input-field" rows="10" placeholder="Topic 1: Introduction to Chemical Reactions
+Chemical reactions involve breaking and making of bonds between atoms.
+---
+Topic 2: Types of Chemical Reactions
+Combination, Decomposition, Displacement, and Double Displacement.
+---
+Q1. Which gas is released when zinc reacts with dilute sulfuric acid?
+A) Oxygen
+B) Hydrogen
+C) Carbon Dioxide
+D) Nitrogen
+Ans: B"></textarea>
+      </div>
+
+      <button class="btn-submit" onclick="saveNewResource()"><i class="fas fa-cloud-upload-alt"></i> Publish Resource</button>
+    </div>
+
+    <!-- TABS -->
+    <div class="hub-tabs">
+      <button class="hub-tab-btn active" onclick="filterDisplay('all')"><i class="fas fa-th"></i> All Materials</button>
+      <button class="hub-tab-btn" onclick="filterDisplay('video')"><i class="fab fa-youtube"></i> Video Lectures</button>
+      <button class="hub-tab-btn" onclick="filterDisplay('text')"><i class="fas fa-file-alt"></i> Smart Slide Notes</button>
+      <button class="hub-tab-btn" onclick="filterDisplay('pdf')"><i class="fas fa-file-pdf"></i> PDF Guides</button>
+      <button class="hub-tab-btn" onclick="filterDisplay('ppt')"><i class="fas fa-file-powerpoint"></i> PPT Slides</button>
+    </div>
+
+    <!-- LIST OF RESOURCES -->
+    <div id="resourceGridContainer" class="resource-grid"></div>
+
+  </div>
+
+  <!-- VIEWER MODAL -->
+  <div id="viewerModal" class="viewer-modal">
+    <div class="viewer-content">
+      <div class="viewer-header">
+        <h3 id="modalResourceTitle">Resource Viewer</h3>
+        <button class="btn-close-viewer" onclick="closeViewer()">&times;</button>
+      </div>
+      <div class="viewer-body" id="modalViewerBody"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "sch_all_study_hub_data";
+    let resources = [];
+    let currentFilter = "all";
+    let currentSlides = [];
+    let currentSlideIdx = 0;
+
+    window.onload = function() {
+      try {
+        resources = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      } catch(e) {
+        resources = [];
+      }
+      renderCards();
+    };
+
+    function toggleAdminPanel() {
+      const box = document.getElementById("adminPanelBox");
+      box.style.display = (box.style.display === "block") ? "none" : "block";
+    }
+
+    function adjustFormInputs() {
+      const cat = document.getElementById("resCategory").value;
+      const urlBox = document.getElementById("urlInputContainer");
+      const textBox = document.getElementById("textInputContainer");
+      const urlLabel = document.getElementById("urlInputLabel");
+
+      if (cat === "text") {
+        urlBox.style.display = "none";
+        textBox.style.display = "block";
+      } else {
+        urlBox.style.display = "block";
+        textBox.style.display = "none";
+        if (cat === "video") urlLabel.innerText = "YouTube Video URL (e.g. https://youtu.be/...):";
+        if (cat === "pdf") urlLabel.innerText = "Google Drive / Web PDF Link:";
+        if (cat === "ppt") urlLabel.innerText = "Google Drive / Web PPT Viewer Link:";
+      }
+    }
+
+    function saveNewResource() {
+      const type = document.getElementById("resCategory").value;
+      const cls = document.getElementById("resClass").value.trim() || "All Classes";
+      const subject = document.getElementById("resSubject").value.trim() || "General";
+      const title = document.getElementById("resTitle").value.trim();
+      const url = document.getElementById("resUrl").value.trim();
+      const rawText = document.getElementById("resRawText").value.trim();
+
+      if (!title) {
+        alert("Kripya Title ya Chapter Name zaroor bharein!");
+        return;
+      }
+      if (type !== "text" && !url) {
+        alert("Kripya valid URL ya Link enter karein!");
+        return;
+      }
+      if (type === "text" && !rawText) {
+        alert("Kripya notes ya text content enter karein!");
+        return;
+      }
+
+      const item = {
+        id: "res_" + Date.now(),
+        type: type,
+        className: cls,
+        subject: subject,
+        title: title,
+        url: url,
+        rawText: rawText,
+        createdDate: new Date().toLocaleDateString()
+      };
+
+      resources.unshift(item);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
+
+      document.getElementById("resTitle").value = "";
+      document.getElementById("resUrl").value = "";
+      document.getElementById("resRawText").value = "";
+      alert("Material successfully post ho gaya!");
+      renderCards();
+    }
+
+    function deleteResource(id) {
+      if (confirm("Kya aap is material ko delete karna chahte hain?")) {
+        resources = resources.filter(r => r.id !== id);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
+        renderCards();
+      }
+    }
+
+    function filterDisplay(cat) {
+      currentFilter = cat;
+      document.querySelectorAll(".hub-tab-btn").forEach(btn => btn.classList.remove("active"));
+      event.currentTarget.classList.add("active");
+      renderCards();
+    }
+
+    function renderCards() {
+      const container = document.getElementById("resourceGridContainer");
+      container.innerHTML = "";
+
+      const filtered = resources.filter(r => (currentFilter === "all" || r.type === currentFilter));
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:50px 20px; color:#94a3b8;">
+          <i class="fas fa-folder-open" style="font-size:42px; margin-bottom:12px;"></i>
+          <p>Is category me abhi koi study material nahi hai. Upar "Post Material" se add karein.</p>
+        </div>`;
+        return;
+      }
+
+      filtered.forEach(r => {
+        let badgeClass = "badge-video";
+        let badgeText = "Video Lecture";
+        if (r.type === "text") { badgeClass = "badge-text"; badgeText = "Smart Slides & Quiz"; }
+        if (r.type === "pdf") { badgeClass = "badge-pdf"; badgeText = "PDF Document"; }
+        if (r.type === "ppt") { badgeClass = "badge-ppt"; badgeText = "PPT Deck"; }
+
+        const card = document.createElement("div");
+        card.className = "res-card";
+        card.innerHTML = `
+          <div class="res-card-top">
+            <span class="badge-type ${badgeClass}">${badgeText}</span>
+            <div class="res-title">${r.title}</div>
+            <div class="res-meta">${r.className} &bull; ${r.subject} &bull; ${r.createdDate}</div>
+          </div>
+          <div class="res-card-actions">
+            <button class="btn-open" onclick='openResourceViewer(${JSON.stringify(r)})'><i class="fas fa-book-reader"></i> Open Material</button>
+            <button class="btn-del" onclick="deleteResource('${r.id}')"><i class="fas fa-trash-alt"></i></button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // OPEN VIEWER CONTROLLER
+    function openResourceViewer(r) {
+      const modal = document.getElementById("viewerModal");
+      const title = document.getElementById("modalResourceTitle");
+      const body = document.getElementById("modalViewerBody");
+      title.innerText = r.title + " (" + r.subject + ")";
+      body.innerHTML = "";
+
+      if (r.type === "video") {
+        let videoId = extractYouTubeID(r.url);
+        body.innerHTML = `<iframe style="width:100%; height:100%; border:none; border-radius:8px;" src="https://www.youtube.com/embed/${videoId}?autoplay=1" allowfullscreen></iframe>`;
+      } 
+      else if (r.type === "pdf" || r.type === "ppt") {
+        let viewUrl = r.url;
+        if (viewUrl.includes("drive.google.com")) {
+          viewUrl = viewUrl.replace("/view", "/preview");
+        } else {
+          viewUrl = "https://docs.google.com/viewer?url=" + encodeURIComponent(r.url) + "&embedded=true";
+        }
+        body.innerHTML = `<iframe style="width:100%; height:100%; border:none; border-radius:8px;" src="${viewUrl}"></iframe>`;
+      } 
+      else if (r.type === "text") {
+        processSmartTextToSlides(r.rawText);
+        renderCurrentSlide();
+      }
+
+      modal.style.display = "flex";
+    }
+
+    function closeViewer() {
+      document.getElementById("viewerModal").style.display = "none";
+      document.getElementById("modalViewerBody").innerHTML = "";
+    }
+
+    function extractYouTubeID(url) {
+      let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      let match = url.match(regExp);
+      return (match && match[2].length == 11) ? match[2] : url;
+    }
+
+    // DIRECT JUMP TO SPECIFIC SLIDE
+    function goToSlide(targetIdx) {
+      if (targetIdx >= 0 && targetIdx < currentSlides.length) {
+        currentSlideIdx = targetIdx;
+        renderCurrentSlide();
+      }
+    }
+
+    // SMART TEXT, TOPIC INDEXER & QUIZ SPLITTER ENGINE
+    function processSmartTextToSlides(raw) {
+      currentSlides = [];
+      currentSlideIdx = 0;
+
+      let rawChunks = raw.split(/\n\s*---\s*\n/);
+      let parsedSlides = [];
+      let topicsIndex = [];
+
+      rawChunks.forEach((chunk, index) => {
+        let text = chunk.trim();
+        if (!text) return;
+
+        // Check if this chunk is an MCQ Quiz Slide
+        let isQuiz = /(Q\d*[\.:]|Question[\.:])/i.test(text) && /[A-D]\)/i.test(text);
+
+        if (isQuiz) {
+          let lines = text.split("\n").map(l => l.trim()).filter(l => l);
+          let qText = lines[0];
+          let options = [];
+          let correctAns = "";
+
+          lines.slice(1).forEach(line => {
+            if (/^Ans(wer)?[\s:]+/i.test(line)) {
+              correctAns = line.replace(/^Ans(wer)?[\s:]+/i, "").trim().toUpperCase();
+            } else if (/^[A-D]\)/i.test(line)) {
+              options.push(line);
+            }
+          });
+
+          parsedSlides.push({
+            type: "quiz",
+            title: qText.substring(0, 45) + (qText.length > 45 ? "..." : ""),
+            question: qText,
+            options: options,
+            correctAns: correctAns
+          });
+        } else {
+          let lines = text.split("\n").map(l => l.trim()).filter(l => l);
+          let detectedTitle = lines[0] ? lines[0].replace(/^[#*\-0-9\.\s]+/, "") : ("Topic " + (index + 1));
+          if (detectedTitle.length > 50) detectedTitle = detectedTitle.substring(0, 50) + "...";
+
+          parsedSlides.push({
+            type: "content",
+            title: detectedTitle,
+            content: text
+          });
+        }
+      });
+
+      // Slide 1 par Table of Contents generate karna (agar 1 se zyada slides hain)
+      if (parsedSlides.length > 1) {
+        parsedSlides.forEach((s, idx) => {
+          let label = s.type === "quiz" ? "📝 Practice Quiz: " + s.title : "📖 " + s.title;
+          topicsIndex.push({
+            label: label,
+            targetIndex: idx + 1 // +1 kyunki 0th slide Table of Contents ban rahi hai
+          });
+        });
+
+        currentSlides.push({
+          type: "toc",
+          title: "Table of Contents",
+          topics: topicsIndex
+        });
+      }
+
+      currentSlides = currentSlides.concat(parsedSlides);
+    }
+
+    // RENDER CURRENT SLIDE (Interactive Index & Return Button ke saath)
+    function renderCurrentSlide() {
+      const body = document.getElementById("modalViewerBody");
+      if (currentSlides.length === 0) return;
+
+      const slide = currentSlides[currentSlideIdx];
+      let innerHTML = "";
+
+      // CASE A: Slide 1 - Table of Contents (Index Page)
+      if (slide.type === "toc") {
+        let tocListHtml = slide.topics.map(t => {
+          return `
+            <div class="index-item-card" onclick="goToSlide(${t.targetIndex})">
+              <span style="font-weight:600; color:#1e293b; font-size:14.5px;">${t.label}</span>
+              <span style="color:#2563eb; font-weight:bold; font-size:12.5px;">Slide ${t.targetIndex + 1} <i class="fas fa-arrow-right" style="margin-left:4px;"></i></span>
+            </div>
+          `;
+        }).join("");
+
+        innerHTML = `
+          <div class="slide-box">
+            <div class="slide-type-tag"><i class="fas fa-list-ol"></i> Table of Contents (Slide 1 of ${currentSlides.length})</div>
+            <h3 style="margin-bottom:8px; color:#1e3a8a;">Chapter Topics & Outline</h3>
+            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Niche kisi bhi topic par click karke direct us slide par jump karein:</p>
+            <div style="max-height:360px; overflow-y:auto; padding-right:5px;">${tocListHtml}</div>
+          </div>
+        `;
+      } 
+      // CASE B: Normal Notes / Content Slide
+      else if (slide.type === "content") {
+        innerHTML = `
+          <div class="slide-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div class="slide-type-tag"><i class="fas fa-book-open"></i> Slide Notes (${currentSlideIdx + 1} of ${currentSlides.length})</div>
+              ${currentSlides[0].type === "toc" ? `<button onclick="goToSlide(0)" style="background:#e0e7ff; color:#3730a3; border:none; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;"><i class="fas fa-th-list"></i> Contents Index</button>` : ""}
+            </div>
+            <div class="slide-body-text">${slide.content}</div>
+          </div>
+        `;
+      } 
+      // CASE C: Interactive Practice Quiz Slide
+      else if (slide.type === "quiz") {
+        let optsHtml = slide.options.map(opt => {
+          let optLetter = opt.charAt(0).toUpperCase();
+          return `<div class="quiz-option" onclick="verifySlideQuiz(this, '${optLetter}', '${slide.correctAns}')">${opt}</div>`;
+        }).join("");
+
+        innerHTML = `
+          <div class="slide-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div class="slide-type-tag" style="color:#d97706;"><i class="fas fa-question-circle"></i> Quick Practice Slide (${currentSlideIdx + 1} of ${currentSlides.length})</div>
+              ${currentSlides[0].type === "toc" ? `<button onclick="goToSlide(0)" style="background:#e0e7ff; color:#3730a3; border:none; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;"><i class="fas fa-th-list"></i> Contents Index</button>` : ""}
+            </div>
+            <h3 style="margin-bottom:15px; color:#1e293b;">${slide.question}</h3>
+            <div>${optsHtml}</div>
+            <div id="quizResultMsg" style="margin-top:12px; font-weight:600;"></div>
+          </div>
+        `;
+      }
+
+      // Bottom Navigation Bar
+      innerHTML += `
+        <div class="slide-controls">
+          <button class="btn-slide-nav" onclick="prevSlide()" ${currentSlideIdx === 0 ? "disabled" : ""}><i class="fas fa-arrow-left"></i> Previous</button>
+          <span style="font-weight:600; color:#64748b; font-size:13px;">Slide ${currentSlideIdx + 1} of ${currentSlides.length}</span>
+          <button class="btn-slide-nav" onclick="nextSlide()" ${currentSlideIdx === currentSlides.length - 1 ? "disabled" : ""}>Next <i class="fas fa-arrow-right"></i></button>
+        </div>
+      `;
+
+      body.innerHTML = innerHTML;
+    }
+
+    function prevSlide() {
+      if (currentSlideIdx > 0) {
+        currentSlideIdx--;
+        renderCurrentSlide();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlideIdx < currentSlides.length - 1) {
+        currentSlideIdx++;
+        renderCurrentSlide();
+      }
+    }
+
+    function verifySlideQuiz(el, selected, correct) {
+      const msg = document.getElementById("quizResultMsg");
+      if (selected === correct) {
+        el.className = "quiz-option correct";
+        msg.innerHTML = "<span style='color:#16a34a;'><i class='fas fa-check-circle'></i> Bilkul Sahi Jawab! Excellent.</span>";
+      } else {
+        el.className = "quiz-option wrong";
+        msg.innerHTML = "<span style='color:#dc2626;'><i class='fas fa-times-circle'></i> Galat Jawab! Sahi Answer: Option " + correct + "</span>";
+      }
+    }
+  </script>
+</body>
+</html>
