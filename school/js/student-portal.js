@@ -85,6 +85,25 @@ function previewStudentPhoto(input) {
   }
 }
 
+// Photo Preview & Base64 Encoder (Camera + File Picker)
+function previewStudentPhoto(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      if (activeLoggedStudent) {
+        activeLoggedStudent.photo = e.target.result;
+      }
+      const statusEl = document.getElementById("photoUploadStatus");
+      if (statusEl) {
+        statusEl.style.display = "inline-flex";
+        statusEl.innerHTML = '<i class="fas fa-check-circle" style="margin-right:4px;"></i> Photo Attached!';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 function saveStudentSelfDetails(e) {
   e.preventDefault();
   if (!activeLoggedStudent) return;
@@ -130,7 +149,26 @@ function renderStudentIdCard() {
     return;
   }
 
-  const studentPhoto = activeLoggedStudent.photo || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+ <div class="form-group mt-3">
+  <label style="display:block; margin-bottom:6px; font-weight:600;">Upload Photograph:</label>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <!-- Gallery / File Manager Se -->
+    <label style="background:#e2e8f0; color:#1e293b; padding:8px 14px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+      <i class="fas fa-folder-open"></i> Choose File
+      <input type="file" id="stuPhotoInput" accept="image/*" onchange="previewStudentPhoto(this)" style="display:none;">
+    </label>
+    
+    <!-- Phone / Device Camera Se Direct Snap -->
+    <label style="background:#0284c7; color:#fff; padding:8px 14px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+      <i class="fas fa-camera"></i> Take Photo (Camera)
+      <input type="file" id="stuCameraInput" accept="image/*" capture="user" onchange="previewStudentPhoto(this)" style="display:none;">
+    </label>
+    
+    <span id="photoUploadStatus" style="font-size:12px; color:#16a34a; font-weight:600; display:none;">
+      <i class="fas fa-check-circle"></i> Photo Attached!
+    </span>
+  </div>
+</div>
 
   container.innerHTML = `
     <div class="id-card-wrapper" style="display:flex; flex-direction:column; align-items:center; padding:15px 0;">
