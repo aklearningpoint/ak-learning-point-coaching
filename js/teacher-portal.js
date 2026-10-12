@@ -177,6 +177,22 @@ function showTeacherSection(sec) {
 function renderTeacherQuizList() {
   var container = document.getElementById("teacherContentBody");
 
+  // --- ANTI-REAPPEAR AUTO FILTER ENGINE ---
+  var blacklist = [];
+  try {
+    blacklist = JSON.parse(localStorage.getItem("ak_deleted_quizzes_blacklist")) || [];
+  } catch(e) {
+    blacklist = [];
+  }
+
+  if (Array.isArray(activeTeacherQuizzes) && blacklist.length > 0) {
+    activeTeacherQuizzes = activeTeacherQuizzes.filter(function(q) {
+      var key = String(q.id || q.title || "");
+      return blacklist.indexOf(key) === -1;
+    });
+  }
+  // ----------------------------------------
+
   if (!activeTeacherQuizzes || activeTeacherQuizzes.length === 0) {
     container.innerHTML = '<div class="modal-card" style="text-align:center; padding:30px;">' +
       '<h3>No Quizzes Available</h3>' +
@@ -193,8 +209,8 @@ function renderTeacherQuizList() {
     var isDraft = (q.status === 'draft');
     var borderColor = isDraft ? '#94a3b8' : '#16a34a';
     var qCount = q.questions ? q.questions.length : 0;
-var attCount = getQuizAttemptCount(q);
-    
+    var attCount = getQuizAttemptCount(q);
+
     html += '<div class="modal-card" style="max-width:100%; margin-bottom:12px; border-left: 5px solid ' + borderColor + ';">' +
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">' +
       '<div>' +
@@ -223,7 +239,6 @@ var attCount = getQuizAttemptCount(q);
 
   container.innerHTML = html;
 }
-
 // 2. Teacher Testing / Preview Mode
 function startTeacherTestPreview(idx) {
   var quiz = activeTeacherQuizzes[idx];
@@ -379,14 +394,39 @@ function togglePublishStatus(idx) {
   renderTeacherQuizList();
 }
 
+// PERMANENT QUIZ WIPE ENGINE (With Anti-Reappear Blacklist)
 function deleteQuizPermanently(idx) {
   var quiz = activeTeacherQuizzes[idx];
+  if (!quiz) return;
+
   if (confirm("Kya aap \"" + quiz.title + "\" ko permanently delete karna chahte hain?")) {
-    activeTeacherQuizzes.splice(idx, 1);
-    setTeacherData("ak_teacher_quizzes", activeTeacherQuizzes);
-    if (typeof API !== "undefined" && API.post) {
-      API.post("deleteQuiz", { id: quiz.id });
+    var quizId = String(quiz.id || quiz.quizId || "");
+
+    // 1. Blacklist me ID add karo (Taaki reload par default se bhi wapas na aaye)
+    var deletedBlacklist = [];
+    try {
+      deletedBlacklist = JSON.parse(localStorage.getItem("ak_deleted_quizzes_blacklist")) || [];
+    } catch(e) {
+      deletedBlacklist = [];
     }
+    if (quizId && deletedBlacklist.indexOf(quizId) === -1) {
+      deletedBlacklist.push(quizId);
+      localStorage.setItem("ak_deleted_quizzes_blacklist", JSON.stringify(deletedBlacklist));
+    }
+
+    // 2. Active List se remove karo
+    activeTeacherQuizzes.splice(idx, 1);
+    
+    // 3. Save to Teacher Data
+    setTeacherData("ak_teacher_quizzes", activeTeacherQuizzes);
+    localStorage.setItem("ak_teacher_quizzes", JSON.stringify(activeTeacherQuizzes));
+
+    // 4. Remote API Cleanup
+    if (typeof API !== "undefined" && API.post) {
+      API.post("deleteQuiz", { id: quizId });
+    }
+
+    // 5. Re-render UI
     renderTeacherQuizList();
   }
 }
@@ -397,16 +437,16 @@ function openQuizLeaderboard(idx) {
 
   var dynamicView = document.getElementById("dynamicView");
   dynamicView.innerHTML = '<div class="modal-overlay" style="display:flex;">' +
-    '<div class="modal-card" style="max-width:720px;">' +
-    '<div class="modal-header">' +
+    '<div class="modal-card" style="max-width:760px; width:92%;">' +
+    '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">' +
     '<div>' +
-    '<h3 style="color:var(--primary-navy); margin:0;">Leaderboard: ' + quiz.title + '</h3>' +
-    '<small style="color:#64748b;">' + quiz.className + ' • ' + quiz.board + '</small>' +
+    '<h3 style="color:var(--primary-navy, #0f172a); margin:0; font-size:1.15rem;">Leaderboard: ' + quiz.title + '</h3>' +
+    '<small style="color:#64748b; font-weight:600;">' + (quiz.className || '') + ' • ' + (quiz.board || '') + ' • ' + (quiz.subject || '') + '</small>' +
     '</div>' +
-    '<button class="close-btn" onclick="renderTeacherDashboard()"><i class="fas fa-times"></i></button>' +
+    '<button class="close-btn" style="background:none; border:none; font-size:1.2rem; cursor:pointer;" onclick="renderTeacherDashboard()"><i class="fas fa-times"></i></button>' +
     '</div>' +
-    '<div id="leaderboardListContainer" style="margin-top:10px; max-height:60vh; overflow-y:auto;">' +
-    '<p style="text-align:center;">Loading participant results...</p>' +
+    '<div id="leaderboardListContainer" style="margin-top:12px; max-height:60vh; overflow-y:auto;">' +
+    '<p style="text-align:center; color:#64748b; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading participant results from Sheet...</p>' +
     '</div>' +
     '<div style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:10px; display:flex; justify-content:space-between;">' +
     '<button class="nav-pill-btn nav-back-btn" onclick="renderTeacherDashboard()"><i class="fas fa-arrow-left"></i> Back</button>' +
@@ -414,6 +454,104 @@ function openQuizLeaderboard(idx) {
     '</div>' +
     '</div></div>';
 
+  // --- RESULTS FETCH & RENDER ENGINE ---
+  fetchAndRenderLeaderboard(quiz);
+}
+
+// Results Puller (Google Sheet / Local Storage / API)
+async function fetchAndRenderLeaderboard(quiz) {
+  var container = document.getElementById("leaderboardListContainer");
+  if (!container) return;
+
+  var quizId = String(quiz.id || quiz.title || "");
+  var attempts = [];
+
+  // 1. Pehle Cloud Sheet API se try karo
+  if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+    try {
+      var res = await fetch(CLOUD_SYNC_URL + "?tabName=QuizResults");
+      var json = await res.json();
+      if (json && json.success && Array.isArray(json.data)) {
+        attempts = json.data.filter(function(r) {
+          return String(r.quizId || r.title || "") === quizId;
+        });
+      }
+    } catch(e) {
+      console.warn("Could not pull leaderboard from sheet directly:", e);
+    }
+  }
+
+  // 2. Fallback: LocalStorage / API se attempts check karo
+  if (attempts.length === 0) {
+    try {
+      var allLocalResults = JSON.parse(localStorage.getItem("ak_quiz_results")) || [];
+      attempts = allLocalResults.filter(function(r) {
+        return String(r.quizId || r.quizTitle || r.title || "") === quizId;
+      });
+    } catch(e) {
+      attempts = [];
+    }
+  }
+
+  // 3. Agar koi attempt nahi mila
+  if (!attempts || attempts.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:35px 20px; color:#64748b;">' +
+      '<i class="fas fa-user-clock" style="font-size:36px; color:#94a3b8; margin-bottom:10px;"></i>' +
+      '<p style="margin:0; font-size:14px; font-weight:600;">Abhi tak kisi student ne yeh quiz attempt nahi kiya hai.</p>' +
+      '<small style="color:#94a3b8;">Students ke submit karte hi results yahan live show honge.</small>' +
+      '</div>';
+    return;
+  }
+
+  // 4. Duplicate cleanup & Score Sorting (Descending)
+  // Ek student ka duplicate record filter karke highest score rakhna
+  var uniqueMap = {};
+  attempts.forEach(function(att) {
+    var key = String(att.studentName || att.name || "Unknown") + "_" + String(att.rollNo || "");
+    if (!uniqueMap[key] || Number(att.score || 0) > Number(uniqueMap[key].score || 0)) {
+      uniqueMap[key] = att;
+    }
+  });
+
+  var sortedList = Object.values(uniqueMap).sort(function(a, b) {
+    return Number(b.score || b.marks || 0) - Number(a.score || a.marks || 0);
+  });
+
+  // 5. Render Leaderboard Table
+  var tableHtml = '<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">' +
+    '<thead>' +
+    '<tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:#475569;">' +
+    '<th style="padding:8px 10px;">Rank</th>' +
+    '<th style="padding:8px 10px;">Student Name</th>' +
+    '<th style="padding:8px 10px;">Class / Roll</th>' +
+    '<th style="padding:8px 10px; text-align:center;">Score</th>' +
+    '<th style="padding:8px 10px; text-align:center;">Percentage</th>' +
+    '</tr>' +
+    '</thead>' +
+    '<tbody>';
+
+  sortedList.forEach(function(item, rank) {
+    var score = item.score || item.marks || 0;
+    var total = item.totalQuestions || item.total || (quiz.questions ? quiz.questions.length : 10);
+    var pct = Math.round((Number(score) / Number(total)) * 100) || 0;
+
+    var rankBadge = '<span style="font-weight:700; color:#475569;">#' + (rank + 1) + '</span>';
+    if (rank === 0) rankBadge = '<span style="color:#eab308; font-weight:800; font-size:15px;"><i class="fas fa-crown"></i> 1st</span>';
+    if (rank === 1) rankBadge = '<span style="color:#94a3b8; font-weight:800;"><i class="fas fa-medal"></i> 2nd</span>';
+    if (rank === 2) rankBadge = '<span style="color:#b45309; font-weight:800;"><i class="fas fa-medal"></i> 3rd</span>';
+
+    tableHtml += '<tr style="border-bottom:1px solid #f1f5f9;">' +
+      '<td style="padding:9px 10px;">' + rankBadge + '</td>' +
+      '<td style="padding:9px 10px; font-weight:600; color:#1e293b;">' + (item.studentName || item.name || "Student") + '</td>' +
+      '<td style="padding:9px 10px; color:#64748b;">Class ' + (item.className || quiz.className || "—") + ' | Roll: ' + (item.rollNo || "—") + '</td>' +
+      '<td style="padding:9px 10px; text-align:center; font-weight:700; color:#0284c7;">' + score + ' / ' + total + '</td>' +
+      '<td style="padding:9px 10px; text-align:center;"><span style="background:' + (pct >= 60 ? '#dcfce7; color:#16a34a;' : '#fee2e2; color:#dc2626;') + ' padding:3px 8px; border-radius:12px; font-weight:700; font-size:11px;">' + pct + '%</span></td>' +
+      '</tr>';
+  });
+
+  tableHtml += '</tbody></table>';
+  container.innerHTML = tableHtml;
+}
 // Direct Safe Storage Reader (LocalStorage + Fallback)
   var allStored = [];
   try {
