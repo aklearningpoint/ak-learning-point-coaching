@@ -109,7 +109,7 @@ function saveStudentSelfDetails(e) {
   }
 }
 
-// Tab 2: Official 7x10cm Printable Identity Card
+// Tab 2: Official 6cm x 9cm Printable Identity Card
 function renderStudentIdCard() {
   const container = document.getElementById("idCardContainer");
   if (!container || !activeLoggedStudent) return;
@@ -120,7 +120,7 @@ function renderStudentIdCard() {
 
   if (!hasReg || !hasFather) {
     container.innerHTML = `
-      <div style="text-align:center; padding:35px 20px; background:#fff; border-radius:10px; border:2px dashed #cbd5e1; max-width:440px; margin:20px auto;">
+      <div style="text-align:center; padding:35px 20px; background:#fff; border-radius:10px; border:2px dashed #cbd5e1; max-width:400px; margin:20px auto;">
         <i class="fas fa-id-card-clip" style="font-size:42px; color:#d97706; margin-bottom:12px;"></i>
         <h3 style="margin:6px 0; color:#1e293b;">Profile Details Incomplete</h3>
         <p style="color:#64748b; font-size:13px; line-height:1.5;">Aapka ID Card tabhi generate hoga jab aap Profile Details tab me apna <b>Register Number</b> aur <b>Father's Name</b> fill karke save karenge.</p>
@@ -133,151 +133,173 @@ function renderStudentIdCard() {
   const studentPhoto = activeLoggedStudent.photo || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 
   container.innerHTML = `
-    <div class="id-card-wrapper">
-      <div class="official-id-card-7x10" id="idCardPrintArea">
-        <div class="id-header-box">
-          <h4>ASSENT PUBLIC SCHOOL</h4>
-          <small>STUDENT IDENTITY CARD (7cm x 10cm)</small>
-        </div>
-        <div class="id-body-box">
-          <div class="id-photo-slot">
-            <img src="${studentPhoto}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" alt="Student">
+    <div class="id-card-wrapper" style="display:flex; flex-direction:column; align-items:center; padding:15px 0;">
+      <div id="idCardPrintArea" style="width:240px; min-height:360px; background:#ffffff; border:2px solid #0f172a; border-radius:10px; overflow:hidden; box-shadow:0 6px 16px rgba(0,0,0,0.12); font-family:'Segoe UI', Arial, sans-serif; display:flex; flex-direction:column; justify-content:space-between;">
+        
+        <!-- Header (Logo on Top-Left + Name + Address) -->
+        <div style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:#ffffff; padding:7px 8px; text-align:center; position:relative;">
+          <img src="../logo.png" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/2997/2997322.png'" style="position:absolute; left:7px; top:6px; width:28px; height:28px; object-fit:contain; border-radius:50%; background:#fff; padding:1px;" alt="Logo">
+          <div style="margin-left:26px;">
+            <div style="font-size:11.5px; font-weight:800; letter-spacing:0.3px; line-height:1.2;">ASSENT PUBLIC SCHOOL</div>
+            <div style="font-size:7.5px; color:#cbd5e1; margin-top:1px;">Singhiya Khurd, Samastipur</div>
+            <div style="font-size:8px; color:#93c5fd; font-weight:bold; letter-spacing:0.4px;">STUDENT IDENTITY CARD (6x9 cm)</div>
           </div>
-          <h4 style="margin:0; font-size:15px; color:#0f172a;">${activeLoggedStudent.name}</h4>
-          <div style="font-size:11px; color:#2563eb; font-weight:600; margin-top:2px;">Class: ${activeLoggedStudent.className} | Roll No: ${activeLoggedStudent.rollNo}</div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:6px 10px; text-align:center; flex:1;">
+          <div style="width:68px; height:76px; margin:0 auto 4px; border:1.5px solid #0f172a; border-radius:5px; overflow:hidden; background:#f8fafc;">
+            <img src="${studentPhoto}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" style="width:100%; height:100%; object-fit:cover;" alt="Student">
+          </div>
+          <div style="font-size:13px; font-weight:bold; color:#0f172a; line-height:1.2;">${activeLoggedStudent.name}</div>
+          <div style="font-size:10px; color:#2563eb; font-weight:700; margin-bottom:5px;">Class: ${activeLoggedStudent.className} | Roll: ${activeLoggedStudent.rollNo}</div>
           
-          <div class="id-details-list">
+          <div style="text-align:left; font-size:9.5px; line-height:1.5; background:#f8fafc; padding:6px 8px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">
             <div><b>Reg No:</b> ${activeLoggedStudent.regNo}</div>
             <div><b>Father:</b> ${activeLoggedStudent.father}</div>
-            <div><b>Contact:</b> ${activeLoggedStudent.mobile1 || 'N/A'}</div>
+            <div><b>DOB:</b> ${activeLoggedStudent.dob || '—'}</div>
+            <div><b>Mobile 1:</b> ${activeLoggedStudent.mobile1 || 'N/A'}</div>
+            <div><b>Mobile 2:</b> ${activeLoggedStudent.mobile2 || '—'}</div>
             <div><b>Transport:</b> ${activeLoggedStudent.transport || 'School Transport'}</div>
             <div><b>Session:</b> 2026-2027</div>
           </div>
+        </div>
 
-          <div class="id-signatures">
-            <div><b>G. K. Thakur</b><br>Director</div>
-            <div><b>A. K. Singh</b><br>Principal</div>
+        <!-- Signatures & Authority Helpline -->
+        <div style="background:#f1f5f9; border-top:1px dashed #cbd5e1; padding:5px 8px; font-size:8px; color:#0f172a;">
+          <div style="display:flex; justify-content:space-between; text-align:center;">
+            <div><b>G. K. Thakur</b><br><span style="color:#475569;">Director</span><br><a href="tel:7739400300" style="color:#0284c7; text-decoration:none; font-weight:bold;">7739400300</a></div>
+            <div><b>A. K. Singh</b><br><span style="color:#475569;">Principal</span><br><a href="tel:9570638608" style="color:#0284c7; text-decoration:none; font-weight:bold;">9570638608</a></div>
           </div>
         </div>
+
       </div>
-      <button class="btn-download-img" onclick="downloadStudentIdCardImage()"><i class="fas fa-download"></i> Download ID Card (Image)</button>
+      <button class="btn-download-img" style="margin-top:12px; background:#16a34a; color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" onclick="downloadStudentIdCardImage()">
+        <i class="fas fa-download"></i> Download ID Card (Image)
+      </button>
     </div>
   `;
 }
 
-// 7cm x 10cm Exact Aspect Ratio Image Exporter (Canvas)
+// 6cm x 9cm Exact Ratio (480px x 720px) Canvas Image Exporter
 function downloadStudentIdCardImage() {
   const s = activeLoggedStudent;
   if (!s) return;
 
   const canvas = document.createElement("canvas");
-  // 7cm x 10cm @ 150 DPI ratio (420px x 600px)
-  canvas.width = 420;
-  canvas.height = 600;
+  // 6cm x 9cm standard proportions
+  canvas.width = 480;
+  canvas.height = 720;
   const ctx = canvas.getContext("2d");
 
   // Background
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, 420, 600);
+  ctx.fillRect(0, 0, 480, 720);
 
-  // Outer Border & Card Structure
+  // Outer Border
   ctx.lineWidth = 4;
   ctx.strokeStyle = "#0f172a";
-  ctx.strokeRect(10, 10, 400, 580);
+  ctx.strokeRect(8, 8, 464, 704);
 
   // Header Banner
   ctx.fillStyle = "#0f172a";
-  ctx.fillRect(12, 12, 396, 76);
+  ctx.fillRect(10, 10, 460, 95);
 
+  // Header Texts
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 20px Arial";
+  ctx.font = "bold 21px Arial";
   ctx.textAlign = "center";
-  ctx.fillText("ASSENT PUBLIC SCHOOL", 210, 46);
+  ctx.fillText("ASSENT PUBLIC SCHOOL", 260, 42);
 
-  ctx.fillStyle = "#93c5fd";
+  ctx.fillStyle = "#cbd5e1";
   ctx.font = "12px Arial";
-  ctx.fillText("STUDENT IDENTITY CARD", 210, 68);
+  ctx.fillText("Singhiya Khurd, Samastipur", 260, 62);
 
-  // Name & Class
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 13px Arial";
+  ctx.fillText("STUDENT IDENTITY CARD", 260, 84);
+
+  // Student Name & Class
   ctx.fillStyle = "#0f172a";
-  ctx.font = "bold 20px Arial";
-  ctx.fillText(s.name, 210, 220);
+  ctx.font = "bold 21px Arial";
+  ctx.fillText(s.name, 240, 275);
 
   ctx.fillStyle = "#2563eb";
   ctx.font = "bold 14px Arial";
-  ctx.fillText("Class: " + s.className + "  |  Roll No: " + s.rollNo, 210, 245);
+  ctx.fillText("Class: " + s.className + "  |  Roll No: " + s.rollNo, 240, 298);
 
-  // Info Grid Box
+  // Info Box
   ctx.fillStyle = "#f8fafc";
-  ctx.fillRect(35, 270, 350, 190);
+  ctx.fillRect(30, 315, 420, 260);
   ctx.strokeStyle = "#cbd5e1";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(35, 270, 350, 190);
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(30, 315, 420, 260);
 
+  // Details List
   ctx.textAlign = "left";
-  ctx.fillStyle = "#334155";
+  ctx.fillStyle = "#1e293b";
   ctx.font = "14px Arial";
-  ctx.fillText("Reg No:      " + (s.regNo || "—"), 55, 305);
-  ctx.fillText("Father:        " + (s.father || "—"), 55, 340);
-  ctx.fillText("Contact:      " + (s.mobile1 || "—"), 55, 375);
-  ctx.fillText("Transport:  " + (s.transport || "School Transport"), 55, 410);
-  ctx.fillText("Session:      2026-2027", 55, 445);
+  ctx.fillText("Reg No:       " + (s.regNo || "—"), 45, 345);
+  ctx.fillText("Father:         " + (s.father || "—"), 45, 380);
+  ctx.fillText("DOB:            " + (s.dob || "—"), 45, 415);
+  ctx.fillText("Mobile 1:      " + (s.mobile1 || "—"), 45, 450);
+  ctx.fillText("Mobile 2:      " + (s.mobile2 || "—"), 45, 485);
+  ctx.fillText("Transport:   " + (s.transport || "School Transport"), 45, 520);
+  ctx.fillText("Session:       2026-2027", 45, 555);
 
-  // Signatures
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "bold 12px Arial";
-  ctx.fillText("G. K. Thakur", 95, 520);
-  ctx.font = "10px Arial";
-  ctx.fillText("Director", 95, 535);
-
-  ctx.font = "bold 12px Arial";
-  ctx.fillText("A. K. Singh", 325, 520);
-  ctx.font = "10px Arial";
-  ctx.fillText("Principal", 325, 535);
-
-  // Bottom Line
-  ctx.strokeStyle = "#0f172a";
-  ctx.lineWidth = 4;
+  // Bottom Line & Authority Section
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(12, 570);
-  ctx.lineTo(408, 570);
+  ctx.moveTo(10, 600);
+  ctx.lineTo(470, 600);
   ctx.stroke();
 
-  // Photo Drawing (If exists as dataURL or default fallback)
-  const drawPhotoAndSave = (imgElement) => {
-    if (imgElement) {
-      try {
-        ctx.drawImage(imgElement, 155, 105, 110, 110);
-      } catch (e) {
-        // Fallback placeholder box
-        ctx.fillStyle = "#e2e8f0";
-        ctx.fillRect(155, 105, 110, 110);
-      }
-    }
+  // Authorities & Contact
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 13px Arial";
+  ctx.fillText("G. K. Thakur", 110, 630);
+  ctx.font = "11px Arial";
+  ctx.fillStyle = "#475569";
+  ctx.fillText("Director", 110, 647);
+  ctx.fillStyle = "#0284c7";
+  ctx.font = "bold 12px Arial";
+  ctx.fillText("7739400300", 110, 665);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 13px Arial";
+  ctx.fillText("A. K. Singh", 370, 630);
+  ctx.font = "11px Arial";
+  ctx.fillStyle = "#475569";
+  ctx.fillText("Principal", 370, 647);
+  ctx.fillStyle = "#0284c7";
+  ctx.font = "bold 12px Arial";
+  ctx.fillText("9570638608", 370, 665);
+
+  // Composite Photo & Logo Drawing
+  const triggerSave = () => {
     const link = document.createElement("a");
-    link.download = (s.name.replace(/\s+/g, "_") || "Student") + "_ID_Card.png";
+    link.download = (s.name.replace(/\s+/g, "_") || "Student") + "_ID_Card_6x9.png";
     link.href = canvas.toDataURL("image/png");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => drawPhotoAndSave(img);
-  img.onerror = () => drawPhotoAndSave(null);
-  img.src = s.photo || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
-}
-
-// Tab 3: Result Gatekeeper
-function renderStudentResults() {
-  const publishedList = SchoolDB.get(SchoolDB.KEYS.RESULTS_PUBLISHED, {});
-  const marksDB = SchoolDB.get(SchoolDB.KEYS.MARKS, {});
-  // Checks if term is published by teacher
-}
-
-// Tab 5: Fee Display
-function renderStudentFees() {
-  // Shows updated ledger
+  const photoImg = new Image();
+  photoImg.crossOrigin = "anonymous";
+  photoImg.onload = () => {
+    ctx.drawImage(photoImg, 185, 120, 110, 125);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#0f172a";
+    ctx.strokeRect(185, 120, 110, 125);
+    triggerSave();
+  };
+  photoImg.onerror = () => {
+    ctx.fillStyle = "#e2e8f0";
+    ctx.fillRect(185, 120, 110, 125);
+    triggerSave();
+  };
+  photoImg.src = s.photo || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 }
