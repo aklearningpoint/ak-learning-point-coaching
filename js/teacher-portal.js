@@ -504,10 +504,9 @@ async function fetchAndRenderLeaderboard(quiz) {
   }
 
   // 4. Duplicate cleanup & Score Sorting (Descending)
-  // Ek student ka duplicate record filter karke highest score rakhna
   var uniqueMap = {};
   attempts.forEach(function(att) {
-    var key = String(att.studentName || att.name || "Unknown") + "_" + String(att.rollNo || "");
+    var key = String(att.studentName || att.name || "Unknown") + "_" + String(att.rollNo || att.mobile || "");
     if (!uniqueMap[key] || Number(att.score || 0) > Number(uniqueMap[key].score || 0)) {
       uniqueMap[key] = att;
     }
@@ -532,7 +531,7 @@ async function fetchAndRenderLeaderboard(quiz) {
 
   sortedList.forEach(function(item, rank) {
     var score = item.score || item.marks || 0;
-    var total = item.totalQuestions || item.total || (quiz.questions ? quiz.questions.length : 10);
+    var total = item.totalQuestions || item.total || item.totalMarks || (quiz.questions ? quiz.questions.length : 10);
     var pct = Math.round((Number(score) / Number(total)) * 100) || 0;
 
     var rankBadge = '<span style="font-weight:700; color:#475569;">#' + (rank + 1) + '</span>';
@@ -543,7 +542,7 @@ async function fetchAndRenderLeaderboard(quiz) {
     tableHtml += '<tr style="border-bottom:1px solid #f1f5f9;">' +
       '<td style="padding:9px 10px;">' + rankBadge + '</td>' +
       '<td style="padding:9px 10px; font-weight:600; color:#1e293b;">' + (item.studentName || item.name || "Student") + '</td>' +
-      '<td style="padding:9px 10px; color:#64748b;">Class ' + (item.className || quiz.className || "—") + ' | Roll: ' + (item.rollNo || "—") + '</td>' +
+      '<td style="padding:9px 10px; color:#64748b;">Class ' + (item.className || quiz.className || "—") + ' | ' + (item.mobile || item.rollNo || "—") + '</td>' +
       '<td style="padding:9px 10px; text-align:center; font-weight:700; color:#0284c7;">' + score + ' / ' + total + '</td>' +
       '<td style="padding:9px 10px; text-align:center;"><span style="background:' + (pct >= 60 ? '#dcfce7; color:#16a34a;' : '#fee2e2; color:#dc2626;') + ' padding:3px 8px; border-radius:12px; font-weight:700; font-size:11px;">' + pct + '%</span></td>' +
       '</tr>';
