@@ -177,7 +177,7 @@ function showTeacherSection(sec) {
 function renderTeacherQuizList() {
   var container = document.getElementById("teacherContentBody");
 
-  // --- ANTI-REAPPEAR AUTO FILTER ENGINE ---
+  // 1. Anti-Reappear Blacklist Filter
   var blacklist = [];
   try {
     blacklist = JSON.parse(localStorage.getItem("ak_deleted_quizzes_blacklist")) || [];
@@ -191,7 +191,6 @@ function renderTeacherQuizList() {
       return blacklist.indexOf(key) === -1;
     });
   }
-  // ----------------------------------------
 
   if (!activeTeacherQuizzes || activeTeacherQuizzes.length === 0) {
     container.innerHTML = '<div class="modal-card" style="text-align:center; padding:30px;">' +
@@ -202,40 +201,82 @@ function renderTeacherQuizList() {
     return;
   }
 
-  var html = '<h3 style="color:var(--primary-navy); margin-bottom:12px;">Active Quiz List</h3>';
+  // 2. Date-wise Grouping Engine
+  var groups = {};
+  for (var i = 0; i < activeTeacherQuizzes.length; i++) {
+    var item = activeTeacherQuizzes[i];
+    var rawDate = item.createdAt || item.date || item.timestamp;
+    var dObj = rawDate ? new Date(rawDate) : new Date();
+    // Format: "13 Oct 2026"
+    var dateLabel = isNaN(dObj.getTime()) ? "Older Quizzes" : dObj.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' });
 
-  for (var idx = 0; idx < activeTeacherQuizzes.length; idx++) {
-    var q = activeTeacherQuizzes[idx];
-    var isDraft = (q.status === 'draft');
-    var borderColor = isDraft ? '#94a3b8' : '#16a34a';
-    var qCount = q.questions ? q.questions.length : 0;
-    var attCount = getQuizAttemptCount(q);
-
-    html += '<div class="modal-card" style="max-width:100%; margin-bottom:12px; border-left: 5px solid ' + borderColor + ';">' +
-      '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">' +
-      '<div>' +
-      '<h3 style="color:var(--primary-navy); margin-bottom:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' + q.title + ' <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;"><i class="fas fa-users"></i> ' + attCount + ' Attempts</span></h3>' +
-      '<div style="font-size:0.85rem; color:#64748b;">' +
-      '<strong>' + q.board + '</strong> | <strong>' + q.className + '</strong> | <strong>' + q.subject + '</strong> • ' + qCount + ' Questions ' +
-      (q.isRewarding ? '<span style="background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-weight:700; margin-left:6px;">🎁 Code: ' + (q.passkey || '') + '</span>' : '') +
-      '<span style="background:' + (isDraft ? '#e2e8f0' : '#dcfce7') + '; color:' + (isDraft ? '#475569' : '#16a34a') + '; padding:2px 6px; border-radius:4px; font-weight:700; margin-left:4px;">' +
-      (isDraft ? 'Draft (Coming Soon)' : 'Published Live') +
-      '</span>' +
-      '</div>' +
-      '</div>' +
-      '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
-      '<button onclick="startTeacherTestPreview(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#4f46e5;" title="Test without saving marks"><i class="fas fa-play-circle"></i> Test / Preview</button>' +
-      '<button onclick="togglePublishStatus(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:' + (isDraft ? '#16a34a' : '#64748b') + ';">' +
-      (isDraft ? 'Publish' : 'Unpublish') +
-      '</button>' +
-      '<button onclick="openQuizLeaderboard(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#0284c7;">Leaderboard</button>' +
-      '<button onclick="openQuizEditorModal(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#d97706;">Edit Keys</button>' +
-      '<button onclick="printActualQuizByIndex(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#059669;" title="Print A4 Question Paper"><i class="fas fa-print"></i> Print</button>' +
-      '<button onclick="deleteQuizPermanently(' + idx + ')" class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; margin:0; background:#dc2626;"><i class="fas fa-trash"></i></button>' +
-      '</div>' +
-      '</div>' +
-      '</div>';
+    if (!groups[dateLabel]) {
+      groups[dateLabel] = [];
+    }
+    groups[dateLabel].push({ quiz: item, originalIndex: i });
   }
+
+  var html = '<h3 style="color:var(--primary-navy); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">' +
+             '<span><i class="fas fa-folder-open"></i> Quizzes by Date</span>' +
+             '<span style="font-size:0.8rem; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:12px;">Total: ' + activeTeacherQuizzes.length + ' Tests</span>' +
+             '</h3>';
+
+  var groupKeys = Object.keys(groups);
+
+  groupKeys.forEach(function(dateKey, gIndex) {
+    var quizItems = groups[dateKey];
+    var groupId = "quizGroup_" + gIndex;
+    var isFirst = (gIndex === 0); // Sirf sabse latest date by default open rahegi
+
+    html += '<div style="margin-bottom:12px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff;">' +
+      // Accordion Header Button
+      '<div onclick="toggleDateGroup(\'' + groupId + '\')" style="background:#f8fafc; padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none; border-bottom:1px solid ' + (isFirst ? '#e2e8f0' : 'transparent') + ';">' +
+      '<div style="font-weight:700; color:#1e293b; font-size:0.95rem;">' +
+      '<i class="far fa-calendar-alt" style="color:#0284c7; margin-right:6px;"></i> ' + dateKey + ' ' +
+      '<span style="background:#e2e8f0; color:#475569; font-size:0.75rem; padding:1px 7px; border-radius:10px; margin-left:6px;">' + quizItems.length + ' Tests</span>' +
+      '</div>' +
+      '<div><i id="icon-' + groupId + '" class="fas ' + (isFirst ? 'fa-chevron-up' : 'fa-chevron-down') + '" style="color:#64748b;"></i></div>' +
+      '</div>' +
+
+      // Collapsible Content
+      '<div id="' + groupId + '" style="padding:10px; display:' + (isFirst ? 'block' : 'none') + ';">';
+
+    quizItems.forEach(function(entry) {
+      var q = entry.quiz;
+      var idx = entry.originalIndex;
+      var isDraft = (q.status === 'draft');
+      var borderColor = isDraft ? '#94a3b8' : '#16a34a';
+      var qCount = q.questions ? q.questions.length : 0;
+      var attCount = (typeof getQuizAttemptCount === "function") ? getQuizAttemptCount(q) : 0;
+
+      html += '<div class="modal-card" style="max-width:100%; margin-bottom:10px; border-left: 5px solid ' + borderColor + '; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
+        '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">' +
+        '<div>' +
+        '<h4 style="color:var(--primary-navy); margin:0 0 4px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:0.95rem;">' + q.title + ' <span style="background:#e0f2fe; color:#0284c7; padding:1px 6px; border-radius:10px; font-size:0.7rem; font-weight:600;"><i class="fas fa-users"></i> ' + attCount + ' Attempts</span></h4>' +
+        '<div style="font-size:0.8rem; color:#64748b;">' +
+        '<strong>' + (q.board || 'CBSE') + '</strong> | <strong>Class ' + (q.className || '—') + '</strong> | <strong>' + (q.subject || '—') + '</strong> • ' + qCount + ' Questions ' +
+        (q.isRewarding ? '<span style="background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:700; margin-left:4px;">🎁 Passkey: ' + (q.passkey || '') + '</span>' : '') +
+        '<span style="background:' + (isDraft ? '#e2e8f0' : '#dcfce7') + '; color:' + (isDraft ? '#475569' : '#16a34a') + '; padding:1px 5px; border-radius:4px; font-weight:700; margin-left:4px;">' +
+        (isDraft ? 'Draft' : 'Live') +
+        '</span>' +
+        '</div>' +
+        '</div>' +
+        '<div style="display:flex; gap:5px; flex-wrap:wrap;">' +
+        // WhatsApp Share Button
+        '<button onclick="shareQuizOnWhatsApp(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#25D366; color:#fff;" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i> Share</button>' +
+        '<button onclick="startTeacherTestPreview(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#4f46e5;" title="Preview"><i class="fas fa-play"></i> Preview</button>' +
+        '<button onclick="togglePublishStatus(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:' + (isDraft ? '#16a34a' : '#64748b') + ';">' + (isDraft ? 'Publish' : 'Unpublish') + '</button>' +
+        '<button onclick="openQuizLeaderboard(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#0284c7;">Leaderboard</button>' +
+        '<button onclick="openQuizEditorModal(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#d97706;">Edit</button>' +
+        '<button onclick="printActualQuizByIndex(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#059669;" title="Print"><i class="fas fa-print"></i></button>' +
+        '<button onclick="deleteQuizPermanently(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#dc2626;"><i class="fas fa-trash"></i></button>' +
+        '</div>' +
+        '</div>' +
+        '</div>';
+    });
+
+    html += '</div></div>';
+  });
 
   container.innerHTML = html;
 }
@@ -466,7 +507,7 @@ async function fetchAndRenderLeaderboard(quiz) {
   var quizId = String(quiz.id || quiz.title || "");
   var attempts = [];
 
-  // 1. Pehle Cloud Sheet API se try karo
+  // 1. Cloud Sheet API se check karein
   if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
     try {
       var res = await fetch(CLOUD_SYNC_URL + "?tabName=QuizResults");
@@ -481,125 +522,73 @@ async function fetchAndRenderLeaderboard(quiz) {
     }
   }
 
-  // 2. Fallback: LocalStorage / API se attempts check karo
+  // 2. Fallback: LocalStorage / TeacherData se uthao
   if (attempts.length === 0) {
+    var allStored = [];
     try {
-      var allLocalResults = JSON.parse(localStorage.getItem("ak_quiz_results")) || [];
-      attempts = allLocalResults.filter(function(r) {
-        return String(r.quizId || r.quizTitle || r.title || "") === quizId;
-      });
+      var stored1 = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+      var stored2 = JSON.parse(localStorage.getItem("ak_quiz_results") || "[]");
+      allStored = stored1.concat(stored2);
+      if (!allStored.length && typeof getTeacherData === "function") {
+        allStored = getTeacherData("ak_student_attempts", []) || [];
+      }
     } catch(e) {
-      attempts = [];
+      allStored = [];
     }
+
+    var targetTitleClean = (quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    attempts = allStored.filter(function(a) { 
+      var idMatch = a.quizId && quiz.id && (String(a.quizId).trim() === String(quiz.id).trim());
+      var aTitleClean = (a.quizTitle || a.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      var titleMatch = targetTitleClean && aTitleClean && (targetTitleClean.includes(aTitleClean) || aTitleClean.includes(targetTitleClean));
+      return idMatch || titleMatch;
+    });
   }
 
   // 3. Agar koi attempt nahi mila
   if (!attempts || attempts.length === 0) {
-    container.innerHTML = '<div style="text-align:center; padding:35px 20px; color:#64748b;">' +
-      '<i class="fas fa-user-clock" style="font-size:36px; color:#94a3b8; margin-bottom:10px;"></i>' +
-      '<p style="margin:0; font-size:14px; font-weight:600;">Abhi tak kisi student ne yeh quiz attempt nahi kiya hai.</p>' +
-      '<small style="color:#94a3b8;">Students ke submit karte hi results yahan live show honge.</small>' +
-      '</div>';
+    container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">Abhi kisi student ne is quiz ko attempt nahi kiya hai.</p>';
     return;
   }
 
-  // 4. Duplicate cleanup & Score Sorting (Descending)
+  // 4. Duplicate Student Cleanup (Highest Score Filter)
   var uniqueMap = {};
   attempts.forEach(function(att) {
-    var key = String(att.studentName || att.name || "Unknown") + "_" + String(att.rollNo || att.mobile || "");
+    var key = String(att.studentName || att.name || "Unknown").toLowerCase() + "_" + String(att.mobile || att.rollNo || "");
     if (!uniqueMap[key] || Number(att.score || 0) > Number(uniqueMap[key].score || 0)) {
       uniqueMap[key] = att;
     }
   });
 
   var sortedList = Object.values(uniqueMap).sort(function(a, b) {
-    return Number(b.score || b.marks || 0) - Number(a.score || a.marks || 0);
+    return Number(b.score || 0) - Number(a.score || 0);
   });
+  currentLeaderboardParticipants = sortedList;
 
-  // 5. Render Leaderboard Table
-  var tableHtml = '<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">' +
-    '<thead>' +
-    '<tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:#475569;">' +
-    '<th style="padding:8px 10px;">Rank</th>' +
-    '<th style="padding:8px 10px;">Student Name</th>' +
-    '<th style="padding:8px 10px;">Class / Roll</th>' +
-    '<th style="padding:8px 10px; text-align:center;">Score</th>' +
-    '<th style="padding:8px 10px; text-align:center;">Percentage</th>' +
-    '</tr>' +
-    '</thead>' +
-    '<tbody>';
-
-  sortedList.forEach(function(item, rank) {
-    var score = item.score || item.marks || 0;
-    var total = item.totalQuestions || item.total || item.totalMarks || (quiz.questions ? quiz.questions.length : 10);
-    var pct = Math.round((Number(score) / Number(total)) * 100) || 0;
-
-    var rankBadge = '<span style="font-weight:700; color:#475569;">#' + (rank + 1) + '</span>';
-    if (rank === 0) rankBadge = '<span style="color:#eab308; font-weight:800; font-size:15px;"><i class="fas fa-crown"></i> 1st</span>';
-    if (rank === 1) rankBadge = '<span style="color:#94a3b8; font-weight:800;"><i class="fas fa-medal"></i> 2nd</span>';
-    if (rank === 2) rankBadge = '<span style="color:#b45309; font-weight:800;"><i class="fas fa-medal"></i> 3rd</span>';
-
-    tableHtml += '<tr style="border-bottom:1px solid #f1f5f9;">' +
-      '<td style="padding:9px 10px;">' + rankBadge + '</td>' +
-      '<td style="padding:9px 10px; font-weight:600; color:#1e293b;">' + (item.studentName || item.name || "Student") + '</td>' +
-      '<td style="padding:9px 10px; color:#64748b;">Class ' + (item.className || quiz.className || "—") + ' | ' + (item.mobile || item.rollNo || "—") + '</td>' +
-      '<td style="padding:9px 10px; text-align:center; font-weight:700; color:#0284c7;">' + score + ' / ' + total + '</td>' +
-      '<td style="padding:9px 10px; text-align:center;"><span style="background:' + (pct >= 60 ? '#dcfce7; color:#16a34a;' : '#fee2e2; color:#dc2626;') + ' padding:3px 8px; border-radius:12px; font-weight:700; font-size:11px;">' + pct + '%</span></td>' +
-      '</tr>';
-  });
-
-  tableHtml += '</tbody></table>';
-  container.innerHTML = tableHtml;
-}
-// Direct Safe Storage Reader (LocalStorage + Fallback)
-  var allStored = [];
-  try {
-    allStored = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
-    if (!allStored.length && typeof getTeacherData === "function") {
-      allStored = getTeacherData("ak_student_attempts", []) || [];
-    }
-  } catch(e) {
-    allStored = [];
-  }
-
-var targetTitleClean = (quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  var localAttempts = allStored.filter(function(a) { 
-    var idMatch = a.quizId && quiz.id && (String(a.quizId).trim() === String(quiz.id).trim());
-    var aTitleClean = (a.quizTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    var titleMatch = targetTitleClean && aTitleClean && (targetTitleClean.includes(aTitleClean) || aTitleClean.includes(targetTitleClean));
-    return idMatch || titleMatch;
-  });
-  currentLeaderboardParticipants = localAttempts;
-
-  var container = document.getElementById("leaderboardListContainer");
-  if (!currentLeaderboardParticipants || currentLeaderboardParticipants.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">Abhi kisi student ne is quiz ko attempt nahi kiya hai.</p>';
-    return;
-  }
-
-  currentLeaderboardParticipants.sort(function(a, b) { return Number(b.score) - Number(a.score); });
-
+  // 5. Leaderboard UI Table Render (With View & Delete Actions)
   var tbHtml = '<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">' +
     '<thead><tr style="background:#f1f5f9; text-align:left; border-bottom:2px solid #cbd5e1;">' +
-    '<th style="padding:6px;">Rank</th><th style="padding:6px;">Student Name</th><th style="padding:6px;">Mobile</th><th style="padding:6px;">Score</th><th style="padding:6px;">Accuracy</th><th style="padding:6px;">Action</th>' +
+    '<th style="padding:6px;">Rank</th><th style="padding:6px;">Student Name</th><th style="padding:6px;">Mobile</th><th style="padding:6px; text-align:center;">Score</th><th style="padding:6px; text-align:center;">Accuracy</th><th style="padding:6px; text-align:center;">Action</th>' +
     '</tr></thead><tbody>';
 
-  for (var pIdx = 0; pIdx < currentLeaderboardParticipants.length; pIdx++) {
-    var p = currentLeaderboardParticipants[pIdx];
+  for (var pIdx = 0; pIdx < sortedList.length; pIdx++) {
+    var p = sortedList[pIdx];
+    var totalMarks = p.total || p.totalMarks || (quiz.questions ? quiz.questions.length : 10);
+    var pct = p.percentage || Math.round((Number(p.score || 0) / Number(totalMarks)) * 100) || 0;
+
     tbHtml += '<tr style="border-bottom:1px solid #e2e8f0;">' +
       '<td style="padding:6px; font-weight:700;">#' + (pIdx + 1) + '</td>' +
-      '<td style="padding:6px; font-weight:600; color:var(--brand-blue); cursor:pointer;" onclick="viewParticipantAnswersByIndex(' + pIdx + ')">' + p.studentName + ' <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i></td>' +
-      '<td style="padding:6px;">' + (p.mobile || 'N/A') + '</td>' +
-      '<td style="padding:6px; font-weight:700; color:#16a34a;">' + p.score + '/' + p.totalMarks + '</td>' +
-      '<td style="padding:6px;">' + p.percentage + '%</td>' +
-      '<td style="padding:6px;"><button onclick="deleteParticipantAttempt(' + pIdx + ', ' + idx + ')" style="background:#fee2e2; color:#dc2626; border:none; padding:3px 8px; border-radius:4px; cursor:pointer;"><i class="fas fa-trash"></i></button></td>' +
+      '<td style="padding:6px; font-weight:600; color:var(--brand-blue, #2563eb); cursor:pointer;" onclick="if(typeof viewParticipantAnswersByIndex===\'function\')viewParticipantAnswersByIndex(' + pIdx + ')">' + (p.studentName || p.name || 'Student') + ' <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i></td>' +
+      '<td style="padding:6px; color:#64748b;">' + (p.mobile || p.rollNo || 'N/A') + '</td>' +
+      '<td style="padding:6px; text-align:center; font-weight:700; color:#16a34a;">' + (p.score || 0) + '/' + totalMarks + '</td>' +
+      '<td style="padding:6px; text-align:center;"><span style="background:' + (pct >= 60 ? '#dcfce7; color:#16a34a;' : '#fee2e2; color:#dc2626;') + ' padding:2px 6px; border-radius:10px; font-weight:700; font-size:0.75rem;">' + pct + '%</span></td>' +
+      '<td style="padding:6px; text-align:center;"><button onclick="if(typeof deleteParticipantAttempt===\'function\')deleteParticipantAttempt(' + pIdx + ');" style="background:#fee2e2; color:#dc2626; border:none; padding:3px 8px; border-radius:4px; cursor:pointer;" title="Delete Attempt"><i class="fas fa-trash"></i></button></td>' +
       '</tr>';
   }
 
   tbHtml += '</tbody></table>';
   container.innerHTML = tbHtml;
 }
-
 function viewParticipantAnswersByIndex(pIdx) {
   var participant = currentLeaderboardParticipants[pIdx];
   var quiz = currentLeaderboardQuiz;
@@ -828,4 +817,39 @@ function printActualQuizByIndex(idx) {
     '<script>window.print();<\/script>' +
     '</body></html>'
   );
+}
+
+// WHATSAPP SHARE ENGINE FOR TEACHER
+function shareQuizOnWhatsApp(idx) {
+  var q = activeTeacherQuizzes[idx];
+  if (!q) return;
+
+  var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
+  // Student direct link with quiz parameter
+  var quizLink = appBaseUrl + "index.html?quizId=" + encodeURIComponent(q.id || q.title);
+
+  var msg = "📝 *AK_Learning_Point - Online Test*\n\n" +
+            "📌 *Topic:* " + (q.title || "Practice Test") + "\n" +
+            "📚 *Class / Subject:* Class " + (q.className || "—") + " (" + (q.subject || "—") + ")\n" +
+            "❓ *Questions:* " + (q.questions ? q.questions.length : 0) + "\n" +
+            (q.isRewarding && q.passkey ? "🔑 *Passkey:* `" + q.passkey + "`\n" : "") +
+            "\n👉 *Test Link par click karke attempt karein:*\n" + quizLink;
+
+  var waUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
+  window.open(waUrl, "_blank");
+}
+
+// DATE ACCORDION TOGGLE
+function toggleDateGroup(groupId) {
+  var content = document.getElementById(groupId);
+  var icon = document.getElementById("icon-" + groupId);
+  if (content) {
+    if (content.style.display === "none") {
+      content.style.display = "block";
+      if (icon) icon.className = "fas fa-chevron-up";
+    } else {
+      content.style.display = "none";
+      if (icon) icon.className = "fas fa-chevron-down";
+    }
+  }
 }
