@@ -1,4 +1,6 @@
-// Central School Database Socket & Storage Engine
+// Central School Database Socket & Storage Engine with Cloud Sheet Sync
+const CLOUD_SYNC_URL = "APNA_DEPLOYED_WEB_APP_URL_YAHAN_PASTE_KAREIN";
+
 const SchoolDB = {
   KEYS: {
     CONFIG: "sch_config",
@@ -26,6 +28,11 @@ const SchoolDB = {
       localStorage.setItem(key, JSON.stringify(val));
     } catch (e) {
       console.error("Storage error:", e);
+    }
+
+    // Auto-Sync Hook: Agar Students list update hui toh Google Sheet me push karein
+    if (key === this.KEYS.STUDENTS && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+      this.pushToGoogleSheet("Students", val);
     }
   },
 
@@ -58,5 +65,46 @@ const SchoolDB = {
       });
       this.set(this.KEYS.STUDENTS, list);
     }
+  },
+
+  // --- CLOUD SHEET INTEGRATION ENGINE ---
+
+  // Google Sheet me data bhejna (Auto columns mapping)
+  async pushToGoogleSheet(tabName, dataList) {
+    if (!Array.isArray(dataList)) return;
+    try {
+      await fetch(CLOUD_SYNC_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tabName: tabName,
+          data: dataList
+        })
+      });
+      console.log("Auto-synced " + tabName + " to Google Sheet.");
+    } catch (err) {
+      console.error("Cloud push failed:", err);
+    }
+  },
+
+  // Google Sheet se data laana (Cross-device persistence)
+  async pullFromGoogleSheet(tabName, localKey) {
+    if (!CLOUD_SYNC_URL || CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) return;
+    try {
+      const res = await fetch(CLOUD_SYNC_URL + "?tabName=" + encodeURIComponent(tabName));
+      const result = await res.json();
+      if (result && result.success && result.data && result.data.length > 0) {
+        localStorage.setItem(localKey, JSON.stringify(result.data));
+        console.log("Fetched " + tabName + " from Cloud Sheet:", result.data.length);
+      }
+    } catch (err) {
+      console.warn("Cloud pull failed:", err);
+    }
   }
 };
+
+// Page load hone par Google Sheet se sync check
+window.addEventListener("DOMContentLoaded", function () {
+  SchoolDB.pullFromGoogleSheet("Students", SchoolDB.KEYS.STUDENTS);
+});
