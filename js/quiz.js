@@ -455,8 +455,53 @@ function nextQuestion() {
   }
 }
 
+// GLOBAL SUBMIT LOCK (Prevents duplicate triggers)
+var isQuizSubmissionInProgress = false;
+
 function submitQuiz(e) {
   if (e && e.preventDefault) e.preventDefault();
+
+  // GUARD 1: Prevent rapid double-tap / double execution
+  if (isQuizSubmissionInProgress) {
+    console.warn("Quiz submission already in progress. Duplicate blocked.");
+    return;
+  }
+
+  // GUARD 2: Teacher Preview Mode Check (Do not save preview marks to sheet/db)
+  if (window.isTeacherPreviewMode === true) {
+    // 2. Score & Answers Calculation for Preview
+    var prevCorrect = 0;
+    var prevWrong = 0;
+    var prevQuestions = window.currentQuizQuestions || (typeof currentQuiz !== "undefined" && currentQuiz?.questions) || [];
+    var prevTotalQ = prevQuestions.length || 1;
+
+    prevQuestions.forEach(function(q, idx) {
+      var selected = (window.userAnswers && window.userAnswers[idx] !== undefined) ? window.userAnswers[idx] : null;
+      if (selected !== null && selected !== undefined) {
+        if (selected === q.correctAnswer) prevCorrect++;
+        else prevWrong++;
+      }
+    });
+
+    var prevScore = prevCorrect;
+    var prevPct = ((prevScore / prevTotalQ) * 100).toFixed(1);
+
+    if (window.SecurityShield && typeof window.SecurityShield.deactivate === "function") {
+      window.SecurityShield.deactivate();
+    }
+
+    alert("Preview Mode: Marks not saved to database.\nScore: " + prevScore + " / " + prevTotalQ + " (" + prevPct + "%)");
+    return;
+  }
+
+  isQuizSubmissionInProgress = true;
+
+  // Submit button visual lock
+  var submitBtn = document.getElementById("submitQuizBtn") || document.querySelector("button[onclick*='submitQuiz']");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Submitting...";
+  }
 
   try {
     // 1. Participant Details Fetch
@@ -494,8 +539,10 @@ function submitQuiz(e) {
     var quizTitle = (typeof currentQuiz !== "undefined" && currentQuiz?.title) || "Practice Test";
 
     // 3. Save to Local Storage (Instant Leaderboard & Scorecard)
+    var nowTime = Date.now();
     var attemptRecord = {
-      id: "att_" + Date.now(),
+      id: "att_" + nowTime,
+      attemptId: "att_" + nowTime + "_" + Math.floor(Math.random() * 1000),
       quizId: activeQuizId,
       quizTitle: quizTitle,
       name: studentName,
@@ -508,7 +555,7 @@ function submitQuiz(e) {
       totalMarks: totalQ,
       percentage: pct,
       answers: window.userAnswers || {},
-      timestamp: new Date().toISOString()
+      timestamp: nowTime
     };
 
     var allAttempts = [];
@@ -519,27 +566,27 @@ function submitQuiz(e) {
       allAttempts = [];
     }
 
-  // 1. Har attempt ko unique ID aur timestamp dein (Single item delete ke liye)
-  var nowTime = Date.now();
-  attemptRecord.attemptId = "att_" + nowTime + "_" + Math.floor(Math.random() * 1000);
-  attemptRecord.timestamp = attemptRecord.timestamp || nowTime;
+    // Strict Duplicate Check: pichhle 10 second me same student + quiz ka attempt aaya ho toh drop karein
+    var isAlreadySaved = allAttempts.some(function(prev) {
+      var sameName = (prev.studentName || prev.name) === (attemptRecord.studentName || attemptRecord.name);
+      var sameQuiz = String(prev.quizId) === String(attemptRecord.quizId);
+      var timeDiff = Math.abs(nowTime - (prev.timestamp || 0));
+      return sameName && sameQuiz && timeDiff < 10000;
+    });
 
-  // 2. Duplicate Check: pichhle 5 second me same student + quiz ka attempt aaya ho toh rok dein
-  var isAlreadySaved = allAttempts.some(function(prev) {
-    var sameName = (prev.studentName || prev.name) === (attemptRecord.studentName || attemptRecord.name);
-    var sameQuiz = prev.quizId === attemptRecord.quizId;
-    var timeDiff = Math.abs(nowTime - (prev.timestamp || 0));
-    return sameName && sameQuiz && timeDiff < 5000;
-  });
+    if (!isAlreadySaved) {
+      allAttempts.unshift(attemptRecord);
+      localStorage.setItem("ak_student_attempts", JSON.stringify(allAttempts));
+      localStorage.setItem("ak_quiz_results", JSON.stringify(allAttempts));
+      console.log("Result saved successfully (Single entry):", attemptRecord);
 
-  if (!isAlreadySaved) {
-    allAttempts.unshift(attemptRecord);
-    localStorage.setItem("ak_student_attempts", JSON.stringify(allAttempts));
-    localStorage.setItem("ak_quiz_results", JSON.stringify(allAttempts));
-    console.log("Result saved successfully (Single):", attemptRecord);
-  } else {
-    console.warn("Duplicate attempt prevented from saving!");
-  }
+      // Auto-Sync to Google Sheet (QuizResults tab)
+      if (typeof SchoolDB !== "undefined" && typeof SchoolDB.pushToGoogleSheet === "function") {
+        SchoolDB.pushToGoogleSheet("QuizResults", allAttempts);
+      }
+    } else {
+      console.warn("Duplicate attempt prevented from saving!");
+    }
 
     // 4. API Backend Push (agar available ho)
     if (typeof API !== "undefined" && API.post) {
@@ -563,6 +610,15 @@ function submitQuiz(e) {
   } catch (error) {
     console.error("Critical Quiz Submit Error:", error);
     alert("Submission error: " + error.message);
+  } finally {
+    // 3 second lock release timer
+    setTimeout(function() {
+      isQuizSubmissionInProgress = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit Quiz";
+      }
+    }, 3000);
   }
 }
 
