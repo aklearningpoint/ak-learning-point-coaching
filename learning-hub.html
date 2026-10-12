@@ -368,7 +368,29 @@ Ans: B"></textarea>
       renderCards();
     };
 
+    // Check if opened by Teacher or Student
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTeacher = urlParams.get("role") === "teacher";
+
+    // Agar Student hai, toh page load hote hi button aur form hide kar do
+    window.addEventListener("DOMContentLoaded", function () {
+      if (!isTeacher) {
+        // Post material button dhundh kar hide karo
+        const allBtns = document.querySelectorAll("button");
+        allBtns.forEach(b => {
+          if (b.innerText.includes("Post") || (b.getAttribute("onclick") && b.getAttribute("onclick").includes("toggleAdminPanel"))) {
+            b.style.display = "none";
+          }
+        });
+        
+        // Admin form box hide karo
+        const adminBox = document.getElementById("adminPanelBox");
+        if (adminBox) adminBox.style.display = "none";
+      }
+    });
+
     function toggleAdminPanel() {
+      if (!isTeacher) return;
       const box = document.getElementById("adminPanelBox");
       box.style.display = (box.style.display === "block") ? "none" : "block";
     }
@@ -392,6 +414,10 @@ Ans: B"></textarea>
     }
 
     function saveNewResource() {
+      if (!isTeacher) {
+        alert("Only teachers can post material!");
+        return;
+      }
       const type = document.getElementById("resCategory").value;
       const cls = document.getElementById("resClass").value.trim() || "All Classes";
       const subject = document.getElementById("resSubject").value.trim() || "General";
@@ -434,6 +460,7 @@ Ans: B"></textarea>
     }
 
     function deleteResource(id) {
+      if (!isTeacher) return;
       if (confirm("Kya aap is material ko delete karna chahte hain?")) {
         resources = resources.filter(r => r.id !== id);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
@@ -457,7 +484,7 @@ Ans: B"></textarea>
       if (filtered.length === 0) {
         container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:50px 20px; color:#94a3b8;">
           <i class="fas fa-folder-open" style="font-size:42px; margin-bottom:12px;"></i>
-          <p>Is category me abhi koi study material nahi hai. Upar "Post Material" se add karein.</p>
+          <p>Is category me abhi koi study material nahi hai.${isTeacher ? ' Upar "Post Material" se add karein.' : ''}</p>
         </div>`;
         return;
       }
@@ -469,6 +496,9 @@ Ans: B"></textarea>
         if (r.type === "pdf") { badgeClass = "badge-pdf"; badgeText = "PDF Document"; }
         if (r.type === "ppt") { badgeClass = "badge-ppt"; badgeText = "PPT Deck"; }
 
+        // Sirf Teacher ko Delete button dikhega, student ko nahi
+        const delBtnHtml = isTeacher ? `<button class="btn-del" onclick="deleteResource('${r.id}')"><i class="fas fa-trash-alt"></i></button>` : '';
+
         const card = document.createElement("div");
         card.className = "res-card";
         card.innerHTML = `
@@ -479,7 +509,7 @@ Ans: B"></textarea>
           </div>
           <div class="res-card-actions">
             <button class="btn-open" onclick='openResourceViewer(${JSON.stringify(r)})'><i class="fas fa-book-reader"></i> Open Material</button>
-            <button class="btn-del" onclick="deleteResource('${r.id}')"><i class="fas fa-trash-alt"></i></button>
+            ${delBtnHtml}
           </div>
         `;
         container.appendChild(card);
