@@ -62,19 +62,21 @@ function renderTeacherDashboard() {
   showTeacherSection('list');
 }
 
-// MATERIAL POSTING MODAL & ENGINE
+// MULTI-FORMAT MATERIAL POSTING MODAL (TEXT, IMAGE, PDF, PPT, VIDEO)
 function openTeacherMaterialModal() {
   var modalHtml = '<div class="modal-overlay" style="display:flex; z-index:3600;" id="teacherMaterialModal">' +
-    '<div class="modal-card" style="max-width:550px; width:92%;">' +
+    '<div class="modal-card" style="max-width:680px; width:92%; max-height:90vh; overflow-y:auto;">' +
     '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
     '<h3 style="margin:0; color:var(--primary-navy, #0f172a);"><i class="fas fa-book-reader" style="color:#d97706;"></i> Post Study Material</h3>' +
     '<button class="close-btn" onclick="document.getElementById(\'teacherMaterialModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
     '</div>' +
+
     '<div style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">' +
     '<div class="form-group">' +
-    '<label style="font-size:0.85rem; font-weight:600;">Material Title / Topic</label>' +
-    '<input type="text" id="matTitle" placeholder="e.g. Class 10 Light Chapter Notes PDF" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Material Title / Chapter Topic</label>' +
+    '<input type="text" id="matTitle" placeholder="e.g. Chapter 4: Motion and Force Notes" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
     '</div>' +
+
     '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
     '<div class="form-group">' +
     '<label style="font-size:0.85rem; font-weight:600;">Class</label>' +
@@ -93,25 +95,41 @@ function openTeacherMaterialModal() {
     '</select>' +
     '</div>' +
     '</div>' +
+
+    // FORMAT SELECTOR
     '<div class="form-group">' +
-    '<label style="font-size:0.85rem; font-weight:600;">Material Type</label>' +
-    '<select id="matType" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
-    '<option value="PDF">PDF Document / Notes</option>' +
-    '<option value="Video">Video Lecture Link (YouTube)</option>' +
-    '<option value="Assignment">Home Assignment / Worksheet</option>' +
+    '<label style="font-size:0.85rem; font-weight:600;">Content Format / Type</label>' +
+    '<select id="matType" onchange="toggleMaterialInputFields()" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600; color:#1e293b;">' +
+    '<option value="TEXT">📝 Text Article / Revision Notes</option>' +
+    '<option value="PDF">📄 PDF Document / Question Paper</option>' +
+    '<option value="PPT">📊 PowerPoint / Presentation Slide</option>' +
+    '<option value="IMAGE">🖼️ Diagram / Image Infographic</option>' +
+    '<option value="VIDEO">🎥 Video Lecture (YouTube Link)</option>' +
     '</select>' +
     '</div>' +
-    '<div class="form-group">' +
-    '<label style="font-size:0.85rem; font-weight:600;">Link (Google Drive / YouTube / Web URL)</label>' +
-    '<input type="url" id="matUrl" placeholder="https://drive.google.com/... or https://youtu.be/..." required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+
+    // INPUT FIELD A: FILE URL / WEB LINK
+    '<div class="form-group" id="matUrlContainer" style="display:none;">' +
+    '<label id="matUrlLabel" style="font-size:0.85rem; font-weight:600;">Link (Google Drive / Doc / Image URL)</label>' +
+    '<input type="url" id="matUrl" placeholder="https://..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '<small id="matUrlHint" style="color:#64748b; font-size:0.75rem;">Make sure file sharing is set to "Anyone with the link can view".</small>' +
     '</div>' +
-    '<div class="form-group">' +
-    '<label style="font-size:0.85rem; font-weight:600;">Short Description / Instructions</label>' +
-    '<textarea id="matDesc" rows="2" placeholder="Optional notes for students..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>' +
+
+    // INPUT FIELD B: RICH TEXT CONTENT / NOTES BODY
+    '<div class="form-group" id="matTextContainer">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Notes Content / Formulas / Points</label>' +
+    '<textarea id="matTextContent" rows="6" placeholder="Yahan chapter ke detailed points, formulas ya study content likhein..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:sans-serif;"></textarea>' +
     '</div>' +
+
+    // OPTIONAL DESCRIPTION
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Teacher Note / Remarks (Optional)</label>' +
+    '<input type="text" id="matDesc" placeholder="e.g. Read topic 1 before attempting Sunday quiz" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '</div>' +
+
     '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">' +
     '<button class="nav-pill-btn nav-back-btn" onclick="document.getElementById(\'teacherMaterialModal\').remove()">Cancel</button>' +
-    '<button class="btn-primary" style="background:#16a34a; width:auto; padding:6px 16px; margin:0;" onclick="saveTeacherMaterial()">Publish Material</button>' +
+    '<button class="btn-primary" style="background:#16a34a; width:auto; padding:6px 18px; margin:0;" onclick="saveTeacherMaterial()"><i class="fas fa-check"></i> Publish Material</button>' +
     '</div>' +
     '</div>' +
     '</div></div>';
@@ -119,18 +137,65 @@ function openTeacherMaterialModal() {
   var div = document.createElement("div");
   div.innerHTML = modalHtml;
   document.body.appendChild(div.firstElementChild);
+  toggleMaterialInputFields();
 }
 
+// TOGGLE DYNAMIC INPUT FIELDS BASED ON FORMAT
+function toggleMaterialInputFields() {
+  var type = document.getElementById("matType").value;
+  var urlGrp = document.getElementById("matUrlContainer");
+  var textGrp = document.getElementById("matTextContainer");
+  var urlLbl = document.getElementById("matUrlLabel");
+  var urlHint = document.getElementById("matUrlHint");
+
+  if (type === "TEXT") {
+    urlGrp.style.display = "none";
+    textGrp.style.display = "block";
+  } else if (type === "PDF") {
+    urlGrp.style.display = "block";
+    textGrp.style.display = "none";
+    urlLbl.innerText = "PDF Document URL (Google Drive / Cloud Link)";
+    urlHint.innerText = "Google Drive share link ka 'Anyone with link' access on rakhein.";
+  } else if (type === "PPT") {
+    urlGrp.style.display = "block";
+    textGrp.style.display = "none";
+    urlLbl.innerText = "PPT / Slides Link (Google Slides / OneDrive / Canva)";
+    urlHint.innerText = "Presentation share URL paste karein.";
+  } else if (type === "IMAGE") {
+    urlGrp.style.display = "block";
+    textGrp.style.display = "none";
+    urlLbl.innerText = "Image / Diagram URL (Direct Link)";
+    urlHint.innerText = "Image file URL (jpg, png ya drive link) paste karein.";
+  } else if (type === "VIDEO") {
+    urlGrp.style.display = "block";
+    textGrp.style.display = "none";
+    urlLbl.innerText = "YouTube Video / Lecture URL";
+    urlHint.innerText = "YouTube video watch link ya share link paste karein.";
+  }
+}
+
+// SAVE & DISPATCH TO STUDY MATERIAL REPOSITORY
 function saveTeacherMaterial() {
   var title = document.getElementById("matTitle").value.trim();
   var className = document.getElementById("matClass").value;
   var subject = document.getElementById("matSubject").value;
   var type = document.getElementById("matType").value;
-  var url = document.getElementById("matUrl").value.trim();
+  var url = document.getElementById("matUrl") ? document.getElementById("matUrl").value.trim() : "";
+  var textContent = document.getElementById("matTextContent") ? document.getElementById("matTextContent").value.trim() : "";
   var desc = document.getElementById("matDesc").value.trim();
 
-  if (!title || !url) {
-    alert("Title aur URL link bharna zaroori hai!");
+  if (!title) {
+    alert("Material Title bharna mandatory hai!");
+    return;
+  }
+
+  if (type === "TEXT" && !textContent) {
+    alert("Text Notes format ke liye content likhna zaroori hai!");
+    return;
+  }
+
+  if (type !== "TEXT" && !url) {
+    alert(type + " file link / URL dalna zaroori hai!");
     return;
   }
 
@@ -141,20 +206,23 @@ function saveTeacherMaterial() {
     subject: subject,
     type: type,
     url: url,
+    content: textContent,
     desc: desc,
     date: new Date().toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' }),
     timestamp: new Date().toISOString()
   };
 
+  // 1. LocalStorage Me Store Karein
   var materials = getTeacherData("ak_study_materials", []);
   materials.unshift(newMat);
   setTeacherData("ak_study_materials", materials);
 
+  // 2. Remote Sync
   if (typeof API !== "undefined" && API.post) {
     API.post("saveMaterial", newMat);
   }
 
-  alert("Study Material successfully publish ho gaya!");
+  alert("Study Material (" + type + ") safaltapoorvak publish ho gaya!");
   var modal = document.getElementById("teacherMaterialModal");
   if (modal) modal.remove();
 }
