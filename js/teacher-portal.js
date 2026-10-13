@@ -496,25 +496,55 @@ function openQuizLeaderboard(idx) {
     '</div></div>';
 
   // --- RESULTS FETCH & RENDER ENGINE ---
-  fetchAndRenderLeaderboard(quiz);
+  fetchAndRenderLeaderboard(quiz, idx);
 }
 
 // Results Puller (Google Sheet / Local Storage / API)
-async function fetchAndRenderLeaderboard(quiz) {
+async function fetchAndRenderLeaderboard(quiz, quizIdx) {
   var container = document.getElementById("leaderboardListContainer");
   if (!container) return;
 
-  var quizId = String(quiz.id || quiz.title || "");
+  var targetQuizId = String(quiz.id || quiz.Quiz_ID || "").trim();
+  var targetTitleClean = String(quiz.title || quiz.Title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   var attempts = [];
 
-  // 1. Cloud Sheet API se check karein
+  // 1. Google Sheet API se "Attempts" tab ka data pull karein
   if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
     try {
-      var res = await fetch(CLOUD_SYNC_URL + "?tabName=QuizResults");
+      var res = await fetch(CLOUD_SYNC_URL + "?tabName=Attempts");
       var json = await res.json();
-      if (json && json.success && Array.isArray(json.data)) {
-        attempts = json.data.filter(function(r) {
-          return String(r.quizId || r.title || "") === quizId;
+      var rawList = Array.isArray(json) ? json : (json && json.data ? json.data : []);
+
+      if (Array.isArray(rawList) && rawList.length > 0) {
+        attempts = rawList.map(function(r) {
+          var parsedAnswers = {};
+          if (r.answers || r.Answers) {
+            try {
+              parsedAnswers = typeof (r.answers || r.Answers) === "string" ? JSON.parse(r.answers || r.Answers) : (r.answers || r.Answers);
+            } catch(e) { parsedAnswers = {}; }
+          }
+
+          return {
+            id: r.Attempt_ID || r.attemptId || r.id,
+            quizId: String(r.Quiz_ID || r.quizId || "").trim(),
+            quizTitle: r.Quiz_Title || r.quizTitle || r.title || "",
+            studentName: r.Student_Name || r.studentName || r.name || "Student",
+            mobile: r.Mobile || r.mobile || "N/A",
+            score: Number(r.Score || r.score || 0),
+            totalMarks: Number(r.Total_Marks || r.totalMarks || r.total || (quiz.questions ? quiz.questions.length : 10)),
+            percentage: r.Percentage || r.percentage || 0,
+            answers: parsedAnswers,
+            timestamp: r.Timestamp || r.timestamp
+          };
+        }).filter(function(r) {
+          // Teacher Preview ko filter karein
+          var sName = String(r.studentName).toLowerCase().trim();
+          if (sName === "teacher" || sName === "teacher preview") return false;
+
+          var idMatch = targetQuizId && r.quizId && (r.quizId === targetQuizId);
+          var rTitleClean = String(r.quizTitle).toLowerCase().replace(/[^a-z0-9]/g, "");
+          var titleMatch = targetTitleClean && rTitleClean && (targetTitleClean.includes(rTitleClean) || rTitleClean.includes(targetTitleClean));
+          return idMatch || titleMatch;
         });
       }
     } catch(e) {
@@ -522,7 +552,7 @@ async function fetchAndRenderLeaderboard(quiz) {
     }
   }
 
-  // 2. Fallback: LocalStorage / TeacherData se uthao
+  // 2. Fallback: LocalStorage / TeacherData se uthao agar sheet empty ya offline ho
   if (attempts.length === 0) {
     var allStored = [];
     try {
@@ -536,10 +566,24 @@ async function fetchAndRenderLeaderboard(quiz) {
       allStored = [];
     }
 
-    var targetTitleClean = (quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    attempts = allStored.filter(function(a) { 
-      var idMatch = a.quizId && quiz.id && (String(a.quizId).trim() === String(quiz.id).trim());
-      var aTitleClean = (a.quizTitle || a.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    attempts = allStored.map(function(r) {
+      return {
+        id: r.id || r.attemptId || r.Attempt_ID,
+        quizId: String(r.quizId || r.Quiz_ID || "").trim(),
+        quizTitle: r.quizTitle || r.Quiz_Title || r.title || "",
+        studentName: r.studentName || r.Student_Name || r.name || "Student",
+        mobile: r.mobile || r.Mobile || "N/A",
+        score: Number(r.score || r.Score || 0),
+        totalMarks: Number(r.totalMarks || r.Total_Marks || r.total || (quiz.questions ? quiz.questions.length : 10)),
+        percentage: r.percentage || r.Percentage || 0,
+        answers: r.answers || {}
+      };
+    }).filter(function(a) {
+      var sName = String(a.studentName).toLowerCase().trim();
+      if (sName === "teacher" || sName === "teacher preview") return false;
+
+      var idMatch = targetQuizId && a.quizId && (a.quizId === targetQuizId);
+      var aTitleClean = String(a.quizTitle).toLowerCase().replace(/[^a-z0-9]/g, "");
       var titleMatch = targetTitleClean && aTitleClean && (targetTitleClean.includes(aTitleClean) || aTitleClean.includes(targetTitleClean));
       return idMatch || titleMatch;
     });
@@ -554,14 +598,14 @@ async function fetchAndRenderLeaderboard(quiz) {
   // 4. Duplicate Student Cleanup (Highest Score Filter)
   var uniqueMap = {};
   attempts.forEach(function(att) {
-    var key = String(att.studentName || att.name || "Unknown").toLowerCase() + "_" + String(att.mobile || att.rollNo || "");
-    if (!uniqueMap[key] || Number(att.score || 0) > Number(uniqueMap[key].score || 0)) {
+    var key = String(att.studentName).toLowerCase() + "_" + String(att.mobile);
+    if (!uniqueMap[key] || Number(att.score) > Number(uniqueMap[key].score)) {
       uniqueMap[key] = att;
     }
   });
 
   var sortedList = Object.values(uniqueMap).sort(function(a, b) {
-    return Number(b.score || 0) - Number(a.score || 0);
+    return Number(b.score) - Number(a.score);
   });
   currentLeaderboardParticipants = sortedList;
 
@@ -573,38 +617,44 @@ async function fetchAndRenderLeaderboard(quiz) {
 
   for (var pIdx = 0; pIdx < sortedList.length; pIdx++) {
     var p = sortedList[pIdx];
-    var totalMarks = p.total || p.totalMarks || (quiz.questions ? quiz.questions.length : 10);
-    var pct = p.percentage || Math.round((Number(p.score || 0) / Number(totalMarks)) * 100) || 0;
+    var totalMarks = p.totalMarks || (quiz.questions ? quiz.questions.length : 10);
+    var pct = p.percentage || Math.round((Number(p.score) / Number(totalMarks)) * 100) || 0;
 
     tbHtml += '<tr style="border-bottom:1px solid #e2e8f0;">' +
       '<td style="padding:6px; font-weight:700;">#' + (pIdx + 1) + '</td>' +
-      '<td style="padding:6px; font-weight:600; color:var(--brand-blue, #2563eb); cursor:pointer;" onclick="if(typeof viewParticipantAnswersByIndex===\'function\')viewParticipantAnswersByIndex(' + pIdx + ')">' + (p.studentName || p.name || 'Student') + ' <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i></td>' +
-      '<td style="padding:6px; color:#64748b;">' + (p.mobile || p.rollNo || 'N/A') + '</td>' +
-      '<td style="padding:6px; text-align:center; font-weight:700; color:#16a34a;">' + (p.score || 0) + '/' + totalMarks + '</td>' +
+      '<td style="padding:6px; font-weight:600; color:var(--brand-blue, #2563eb); cursor:pointer;" onclick="viewParticipantAnswersByIndex(' + pIdx + ')">' + p.studentName + ' <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i></td>' +
+      '<td style="padding:6px; color:#64748b;">' + p.mobile + '</td>' +
+      '<td style="padding:6px; text-align:center; font-weight:700; color:#16a34a;">' + p.score + '/' + totalMarks + '</td>' +
       '<td style="padding:6px; text-align:center;"><span style="background:' + (pct >= 60 ? '#dcfce7; color:#16a34a;' : '#fee2e2; color:#dc2626;') + ' padding:2px 6px; border-radius:10px; font-weight:700; font-size:0.75rem;">' + pct + '%</span></td>' +
-      '<td style="padding:6px; text-align:center;"><button onclick="if(typeof deleteParticipantAttempt===\'function\')deleteParticipantAttempt(' + pIdx + ');" style="background:#fee2e2; color:#dc2626; border:none; padding:3px 8px; border-radius:4px; cursor:pointer;" title="Delete Attempt"><i class="fas fa-trash"></i></button></td>' +
+      '<td style="padding:6px; text-align:center;"><button onclick="deleteParticipantAttempt(' + pIdx + ', ' + quizIdx + ')" style="background:#fee2e2; color:#dc2626; border:none; padding:3px 8px; border-radius:4px; cursor:pointer;" title="Delete Attempt"><i class="fas fa-trash"></i></button></td>' +
       '</tr>';
   }
 
   tbHtml += '</tbody></table>';
   container.innerHTML = tbHtml;
 }
+
 function viewParticipantAnswersByIndex(pIdx) {
   var participant = currentLeaderboardParticipants[pIdx];
   var quiz = currentLeaderboardQuiz;
   if (!participant || !quiz) return;
 
   var solHtml = "";
-  for (var idx = 0; idx < quiz.questions.length; idx++) {
-    var q = quiz.questions[idx];
-    var userChoice = participant.answers ? participant.answers[idx] : undefined;
-    var isCorrect = (userChoice === q.correctAnswer);
-    solHtml += '<div style="padding:8px 0; border-bottom:1px solid #e2e8f0; font-size:0.85rem;">' +
-      '<strong>Q' + (idx + 1) + ': ' + q.question + '</strong>' +
-      '<div style="margin-top:4px;">' +
-      '<span style="color:' + (isCorrect ? '#16a34a' : '#dc2626') + '; font-weight:600;">Student Answer: ' + (userChoice !== undefined ? q.options[userChoice] : 'Unattempted') + '</span> | ' +
-      '<span style="color:#16a34a;">Correct Answer: ' + q.options[q.correctAnswer] + '</span>' +
-      '</div></div>';
+  var questions = quiz.questions || [];
+  if (questions.length === 0) {
+    solHtml = '<p style="padding:15px; color:#64748b;">Is quiz ke questions load nahi ho sake.</p>';
+  } else {
+    for (var idx = 0; idx < questions.length; idx++) {
+      var q = questions[idx];
+      var userChoice = participant.answers ? participant.answers[idx] : undefined;
+      var isCorrect = (userChoice !== undefined && userChoice === q.correctAnswer);
+      solHtml += '<div style="padding:8px 0; border-bottom:1px solid #e2e8f0; font-size:0.85rem;">' +
+        '<strong>Q' + (idx + 1) + ': ' + q.question + '</strong>' +
+        '<div style="margin-top:4px;">' +
+        '<span style="color:' + (isCorrect ? '#16a34a' : '#dc2626') + '; font-weight:600;">Student Answer: ' + (userChoice !== undefined && q.options ? q.options[userChoice] : 'Unattempted') + '</span> | ' +
+        '<span style="color:#16a34a;">Correct Answer: ' + (q.options ? q.options[q.correctAnswer] : 'N/A') + '</span>' +
+        '</div></div>';
+    }
   }
 
   document.getElementById("dynamicView").innerHTML += '<div class="modal-overlay" style="display:flex; z-index:3500;" id="stSheetModal">' +
@@ -623,18 +673,23 @@ function viewParticipantAnswersByIndex(pIdx) {
 function deleteParticipantAttempt(pIdx, quizIdx) {
   if (confirm("Kya aap is record ko leaderboard se delete karna chahte hain?")) {
     var p = currentLeaderboardParticipants[pIdx];
-    var attempts = getTeacherData("ak_student_attempts", []);
-    var filtered = [];
-    for (var i = 0; i < attempts.length; i++) {
-      if (!(attempts[i].quizId === p.quizId && (attempts[i].mobile === p.mobile || attempts[i].id === p.id))) {
-        filtered.push(attempts[i]);
-      }
+    var attempts = [];
+    try {
+      attempts = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+    } catch(e) { attempts = []; }
+
+    var filtered = attempts.filter(function(att) {
+      return !(String(att.quizId) === String(p.quizId) && (String(att.mobile) === String(p.mobile) || att.id === p.id));
+    });
+
+    localStorage.setItem("ak_student_attempts", JSON.stringify(filtered));
+    localStorage.setItem("ak_quiz_results", JSON.stringify(filtered));
+
+    if (typeof openQuizLeaderboard === "function" && quizIdx !== undefined) {
+      openQuizLeaderboard(quizIdx);
     }
-    setTeacherData("ak_student_attempts", filtered);
-    openQuizLeaderboard(quizIdx);
   }
 }
-
 var editingQuizBuffer = null;
 
 function openQuizEditorModal(idx) {
