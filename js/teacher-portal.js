@@ -1,26 +1,7 @@
 var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxgTvxwNwAPetNnU7Ccoa6oq2cP9k67l_yu3gewEVd8bR4dvTqsj1FRcGZgcaOKdG86/exec";
-// Function: Har quiz ke actual attempts count karna (ID + Title Smart Match)
-function getQuizAttemptCount(quiz) {
-  if (!quiz) return 0;
-  var allStored = [];
-  try {
-    allStored = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
-  } catch(e) {
-    allStored = [];
-  }
 
-  var targetTitle = (quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-
-  var matches = allStored.filter(function(a) {
-    var idMatch = a.quizId && quiz.id && (String(a.quizId).trim() === String(quiz.id).trim());
-    var aTitle = (a.quizTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    var titleMatch = targetTitle && aTitle && (targetTitle.includes(aTitle) || aTitle.includes(targetTitle));
-    return idMatch || titleMatch;
-  });
-
-  return matches.length;
-}
-// Teacher Portal: Smart Parser, Test Preview Mode, Live Leaderboards & Actual A4 Quiz Print Engine
+// Global Cache for Sheet Attempts
+var cachedSheetAttempts = [];
 
 function getTeacherData(key, fallback) {
   try {
@@ -59,7 +40,7 @@ function openTeacherPortal() {
 
 function renderTeacherDashboard() {
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:3000; display:flex; flex-direction:column;">' +
-    '<div style="height:55px; background:var(--primary-navy); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
+    '<div style="height:55px; background:var(--primary-navy, #0f172a); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     '<i class="fas fa-chalkboard-teacher" style="color:#fbbf24;"></i>' +
     '<strong>Teacher Control Panel</strong>' +
@@ -72,13 +53,110 @@ function renderTeacherDashboard() {
     '<div style="background:white; border-bottom:1px solid #e2e8f0; display:flex; overflow-x:auto; padding:8px 12px; gap:8px;">' +
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0;" onclick="showTeacherSection(\'maker\')">+ Create Quiz (Smart Parser)</button>' +
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#0284c7;" onclick="showTeacherSection(\'list\')">Manage Quizzes & Leaderboards</button>' +
-   '<a href="learning-hub.html" class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#d97706; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:#fff;"><i class="fas fa-upload"></i> Post Material</a>' +
+    '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#d97706; display:inline-flex; align-items:center; gap:6px; color:#fff;" onclick="openTeacherMaterialModal()"><i class="fas fa-upload"></i> Post Material</button>' +
     '</div>' +
     '<div id="teacherContentBody" style="flex:1; overflow-y:auto; padding:16px; max-width:850px; margin:0 auto; width:100%;"></div>' +
     '</div>';
 
   document.getElementById("dynamicView").innerHTML = html;
   showTeacherSection('list');
+}
+
+// MATERIAL POSTING MODAL & ENGINE
+function openTeacherMaterialModal() {
+  var modalHtml = '<div class="modal-overlay" style="display:flex; z-index:3600;" id="teacherMaterialModal">' +
+    '<div class="modal-card" style="max-width:550px; width:92%;">' +
+    '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
+    '<h3 style="margin:0; color:var(--primary-navy, #0f172a);"><i class="fas fa-book-reader" style="color:#d97706;"></i> Post Study Material</h3>' +
+    '<button class="close-btn" onclick="document.getElementById(\'teacherMaterialModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+    '<div style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">' +
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Material Title / Topic</label>' +
+    '<input type="text" id="matTitle" placeholder="e.g. Class 10 Light Chapter Notes PDF" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Class</label>' +
+    '<select id="matClass" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '<option value="Class 1">Class 1</option><option value="Class 2">Class 2</option><option value="Class 3">Class 3</option>' +
+    '<option value="Class 4">Class 4</option><option value="Class 5">Class 5</option><option value="Class 6">Class 6</option>' +
+    '<option value="Class 7">Class 7</option><option value="Class 8">Class 8</option><option value="Class 9">Class 9</option>' +
+    '<option value="Class 10">Class 10</option><option value="Class 11">Class 11</option><option value="Class 12">Class 12</option>' +
+    '</select>' +
+    '</div>' +
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Subject</label>' +
+    '<select id="matSubject" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '<option value="Science">Science</option><option value="Math">Math</option><option value="Hindi">Hindi</option>' +
+    '<option value="English">English</option><option value="S.St">S.St</option><option value="G.K">G.K</option><option value="Computer">Computer</option>' +
+    '</select>' +
+    '</div>' +
+    '</div>' +
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Material Type</label>' +
+    '<select id="matType" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '<option value="PDF">PDF Document / Notes</option>' +
+    '<option value="Video">Video Lecture Link (YouTube)</option>' +
+    '<option value="Assignment">Home Assignment / Worksheet</option>' +
+    '</select>' +
+    '</div>' +
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Link (Google Drive / YouTube / Web URL)</label>' +
+    '<input type="url" id="matUrl" placeholder="https://drive.google.com/... or https://youtu.be/..." required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">' +
+    '</div>' +
+    '<div class="form-group">' +
+    '<label style="font-size:0.85rem; font-weight:600;">Short Description / Instructions</label>' +
+    '<textarea id="matDesc" rows="2" placeholder="Optional notes for students..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>' +
+    '</div>' +
+    '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">' +
+    '<button class="nav-pill-btn nav-back-btn" onclick="document.getElementById(\'teacherMaterialModal\').remove()">Cancel</button>' +
+    '<button class="btn-primary" style="background:#16a34a; width:auto; padding:6px 16px; margin:0;" onclick="saveTeacherMaterial()">Publish Material</button>' +
+    '</div>' +
+    '</div>' +
+    '</div></div>';
+
+  var div = document.createElement("div");
+  div.innerHTML = modalHtml;
+  document.body.appendChild(div.firstElementChild);
+}
+
+function saveTeacherMaterial() {
+  var title = document.getElementById("matTitle").value.trim();
+  var className = document.getElementById("matClass").value;
+  var subject = document.getElementById("matSubject").value;
+  var type = document.getElementById("matType").value;
+  var url = document.getElementById("matUrl").value.trim();
+  var desc = document.getElementById("matDesc").value.trim();
+
+  if (!title || !url) {
+    alert("Title aur URL link bharna zaroori hai!");
+    return;
+  }
+
+  var newMat = {
+    id: "mat_" + Date.now(),
+    title: title,
+    className: className,
+    subject: subject,
+    type: type,
+    url: url,
+    desc: desc,
+    date: new Date().toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' }),
+    timestamp: new Date().toISOString()
+  };
+
+  var materials = getTeacherData("ak_study_materials", []);
+  materials.unshift(newMat);
+  setTeacherData("ak_study_materials", materials);
+
+  if (typeof API !== "undefined" && API.post) {
+    API.post("saveMaterial", newMat);
+  }
+
+  alert("Study Material successfully publish ho gaya!");
+  var modal = document.getElementById("teacherMaterialModal");
+  if (modal) modal.remove();
 }
 
 function showTeacherSection(sec) {
@@ -175,8 +253,25 @@ function showTeacherSection(sec) {
   }
 }
 
-function renderTeacherQuizList() {
+// DATE ACCORDION TOGGLE
+function toggleDateGroup(groupId) {
+  var content = document.getElementById(groupId);
+  var icon = document.getElementById("icon-" + groupId);
+  if (content) {
+    if (content.style.display === "none" || content.style.display === "") {
+      content.style.display = "block";
+      if (icon) icon.className = "fas fa-chevron-up";
+    } else {
+      content.style.display = "none";
+      if (icon) icon.className = "fas fa-chevron-down";
+    }
+  }
+}
+
+// TEACHER QUIZ LIST RENDERER (ALL DATES COLLAPSED BY DEFAULT + LIVE ATTEMPTS COUNT)
+async function renderTeacherQuizList() {
   var container = document.getElementById("teacherContentBody");
+  if (!container) return;
 
   // 1. Anti-Reappear Blacklist Filter
   var blacklist = [];
@@ -202,13 +297,54 @@ function renderTeacherQuizList() {
     return;
   }
 
-  // 2. Date-wise Grouping Engine
+  // 2. Fetch Live Sheet Attempts for accurate badge count
+  if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+    try {
+      var res = await fetch(CLOUD_SYNC_URL + "?action=getAttempts");
+      var json = await res.json();
+      if (json && json.data && Array.isArray(json.data)) {
+        cachedSheetAttempts = json.data;
+      }
+    } catch(e) {}
+  }
+
+  var localAttempts = [];
+  try {
+    var stored1 = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+    var stored2 = JSON.parse(localStorage.getItem("ak_quiz_results") || "[]");
+    localAttempts = stored1.concat(stored2);
+  } catch(e) {}
+
+  var allAttemptsCombined = (cachedSheetAttempts || []).concat(localAttempts);
+
+  function getLiveQuizAttemptCount(quiz) {
+    var qId = String(quiz.id || "").trim();
+    var qTitle = String(quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    var matched = allAttemptsCombined.filter(function(a) {
+      var sName = String(a.Student_Name || a.studentName || "").toLowerCase().trim();
+      if (sName === "teacher" || sName === "teacher preview") return false;
+
+      var aId = String(a.Quiz_ID || a.quizId || "").trim();
+      var aTitle = String(a.Quiz_Title || a.quizTitle || a.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      return (qId && aId === qId) || (qTitle && aTitle && (qTitle.includes(aTitle) || aTitle.includes(qTitle)));
+    });
+
+    var uMap = {};
+    matched.forEach(function(m) {
+      var key = String(m.Student_Name || m.studentName || "").toLowerCase() + "_" + String(m.Mobile || m.mobile || "");
+      uMap[key] = true;
+    });
+    return Object.keys(uMap).length;
+  }
+
+  // 3. Date-wise Grouping Engine
   var groups = {};
   for (var i = 0; i < activeTeacherQuizzes.length; i++) {
     var item = activeTeacherQuizzes[i];
     var rawDate = item.createdAt || item.date || item.timestamp;
     var dObj = rawDate ? new Date(rawDate) : new Date();
-    // Format: "13 Oct 2026"
     var dateLabel = isNaN(dObj.getTime()) ? "Older Quizzes" : dObj.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' });
 
     if (!groups[dateLabel]) {
@@ -218,7 +354,7 @@ function renderTeacherQuizList() {
   }
 
   var html = '<h3 style="color:var(--primary-navy); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">' +
-             '<span><i class="fas fa-folder-open"></i> Quizzes by Date</span>' +
+             '<span><i class="fas fa-folder"></i> Quizzes by Date</span>' +
              '<span style="font-size:0.8rem; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:12px;">Total: ' + activeTeacherQuizzes.length + ' Tests</span>' +
              '</h3>';
 
@@ -227,20 +363,19 @@ function renderTeacherQuizList() {
   groupKeys.forEach(function(dateKey, gIndex) {
     var quizItems = groups[dateKey];
     var groupId = "quizGroup_" + gIndex;
-    var isFirst = (gIndex === 0); // Sirf sabse latest date by default open rahegi
 
     html += '<div style="margin-bottom:12px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff;">' +
-      // Accordion Header Button
-      '<div onclick="toggleDateGroup(\'' + groupId + '\')" style="background:#f8fafc; padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none; border-bottom:1px solid ' + (isFirst ? '#e2e8f0' : 'transparent') + ';">' +
+      // Accordion Header (Click to Expand)
+      '<div onclick="toggleDateGroup(\'' + groupId + '\')" style="background:#f8fafc; padding:11px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none; border-bottom:1px solid #e2e8f0;">' +
       '<div style="font-weight:700; color:#1e293b; font-size:0.95rem;">' +
       '<i class="far fa-calendar-alt" style="color:#0284c7; margin-right:6px;"></i> ' + dateKey + ' ' +
       '<span style="background:#e2e8f0; color:#475569; font-size:0.75rem; padding:1px 7px; border-radius:10px; margin-left:6px;">' + quizItems.length + ' Tests</span>' +
       '</div>' +
-      '<div><i id="icon-' + groupId + '" class="fas ' + (isFirst ? 'fa-chevron-up' : 'fa-chevron-down') + '" style="color:#64748b;"></i></div>' +
+      '<div><i id="icon-' + groupId + '" class="fas fa-chevron-down" style="color:#64748b;"></i></div>' +
       '</div>' +
 
-      // Collapsible Content
-      '<div id="' + groupId + '" style="padding:10px; display:' + (isFirst ? 'block' : 'none') + ';">';
+      // Collapsible Content (BY DEFAULT SABHI CLOSED HAIN: display: none)
+      '<div id="' + groupId + '" style="padding:10px; display:none;">';
 
     quizItems.forEach(function(entry) {
       var q = entry.quiz;
@@ -248,12 +383,13 @@ function renderTeacherQuizList() {
       var isDraft = (q.status === 'draft');
       var borderColor = isDraft ? '#94a3b8' : '#16a34a';
       var qCount = q.questions ? q.questions.length : 0;
-      var attCount = (typeof getQuizAttemptCount === "function") ? getQuizAttemptCount(q) : 0;
+      var attCount = getLiveQuizAttemptCount(q);
 
       html += '<div class="modal-card" style="max-width:100%; margin-bottom:10px; border-left: 5px solid ' + borderColor + '; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">' +
         '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">' +
         '<div>' +
-        '<h4 style="color:var(--primary-navy); margin:0 0 4px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:0.95rem;">' + q.title + ' <span style="background:#e0f2fe; color:#0284c7; padding:1px 6px; border-radius:10px; font-size:0.7rem; font-weight:600;"><i class="fas fa-users"></i> ' + attCount + ' Attempts</span></h4>' +
+        '<h4 style="color:var(--primary-navy); margin:0 0 4px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:0.95rem;">' +
+        q.title + ' <span style="background:#e0f2fe; color:#0284c7; padding:1px 7px; border-radius:10px; font-size:0.75rem; font-weight:700;"><i class="fas fa-users"></i> ' + attCount + ' Attempts</span></h4>' +
         '<div style="font-size:0.8rem; color:#64748b;">' +
         '<strong>' + (q.board || 'CBSE') + '</strong> | <strong>Class ' + (q.className || '—') + '</strong> | <strong>' + (q.subject || '—') + '</strong> • ' + qCount + ' Questions ' +
         (q.isRewarding ? '<span style="background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:700; margin-left:4px;">🎁 Passkey: ' + (q.passkey || '') + '</span>' : '') +
@@ -263,7 +399,6 @@ function renderTeacherQuizList() {
         '</div>' +
         '</div>' +
         '<div style="display:flex; gap:5px; flex-wrap:wrap;">' +
-        // WhatsApp Share Button
         '<button onclick="shareQuizOnWhatsApp(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#25D366; color:#fff;" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i> Share</button>' +
         '<button onclick="startTeacherTestPreview(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:#4f46e5;" title="Preview"><i class="fas fa-play"></i> Preview</button>' +
         '<button onclick="togglePublishStatus(' + idx + ')" class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.78rem; margin:0; background:' + (isDraft ? '#16a34a' : '#64748b') + ';">' + (isDraft ? 'Publish' : 'Unpublish') + '</button>' +
@@ -281,6 +416,7 @@ function renderTeacherQuizList() {
 
   container.innerHTML = html;
 }
+
 // 2. Teacher Testing / Preview Mode
 function startTeacherTestPreview(idx) {
   var quiz = activeTeacherQuizzes[idx];
@@ -410,7 +546,8 @@ function saveParsedQuiz(status) {
     isRewarding: isRewarding,
     passkey: passkey,
     status: status,
-    questions: parsedQuestionsBuffer
+    questions: parsedQuestionsBuffer,
+    createdAt: new Date().toISOString()
   };
 
   activeTeacherQuizzes = getTeacherData("ak_teacher_quizzes", []);
@@ -444,7 +581,6 @@ function deleteQuizPermanently(idx) {
   if (confirm("Kya aap \"" + quiz.title + "\" ko permanently delete karna chahte hain?")) {
     var quizId = String(quiz.id || quiz.quizId || "");
 
-    // 1. Blacklist me ID add karo (Taaki reload par default se bhi wapas na aaye)
     var deletedBlacklist = [];
     try {
       deletedBlacklist = JSON.parse(localStorage.getItem("ak_deleted_quizzes_blacklist")) || [];
@@ -456,19 +592,14 @@ function deleteQuizPermanently(idx) {
       localStorage.setItem("ak_deleted_quizzes_blacklist", JSON.stringify(deletedBlacklist));
     }
 
-    // 2. Active List se remove karo
     activeTeacherQuizzes.splice(idx, 1);
-    
-    // 3. Save to Teacher Data
     setTeacherData("ak_teacher_quizzes", activeTeacherQuizzes);
     localStorage.setItem("ak_teacher_quizzes", JSON.stringify(activeTeacherQuizzes));
 
-    // 4. Remote API Cleanup
     if (typeof API !== "undefined" && API.post) {
       API.post("deleteQuiz", { id: quizId });
     }
 
-    // 5. Re-render UI
     renderTeacherQuizList();
   }
 }
@@ -496,7 +627,6 @@ function openQuizLeaderboard(idx) {
     '</div>' +
     '</div></div>';
 
-  // --- RESULTS FETCH & RENDER ENGINE ---
   fetchAndRenderLeaderboard(quiz, idx);
 }
 
@@ -517,6 +647,7 @@ async function fetchAndRenderLeaderboard(quiz, quizIdx) {
       var rawList = Array.isArray(json) ? json : (json && json.data ? json.data : []);
 
       if (Array.isArray(rawList) && rawList.length > 0) {
+        cachedSheetAttempts = rawList; // Cache for badge counts
         attempts = rawList.map(function(r) {
           var parsedAnswers = {};
           if (r.answers || r.Answers) {
@@ -538,7 +669,6 @@ async function fetchAndRenderLeaderboard(quiz, quizIdx) {
             timestamp: r.Timestamp || r.timestamp
           };
         }).filter(function(r) {
-          // Teacher Preview ko filter karein
           var sName = String(r.studentName).toLowerCase().trim();
           if (sName === "teacher" || sName === "teacher preview") return false;
 
@@ -553,7 +683,7 @@ async function fetchAndRenderLeaderboard(quiz, quizIdx) {
     }
   }
 
-  // 2. Fallback: LocalStorage / TeacherData se uthao agar sheet empty ya offline ho
+  // 2. Fallback: LocalStorage / TeacherData
   if (attempts.length === 0) {
     var allStored = [];
     try {
@@ -691,6 +821,7 @@ function deleteParticipantAttempt(pIdx, quizIdx) {
     }
   }
 }
+
 var editingQuizBuffer = null;
 
 function openQuizEditorModal(idx) {
@@ -804,7 +935,7 @@ function saveEditedQuizChanges(idx) {
   renderTeacherDashboard();
 }
 
-// 5. Actual Dynamic Quiz A4 Print (2 Columns + Sub-Columns + Separate Answer Key)
+// 5. Actual Dynamic Quiz A4 Print
 function printActualQuizByIndex(idx) {
   var quiz = activeTeacherQuizzes[idx];
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
@@ -815,7 +946,6 @@ function printActualQuizByIndex(idx) {
   var questions = quiz.questions;
   var qHtml = "";
   var keyHtml = "";
-
   var optLabels = ["(A)", "(B)", "(C)", "(D)"];
 
   for (var i = 0; i < questions.length; i++) {
@@ -881,7 +1011,6 @@ function shareQuizOnWhatsApp(idx) {
   if (!q) return;
 
   var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
-  // Student direct link with quiz parameter
   var quizLink = appBaseUrl + "index.html?quizId=" + encodeURIComponent(q.id || q.title);
 
   var msg = "📝 *AK_Learning_Point - Online Test*\n\n" +
@@ -893,19 +1022,4 @@ function shareQuizOnWhatsApp(idx) {
 
   var waUrl = "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
   window.open(waUrl, "_blank");
-}
-
-// DATE ACCORDION TOGGLE
-function toggleDateGroup(groupId) {
-  var content = document.getElementById(groupId);
-  var icon = document.getElementById("icon-" + groupId);
-  if (content) {
-    if (content.style.display === "none") {
-      content.style.display = "block";
-      if (icon) icon.className = "fas fa-chevron-up";
-    } else {
-      content.style.display = "none";
-      if (icon) icon.className = "fas fa-chevron-down";
-    }
-  }
 }
