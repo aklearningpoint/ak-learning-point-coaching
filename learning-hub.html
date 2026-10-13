@@ -129,6 +129,7 @@
     .badge-text { background: #fef3c7; color: #b45309; }
     .badge-pdf { background: #e0e7ff; color: #4338ca; }
     .badge-ppt { background: #fae8ff; color: #a21caf; }
+    .badge-image { background: #dcfce7; color: #16a34a; }
     .res-title { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
     .res-meta { font-size: 12px; color: #64748b; margin-bottom: 10px; }
     .res-card-actions {
@@ -154,55 +155,134 @@
     }
     .btn-del { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 15px; }
 
-    /* Fullscreen Modal Viewers */
+    /* =================== PREMIUM READER STYLING =================== */
     .viewer-modal {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(4px);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(6px);
       z-index: 9999;
       display: none;
       align-items: center;
       justify-content: center;
+      padding: 10px;
     }
+    
+    /* Modern Dynamic Colorful Gradient Border */
+    .premium-reader-wrapper {
+      position: relative;
+      border-radius: 14px;
+      padding: 3.5px;
+      background: linear-gradient(135deg, #3b82f6, #ec4899, #8b5cf6, #10b981);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+      width: 95%;
+      max-width: 980px;
+      height: 90vh;
+      display: flex;
+      animation: borderGlow 6s ease infinite alternate;
+    }
+    @keyframes borderGlow {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(45deg); }
+    }
+
     .viewer-content {
+      position: relative;
       background: #fff;
-      width: 92%;
-      max-width: 950px;
-      height: 85vh;
-      border-radius: 12px;
+      width: 100%;
+      height: 100%;
+      border-radius: 11px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      transition: filter 0.2s ease, background 0.3s ease;
     }
+
+    /* Watermark Logo Background */
+    .reader-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: rgba(15, 23, 42, 0.04);
+      pointer-events: none;
+      user-select: none;
+      text-align: center;
+      z-index: 2;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
     .viewer-header {
-      background: var(--primary);
-      color: #fff;
-      padding: 12px 18px;
+      background: #f8fafc;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      z-index: 10;
     }
-    .viewer-header h3 { font-size: 16px; }
-    .btn-close-viewer { background: transparent; border: none; color: #fff; font-size: 22px; cursor: pointer; }
-    .viewer-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; }
+    .viewer-header h3 { font-size: 15px; font-weight: 700; }
+    
+    .reader-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .reader-tool-btn {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 4px 9px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .reader-tool-btn:hover { background: #f1f5f9; }
+
+    .viewer-body {
+      position: relative;
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+    }
+
+    /* Themes */
+    .theme-day { background: #ffffff !important; color: #1e293b !important; }
+    .theme-sepia { background: #fcf6e8 !important; color: #433422 !important; }
+    .theme-night { background: #181a1b !important; color: #e8e6e3 !important; }
+    .theme-night .slide-box { background: #23272a !important; color: #e8e6e3 !important; border-color: #3f4448 !important; }
+    .theme-night .slide-body-text { color: #dcdcdc !important; }
+    .theme-night .quiz-option { background: #2c2f33 !important; border-color: #40444b !important; color: #e8e6e3 !important; }
 
     /* SMART SLIDE TEXT & QUIZ VIEWER */
     .slide-box {
       background: #fff;
       border: 1.5px solid #cbd5e1;
       border-radius: 12px;
-      padding: 26px 30px;
+      padding: 24px 28px;
       flex: 1;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
       overflow-y: auto;
     }
     .slide-type-tag { font-size: 12px; font-weight: bold; color: var(--accent); margin-bottom: 12px; text-transform: uppercase; }
-    .slide-body-text { font-size: 16.5px; line-height: 1.75; color: #1e293b; white-space: pre-wrap; }
+    .slide-body-text { font-size: 16px; line-height: 1.8; color: #1e293b; white-space: pre-wrap; font-family: 'Georgia', serif; }
     .slide-controls {
       display: flex;
       justify-content: space-between;
@@ -234,8 +314,8 @@
       transition: 0.2s;
     }
     .quiz-option:hover { background: #e2e8f0; }
-    .quiz-option.correct { background: #dcfce7; border-color: #22c55e; color: #15803d; font-weight: bold; }
-    .quiz-option.wrong { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+    .quiz-option.correct { background: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; font-weight: bold; }
+    .quiz-option.wrong { background: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
 
     /* Topic Index List Items */
     .index-item-card {
@@ -266,7 +346,7 @@
       <p>Videos, Smart Notes & Interactive Slide Decks</p>
     </div>
     <div class="header-actions">
-      <button id="btnToggleAdmin" onclick="toggleAdminPanel()">+ Post Material</button>
+      <button id="btnToggleAdmin" class="btn-header" style="background:#d97706;" onclick="toggleAdminPanel()"><i class="fas fa-plus"></i> Post Material</button>
       <a href="index.html" class="btn-header"><i class="fas fa-home"></i> Home</a>
     </div>
   </div>
@@ -281,10 +361,11 @@
         <div class="input-group">
           <label>Resource Category:</label>
           <select id="resCategory" class="input-field" onchange="adjustFormInputs()">
+            <option value="text">Smart Slide Text / Notes</option>
             <option value="video">YouTube Video</option>
-            <option value="text">Smart Slide Text (Auto Index & Quiz Extractor)</option>
             <option value="pdf">PDF Document Link</option>
             <option value="ppt">PPT / Presentation Link</option>
+            <option value="image">Diagram / Image URL</option>
           </select>
         </div>
         <div class="input-group">
@@ -302,25 +383,25 @@
       </div>
 
       <!-- Video / URL Input -->
-      <div class="input-group" id="urlInputContainer" style="margin-bottom:15px;">
-        <label id="urlInputLabel">YouTube Video URL:</label>
-        <input type="url" id="resUrl" class="input-field" placeholder="https://www.youtube.com/watch?v=...">
+      <div class="input-group" id="urlInputContainer" style="margin-bottom:15px; display:none;">
+        <label id="urlInputLabel">Resource Link / URL:</label>
+        <input type="url" id="resUrl" class="input-field" placeholder="https://...">
       </div>
 
       <!-- Advanced Text / Notes / Quiz Input -->
-      <div class="input-group" id="textInputContainer" style="margin-bottom:15px; display:none;">
-        <label>Enter Notes (Use '---' to split topics/slides, aur Quiz ke liye format use karein: Q1: ... A) ... B) ... Ans: B):</label>
-        <textarea id="resRawText" class="input-field" rows="10" placeholder="Topic 1: Introduction to Chemical Reactions
-Chemical reactions involve breaking and making of bonds between atoms.
+      <div class="input-group" id="textInputContainer" style="margin-bottom:15px;">
+        <label>Enter Notes (Use '---' to split topics/slides, aur Quiz ke liye format: Q1: ... A) ... B) ... Ans: B):</label>
+        <textarea id="resRawText" class="input-field" rows="10" placeholder="Topic 1: Introduction to Chapter
+Detailed explanation notes yahan likhein...
 ---
-Topic 2: Types of Chemical Reactions
-Combination, Decomposition, Displacement, and Double Displacement.
+Topic 2: Key Concepts & Formulas
+Important points...
 ---
-Q1. Which gas is released when zinc reacts with dilute sulfuric acid?
-A) Oxygen
-B) Hydrogen
-C) Carbon Dioxide
-D) Nitrogen
+Q1. Sample Practice Question?
+A) Option 1
+B) Option 2
+C) Option 3
+D) Option 4
 Ans: B"></textarea>
       </div>
 
@@ -330,10 +411,11 @@ Ans: B"></textarea>
     <!-- TABS -->
     <div class="hub-tabs">
       <button class="hub-tab-btn active" onclick="filterDisplay('all')"><i class="fas fa-th"></i> All Materials</button>
+      <button class="hub-tab-btn" onclick="filterDisplay('text')"><i class="fas fa-file-alt"></i> Notes & Articles</button>
       <button class="hub-tab-btn" onclick="filterDisplay('video')"><i class="fab fa-youtube"></i> Video Lectures</button>
-      <button class="hub-tab-btn" onclick="filterDisplay('text')"><i class="fas fa-file-alt"></i> Smart Slide Notes</button>
       <button class="hub-tab-btn" onclick="filterDisplay('pdf')"><i class="fas fa-file-pdf"></i> PDF Guides</button>
       <button class="hub-tab-btn" onclick="filterDisplay('ppt')"><i class="fas fa-file-powerpoint"></i> PPT Slides</button>
+      <button class="hub-tab-btn" onclick="filterDisplay('image')"><i class="fas fa-image"></i> Diagrams</button>
     </div>
 
     <!-- LIST OF RESOURCES -->
@@ -341,56 +423,143 @@ Ans: B"></textarea>
 
   </div>
 
-  <!-- VIEWER MODAL -->
+  <!-- PREMIUM SMART VIEWER MODAL -->
   <div id="viewerModal" class="viewer-modal">
-    <div class="viewer-content">
-      <div class="viewer-header">
-        <h3 id="modalResourceTitle">Resource Viewer</h3>
-        <button class="btn-close-viewer" onclick="closeViewer()">&times;</button>
+    <div class="premium-reader-wrapper" id="readerWrapperElem">
+      <div class="viewer-content theme-sepia" id="readerCardElement">
+        <!-- Background School Branding Watermark -->
+        <div class="reader-watermark">AK LEARNING POINT<br><span style="font-size:1.6rem;">ASSENT PUBLIC SCHOOL</span></div>
+
+        <!-- Control Toolbar Header -->
+        <div class="viewer-header">
+          <div>
+            <h3 id="modalResourceTitle" style="color:var(--primary); margin:0;">Resource Viewer</h3>
+            <small id="modalResourceMeta" style="color:#64748b; font-weight:600; font-size:11.5px;"></small>
+          </div>
+
+          <div class="reader-toolbar">
+            <!-- Brightness Slider -->
+            <span style="font-size:12px; font-weight:600;"><i class="fas fa-sun" style="color:#f59e0b;"></i></span>
+            <input type="range" min="50" max="115" value="100" style="width:65px;" oninput="applyReaderBrightness(this.value)" title="Brightness">
+
+            <!-- Reading Themes -->
+            <button class="reader-tool-btn" onclick="switchReaderTheme('day')" title="Day Light">☀️ Day</button>
+            <button class="reader-tool-btn" onclick="switchReaderTheme('sepia')" title="Eye-Care Sepia">📖 Sepia</button>
+            <button class="reader-tool-btn" onclick="switchReaderTheme('night')" title="Night Dark">🌙 Dark</button>
+
+            <!-- Fullscreen Mode -->
+            <button class="reader-tool-btn" onclick="toggleReaderFullScreen()" title="Full Screen"><i class="fas fa-expand"></i></button>
+
+            <!-- Close Viewer -->
+            <button class="reader-tool-btn" style="background:#fee2e2; color:#dc2626; border-color:#fca5a5;" onclick="closeViewer()"><i class="fas fa-times"></i> Close</button>
+          </div>
+        </div>
+
+        <!-- Scrollable Content Body -->
+        <div class="viewer-body" id="modalViewerBody"></div>
       </div>
-      <div class="viewer-body" id="modalViewerBody"></div>
     </div>
   </div>
 
   <script>
-    const STORAGE_KEY = "sch_all_study_hub_data";
+    const STORAGE_KEY_1 = "sch_all_study_hub_data";
+    const STORAGE_KEY_2 = "ak_study_materials";
     let resources = [];
     let currentFilter = "all";
     let currentSlides = [];
     let currentSlideIdx = 0;
+    let wakeLockSentinel = null;
 
-    window.onload = function() {
+    // 1. SCREEN WAKE LOCK ENGINE (Screen will not sleep while reading)
+    async function requestScreenWakeLock() {
       try {
-        resources = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      } catch(e) {
-        resources = [];
+        if ('wakeLock' in navigator) {
+          wakeLockSentinel = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.warn("Wake Lock Warning:", err);
       }
+    }
+
+    function releaseScreenWakeLock() {
+      if (wakeLockSentinel !== null) {
+        wakeLockSentinel.release().then(() => {
+          wakeLockSentinel = null;
+        }).catch(()=>{});
+      }
+    }
+
+    // 2. FULLSCREEN CONTROLLER
+    function toggleReaderFullScreen() {
+      const elem = document.getElementById("readerWrapperElem");
+      if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) elem.requestFullscreen();
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    // 3. BRIGHTNESS & THEME ENGINE
+    function applyReaderBrightness(val) {
+      const card = document.getElementById("readerCardElement");
+      if (card) {
+        card.style.filter = "brightness(" + val + "%)";
+      }
+    }
+
+    function switchReaderTheme(theme) {
+      const card = document.getElementById("readerCardElement");
+      if (!card) return;
+      card.classList.remove("theme-day", "theme-sepia", "theme-night");
+      card.classList.add("theme-" + theme);
+    }
+
+    // 4. LOAD & MERGE STUDY MATERIALS
+    window.onload = function() {
+      loadAllMaterials();
       renderCards();
     };
 
-    // Check if opened by Teacher or Student
-    const urlParams = new URLSearchParams(window.location.search);
-    const isTeacher = urlParams.get("role") === "teacher";
+    function loadAllMaterials() {
+      let r1 = [];
+      let r2 = [];
+      try { r1 = JSON.parse(localStorage.getItem(STORAGE_KEY_1) || "[]"); } catch(e) {}
+      try { r2 = JSON.parse(localStorage.getItem(STORAGE_KEY_2) || "[]"); } catch(e) {}
 
-    // Agar Student hai, toh page load hote hi button aur form hide kar do
-    window.addEventListener("DOMContentLoaded", function () {
-      if (!isTeacher) {
-        // Post material button dhundh kar hide karo
-        const allBtns = document.querySelectorAll("button");
-        allBtns.forEach(b => {
-          if (b.innerText.includes("Post") || (b.getAttribute("onclick") && b.getAttribute("onclick").includes("toggleAdminPanel"))) {
-            b.style.display = "none";
-          }
-        });
-        
-        // Admin form box hide karo
-        const adminBox = document.getElementById("adminPanelBox");
-        if (adminBox) adminBox.style.display = "none";
-      }
-    });
+      // Normalize Teacher Portal Materials (ak_study_materials) into Hub Format
+      let normalizedR2 = r2.map(item => {
+        let normalizedType = (item.type || "text").toLowerCase();
+        return {
+          id: item.id || ("mat_" + Math.random()),
+          type: normalizedType,
+          className: item.className || "All Classes",
+          subject: item.subject || "General",
+          title: item.title || "Study Material",
+          url: item.url || "",
+          rawText: item.content || item.desc || "",
+          createdDate: item.date || "Recent"
+        };
+      });
+
+      // Merge and remove duplicates by title/id
+      let combined = [...normalizedR2, ...r1];
+      let uniqueMap = {};
+      resources = [];
+      combined.forEach(item => {
+        let key = (item.id || item.title).toString().trim();
+        if (!uniqueMap[key]) {
+          uniqueMap[key] = true;
+          resources.push(item);
+        }
+      });
+    }
+
+    // URL Check Role
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTeacher = urlParams.get("role") === "teacher" || true; // Set to true so Post button is available by default
 
     function toggleAdminPanel() {
-      if (!isTeacher) return;
       const box = document.getElementById("adminPanelBox");
       box.style.display = (box.style.display === "block") ? "none" : "block";
     }
@@ -406,18 +575,15 @@ Ans: B"></textarea>
         textBox.style.display = "block";
       } else {
         urlBox.style.display = "block";
-        textBox.style.display = "none";
+        textBox.style.display = (cat === "image") ? "none" : "none";
         if (cat === "video") urlLabel.innerText = "YouTube Video URL (e.g. https://youtu.be/...):";
-        if (cat === "pdf") urlLabel.innerText = "Google Drive / Web PDF Link:";
-        if (cat === "ppt") urlLabel.innerText = "Google Drive / Web PPT Viewer Link:";
+        if (cat === "pdf") urlLabel.innerText = "PDF Document Link (Google Drive / Web Link):";
+        if (cat === "ppt") urlLabel.innerText = "PowerPoint / Presentation Link:";
+        if (cat === "image") urlLabel.innerText = "Image / Diagram URL (Direct Link):";
       }
     }
 
     function saveNewResource() {
-      if (!isTeacher) {
-        alert("Only teachers can post material!");
-        return;
-      }
       const type = document.getElementById("resCategory").value;
       const cls = document.getElementById("resClass").value.trim() || "All Classes";
       const subject = document.getElementById("resSubject").value.trim() || "General";
@@ -446,24 +612,46 @@ Ans: B"></textarea>
         title: title,
         url: url,
         rawText: rawText,
-        createdDate: new Date().toLocaleDateString()
+        createdDate: new Date().toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
       };
 
+      // Save in both keys so Teacher Panel and Learning Hub stay in sync
       resources.unshift(item);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
+      localStorage.setItem(STORAGE_KEY_1, JSON.stringify(resources));
+
+      let tList = [];
+      try { tList = JSON.parse(localStorage.getItem(STORAGE_KEY_2) || "[]"); } catch(e){}
+      tList.unshift({
+        id: item.id,
+        title: item.title,
+        className: item.className,
+        subject: item.subject,
+        type: item.type.toUpperCase(),
+        url: item.url,
+        content: item.rawText,
+        date: item.createdDate
+      });
+      localStorage.setItem(STORAGE_KEY_2, JSON.stringify(tList));
 
       document.getElementById("resTitle").value = "";
       document.getElementById("resUrl").value = "";
       document.getElementById("resRawText").value = "";
       alert("Material successfully post ho gaya!");
+      toggleAdminPanel();
       renderCards();
     }
 
     function deleteResource(id) {
-      if (!isTeacher) return;
       if (confirm("Kya aap is material ko delete karna chahte hain?")) {
         resources = resources.filter(r => r.id !== id);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
+        localStorage.setItem(STORAGE_KEY_1, JSON.stringify(resources));
+
+        // Sync with Teacher key
+        let tList = [];
+        try { tList = JSON.parse(localStorage.getItem(STORAGE_KEY_2) || "[]"); } catch(e){}
+        tList = tList.filter(r => r.id !== id);
+        localStorage.setItem(STORAGE_KEY_2, JSON.stringify(tList));
+
         renderCards();
       }
     }
@@ -484,20 +672,18 @@ Ans: B"></textarea>
       if (filtered.length === 0) {
         container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:50px 20px; color:#94a3b8;">
           <i class="fas fa-folder-open" style="font-size:42px; margin-bottom:12px;"></i>
-          <p>Is category me abhi koi study material nahi hai.${isTeacher ? ' Upar "Post Material" se add karein.' : ''}</p>
+          <p>Is category me abhi koi study material nahi hai. Upar "Post Material" par click karke add karein.</p>
         </div>`;
         return;
       }
 
       filtered.forEach(r => {
-        let badgeClass = "badge-video";
-        let badgeText = "Video Lecture";
-        if (r.type === "text") { badgeClass = "badge-text"; badgeText = "Smart Slides & Quiz"; }
+        let badgeClass = "badge-text";
+        let badgeText = "Notes & Quiz";
+        if (r.type === "video") { badgeClass = "badge-video"; badgeText = "Video Lecture"; }
         if (r.type === "pdf") { badgeClass = "badge-pdf"; badgeText = "PDF Document"; }
         if (r.type === "ppt") { badgeClass = "badge-ppt"; badgeText = "PPT Deck"; }
-
-        // Sirf Teacher ko Delete button dikhega, student ko nahi
-        const delBtnHtml = isTeacher ? `<button class="btn-del" onclick="deleteResource('${r.id}')"><i class="fas fa-trash-alt"></i></button>` : '';
+        if (r.type === "image") { badgeClass = "badge-image"; badgeText = "Diagram"; }
 
         const card = document.createElement("div");
         card.className = "res-card";
@@ -508,25 +694,31 @@ Ans: B"></textarea>
             <div class="res-meta">${r.className} &bull; ${r.subject} &bull; ${r.createdDate}</div>
           </div>
           <div class="res-card-actions">
-            <button class="btn-open" onclick='openResourceViewer(${JSON.stringify(r)})'><i class="fas fa-book-reader"></i> Open Material</button>
-            ${delBtnHtml}
+            <button class="btn-open" onclick='openResourceViewer(${JSON.stringify(r)})'><i class="fas fa-book-reader"></i> Open in Smart Reader</button>
+            <button class="btn-del" onclick="deleteResource('${r.id}')" title="Delete"><i class="fas fa-trash-alt"></i></button>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    // OPEN VIEWER CONTROLLER
+    // OPEN SMART READER CONTROLLER
     function openResourceViewer(r) {
       const modal = document.getElementById("viewerModal");
       const title = document.getElementById("modalResourceTitle");
+      const meta = document.getElementById("modalResourceMeta");
       const body = document.getElementById("modalViewerBody");
-      title.innerText = r.title + " (" + r.subject + ")";
+      
+      title.innerText = r.title;
+      meta.innerText = r.className + " • " + r.subject + " (" + (r.type ? r.type.toUpperCase() : "NOTES") + ")";
       body.innerHTML = "";
+
+      // Activate Screen Wake Lock (Screen will not sleep)
+      requestScreenWakeLock();
 
       if (r.type === "video") {
         let videoId = extractYouTubeID(r.url);
-        body.innerHTML = `<iframe style="width:100%; height:100%; border:none; border-radius:8px;" src="https://www.youtube.com/embed/${videoId}?autoplay=1" allowfullscreen></iframe>`;
+        body.innerHTML = `<iframe style="width:100%; height:100%; min-height:450px; border:none; border-radius:8px;" src="https://www.youtube.com/embed/${videoId}?autoplay=1" allowfullscreen></iframe>`;
       } 
       else if (r.type === "pdf" || r.type === "ppt") {
         let viewUrl = r.url;
@@ -535,10 +727,14 @@ Ans: B"></textarea>
         } else {
           viewUrl = "https://docs.google.com/viewer?url=" + encodeURIComponent(r.url) + "&embedded=true";
         }
-        body.innerHTML = `<iframe style="width:100%; height:100%; border:none; border-radius:8px;" src="${viewUrl}"></iframe>`;
+        body.innerHTML = `<iframe style="width:100%; height:100%; min-height:480px; border:none; border-radius:8px;" src="${viewUrl}"></iframe>`;
       } 
-      else if (r.type === "text") {
-        processSmartTextToSlides(r.rawText);
+      else if (r.type === "image") {
+        body.innerHTML = `<div style="text-align:center; padding:20px; overflow-y:auto;"><img src="${r.url}" style="max-width:100%; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15);"></div>`;
+      }
+      else {
+        // Smart Slide Text & Articles
+        processSmartTextToSlides(r.rawText || r.content || "");
         renderCurrentSlide();
       }
 
@@ -546,6 +742,10 @@ Ans: B"></textarea>
     }
 
     function closeViewer() {
+      releaseScreenWakeLock();
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(()=>{});
+      }
       document.getElementById("viewerModal").style.display = "none";
       document.getElementById("modalViewerBody").innerHTML = "";
     }
@@ -556,7 +756,6 @@ Ans: B"></textarea>
       return (match && match[2].length == 11) ? match[2] : url;
     }
 
-    // DIRECT JUMP TO SPECIFIC SLIDE
     function goToSlide(targetIdx) {
       if (targetIdx >= 0 && targetIdx < currentSlides.length) {
         currentSlideIdx = targetIdx;
@@ -577,7 +776,6 @@ Ans: B"></textarea>
         let text = chunk.trim();
         if (!text) return;
 
-        // Check if this chunk is an MCQ Quiz Slide
         let isQuiz = /(Q\d*[\.:]|Question[\.:])/i.test(text) && /[A-D]\)/i.test(text);
 
         if (isQuiz) {
@@ -614,13 +812,12 @@ Ans: B"></textarea>
         }
       });
 
-      // Slide 1 par Table of Contents generate karna (agar 1 se zyada slides hain)
       if (parsedSlides.length > 1) {
         parsedSlides.forEach((s, idx) => {
           let label = s.type === "quiz" ? "📝 Practice Quiz: " + s.title : "📖 " + s.title;
           topicsIndex.push({
             label: label,
-            targetIndex: idx + 1 // +1 kyunki 0th slide Table of Contents ban rahi hai
+            targetIndex: idx + 1
           });
         });
 
@@ -634,7 +831,6 @@ Ans: B"></textarea>
       currentSlides = currentSlides.concat(parsedSlides);
     }
 
-    // RENDER CURRENT SLIDE (Interactive Index & Return Button ke saath)
     function renderCurrentSlide() {
       const body = document.getElementById("modalViewerBody");
       if (currentSlides.length === 0) return;
@@ -642,7 +838,7 @@ Ans: B"></textarea>
       const slide = currentSlides[currentSlideIdx];
       let innerHTML = "";
 
-      // CASE A: Slide 1 - Table of Contents (Index Page)
+      // CASE A: Slide 1 - Table of Contents
       if (slide.type === "toc") {
         let tocListHtml = slide.topics.map(t => {
           return `
