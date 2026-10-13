@@ -1,3 +1,4 @@
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxgTvxwNwAPetNnU7Ccoa6oq2cP9k67l_yu3gewEVd8bR4dvTqsj1FRcGZgcaOKdG86/exec";
 // Function: Har quiz ke actual attempts count karna (ID + Title Smart Match)
 function getQuizAttemptCount(quiz) {
   if (!quiz) return 0;
@@ -511,7 +512,7 @@ async function fetchAndRenderLeaderboard(quiz, quizIdx) {
   // 1. Google Sheet API se "Attempts" tab ka data pull karein
   if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
     try {
-      var res = await fetch(CLOUD_SYNC_URL + "?tabName=Attempts");
+      var res = await fetch(CLOUD_SYNC_URL + "?action=getAttempts");
       var json = await res.json();
       var rawList = Array.isArray(json) ? json : (json && json.data ? json.data : []);
 
