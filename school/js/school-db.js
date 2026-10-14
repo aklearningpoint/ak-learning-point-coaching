@@ -1,273 +1,135 @@
 // ==========================================
-// STUDENT PORTAL ENGINE - ASSENT PUBLIC SCHOOL
+// SCHOOL DATABASE & CLOUD SYNC ENGINE - ASSENT PUBLIC SCHOOL
+// File: js/school-db.js
 // ==========================================
 
-var currentStudent = null;
+// APNA GOOGLE APPS SCRIPT WEB APP URL YAHAN DALEIN
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwPq117WjFvE6cRjVkWjZz9cR1gZ7xV3h8q9y2/exec"; 
+// Note: Agar aapka naya deployment URL alag hai toh upar wali string me paste kar sakte hain.
 
-// Smart Class Normalizer: Handles "5", "Class 5", "Class-5", "Nur & Play", etc.
-function normalizeClass(cls) {
+// Smart Class Normalizer: "5", "Class 5", "Class-5", "Nur & Play" sabko ek jaisa samajhta hai
+function normalizeClassName(cls) {
   return String(cls || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function isClassEqual(classA, classB) {
-  var a = normalizeClass(classA);
-  var b = normalizeClass(classB);
+function matchClass(classA, classB) {
+  var a = normalizeClassName(classA);
+  var b = normalizeClassName(classB);
   if (!a || !b) return false;
   if (a === b || a === ("class" + b) || ("class" + a) === b) return true;
   if ((a.includes("nur") || a.includes("play")) && (b.includes("nur") || b.includes("play"))) return true;
   return false;
 }
 
-// 1. GATEWAY: STUDENT VERIFICATION & LOGIN
-function verifyStudentCandidate() {
-  var selectedClass = document.getElementById("loginClass").value.trim();
-  var enteredRoll = parseInt(document.getElementById("loginRoll").value, 10);
-
-  if (isNaN(enteredRoll)) {
-    alert("Kripya valid Roll Number enter karein!");
-    return;
-  }
-
-  var studentsList = [];
-  if (typeof schoolDB !== "undefined" && typeof schoolDB.getStudents === "function") {
-    studentsList = schoolDB.getStudents();
-  } else {
+var schoolDB = {
+  // 1. GET ALL STUDENTS
+  getStudents: function() {
     try {
-      studentsList = JSON.parse(localStorage.getItem("ak_school_students") || "[]");
+      return JSON.parse(localStorage.getItem("ak_school_students") || "[]");
     } catch(e) {
-      studentsList = [];
+      return [];
     }
-  }
+  },
 
-  if (!studentsList || studentsList.length === 0) {
-    alert("Students data abhi cloud sheet se load ho raha hai. Kripya 2 second baad dobara prayas karein!");
-    return;
-  }
+  // 2. GET STUDENTS BY CLASS (Smart match for 3, 4, 5, UKG, etc.)
+  getStudentsByClass: function(targetClass) {
+    var all = this.getStudents();
+    if (!targetClass || targetClass === "All") return all;
+    return all.filter(function(s) {
+      return matchClass(s.className || s.class, targetClass);
+    });
+  },
 
-  var candidate = studentsList.find(function(s) {
-    var rollMatch = parseInt(s.rollNo || s.roll, 10) === enteredRoll;
-    var classMatch = isClassEqual(s.className || s.class, selectedClass);
-    return rollMatch && classMatch;
-  });
-
-  if (!candidate) {
-    alert("Student record nahi mila!\nClass: " + selectedClass + " | Roll No: " + enteredRoll + "\nKripya Class aur Roll Number verify karein.");
-    return;
-  }
-
-  currentStudent = candidate;
-
-  document.getElementById("studentAuthOverlay").style.display = "none";
-  document.getElementById("studentWorkspace").style.display = "block";
-
-  var welcomeElem = document.getElementById("welcomeBanner");
-  if (welcomeElem) {
-    welcomeElem.innerHTML = '<span style="color:#d97706;"><i class="fas fa-user-graduate"></i></span> Welcome, ' + 
-      '<span style="background: linear-gradient(135deg, #1e3a8a, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight:800;">' + 
-      (candidate.name || "Student") + '</span> ' +
-      '<small style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:20px; font-weight:700; margin-left:8px; display:inline-block; vertical-align:middle;">Class: ' + (candidate.className || candidate.class) + ' | Roll: ' + (candidate.rollNo || candidate.roll) + '</small>';
-  }
-
-  populateStudentProfile(candidate);
-  renderStudentIDCard(candidate);
-  renderStudentResults(candidate);
-}
-
-// 2. LOGOUT / EXIT
-function logoutStudent() {
-  currentStudent = null;
-  document.getElementById("studentWorkspace").style.display = "none";
-  document.getElementById("studentAuthOverlay").style.display = "flex";
-  document.getElementById("loginRoll").value = "";
-}
-
-// 3. TAB NAVIGATION
-function switchTab(tabId) {
-  var panes = document.querySelectorAll(".tab-pane");
-  panes.forEach(function(pane) { pane.classList.remove("active"); });
-
-  var btns = document.querySelectorAll(".tab-btn");
-  btns.forEach(function(btn) { btn.classList.remove("active"); });
-
-  var targetPane = document.getElementById(tabId);
-  if (targetPane) targetPane.classList.add("active");
-
-  if (window.event && window.event.currentTarget) {
-    window.event.currentTarget.classList.add("active");
-  }
-}
-
-// 4. POPULATE PROFILE TAB
-function populateStudentProfile(s) {
-  document.getElementById("stuRegNo").value = s.regNo || "";
-  document.getElementById("stuFather").value = s.father || "";
-  document.getElementById("stuMother").value = s.mother || "";
-  document.getElementById("stuGender").value = s.gender || "Male";
-  document.getElementById("stuTransport").value = s.transport || "School Transport";
-  document.getElementById("stuMob1").value = s.mobile1 || s.mobile || "";
-  document.getElementById("stuMob2").value = s.mobile2 || "";
-  document.getElementById("stuDOB").value = s.dob || "";
-}
-
-// 5. SAVE PROFILE SELF-UPDATE
-function saveStudentSelfDetails(e) {
-  e.preventDefault();
-  if (!currentStudent) return;
-
-  currentStudent.regNo = document.getElementById("stuRegNo").value.trim();
-  currentStudent.father = document.getElementById("stuFather").value.trim();
-  currentStudent.mother = document.getElementById("stuMother").value.trim();
-  currentStudent.gender = document.getElementById("stuGender").value;
-  currentStudent.transport = document.getElementById("stuTransport").value;
-  currentStudent.mobile1 = document.getElementById("stuMob1").value.trim();
-  currentStudent.mobile2 = document.getElementById("stuMob2").value.trim();
-  currentStudent.dob = document.getElementById("stuDOB").value;
-
-  if (typeof schoolDB !== "undefined" && typeof schoolDB.updateStudent === "function") {
-    schoolDB.updateStudent(currentStudent);
-  }
-
-  if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+  // 3. GET ALL MARKS
+  getMarks: function() {
     try {
-      fetch(CLOUD_SYNC_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "updateStudentDetails", student: currentStudent })
-      });
-    } catch(err) {
-      console.warn("Cloud sync error:", err);
+      return JSON.parse(localStorage.getItem("ak_school_marks") || "[]");
+    } catch(e) {
+      return [];
     }
-  }
+  },
 
-  alert("Profile information successfully update ho gayi!");
-  renderStudentIDCard(currentStudent);
-}
+  // 4. GET MARKS BY CLASS & TERM
+  getMarksByClass: function(targetClass, term) {
+    var all = this.getMarks();
+    return all.filter(function(m) {
+      var cMatch = matchClass(m.className || m.class, targetClass);
+      var tMatch = term ? (String(m.term).toLowerCase() === String(term).toLowerCase()) : true;
+      return cMatch && tMatch;
+    });
+  },
 
-// 6. PHOTO PREVIEW HANDLER
-function previewStudentPhoto(input) {
-  if (input.files && input.files[0]) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      if (currentStudent) {
-        currentStudent.photo = e.target.result;
-        renderStudentIDCard(currentStudent);
+  // 5. UPDATE SINGLE STUDENT RECORD
+  updateStudent: function(studentObj) {
+    var list = this.getStudents();
+    var idx = list.findIndex(function(s) {
+      return String(s.id || s.regNo) === String(studentObj.id || studentObj.regNo);
+    });
+    if (idx !== -1) {
+      list[idx] = Object.assign({}, list[idx], studentObj);
+    } else {
+      list.push(studentObj);
+    }
+    localStorage.setItem("ak_school_students", JSON.stringify(list));
+  },
+
+  // 6. SAVE STUDENT MARKS
+  saveMarks: function(marksRecord) {
+    var marksList = this.getMarks();
+    var idx = marksList.findIndex(function(m) {
+      return String(m.studentId) === String(marksRecord.studentId) && String(m.term) === String(marksRecord.term);
+    });
+    if (idx !== -1) {
+      marksList[idx] = Object.assign({}, marksList[idx], marksRecord);
+    } else {
+      marksList.push(marksRecord);
+    }
+    localStorage.setItem("ak_school_marks", JSON.stringify(marksList));
+
+    // Cloud Sheet Sync
+    if (CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+      try {
+        fetch(CLOUD_SYNC_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "saveMarks", marks: marksRecord })
+        });
+      } catch(e) {}
+    }
+  },
+
+  // 7. FETCH ALL DATA FROM CLOUD SHEET (Students + Marks)
+  syncFromCloud: async function() {
+    if (!CLOUD_SYNC_URL || CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) return;
+
+    // Fetch Students
+    try {
+      var res = await fetch(CLOUD_SYNC_URL + "?action=getStudents");
+      var json = await res.json();
+      if (json && json.data && Array.isArray(json.data)) {
+        localStorage.setItem("ak_school_students", JSON.stringify(json.data));
+        console.log("Fetched Students from Cloud Sheet: " + json.data.length);
       }
-    };
-    reader.readAsDataURL(input.files[0]);
-  }
-}
+    } catch(err) {
+      console.warn("Could not fetch students from Cloud:", err);
+    }
 
-// 7. RENDER OFFICIAL 6:9 ASPECT RATIO ID CARD
-function renderStudentIDCard(s) {
-  var container = document.getElementById("idCardContainer");
-  if (!container) return;
-
-  var photoSrc = s.photo || "https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(s.name || "Student");
-
-  var cardHtml = '<div class="id-card-wrapper" style="display:flex; flex-direction:column; align-items:center; padding:15px 0;">' +
-    '<div class="official-id-card-6x9" id="officialCardNode" style="width:280px; height:420px; aspect-ratio:6/9; background:#ffffff; border:2px solid #0f172a; border-radius:14px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.15); display:flex; flex-direction:column; justify-content:space-between; font-family:\'Segoe UI\', Tahoma, sans-serif;">' +
-      
-      '<div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color:#fff; text-align:center; padding:10px 8px; border-bottom:3px solid #d97706;">' +
-        '<div style="font-size:13px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">ASSENT PUBLIC SCHOOL</div>' +
-        '<div style="font-size:9px; color:#93c5fd; letter-spacing:0.3px;">Singhiya Khurd, Samastipur, Bihar - 848101</div>' +
-        '<div style="font-size:8.5px; background:rgba(217, 119, 6, 0.25); color:#fef3c7; border:1px solid rgba(255,255,255,0.2); border-radius:10px; display:inline-block; padding:1px 8px; margin-top:3px; font-weight:600;">IDENTITY CARD • 2026-27</div>' +
-      '</div>' +
-
-      '<div style="padding:10px 14px; flex:1; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">' +
-        '<div style="width:82px; height:94px; margin:0 auto; border:2.5px solid #1e3a8a; border-radius:8px; overflow:hidden; background:#e2e8f0; box-shadow:0 4px 8px rgba(0,0,0,0.1);">' +
-          '<img src="' + photoSrc + '" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">' +
-        '</div>' +
-
-        '<div style="text-align:center; margin-top:4px;">' +
-          '<h4 style="margin:0; color:#0f172a; font-size:13px; text-transform:uppercase; font-weight:800; letter-spacing:0.4px;">' + (s.name || 'STUDENT NAME') + '</h4>' +
-          '<div style="font-size:10.5px; font-weight:700; color:#1e3a8a; background:#e0e7ff; border-radius:12px; display:inline-block; padding:2px 10px; margin-top:2px;">' +
-            'Class: ' + (s.className || s.class || '—') + ' | Roll No: ' + (s.rollNo || s.roll || '—') +
-          '</div>' +
-        '</div>' +
-
-        '<div style="font-size:10px; line-height:1.6; background:#ffffff; padding:6px 10px; border-radius:8px; border:1px solid #e2e8f0; box-shadow:inset 0 1px 3px rgba(0,0,0,0.03); color:#334155;">' +
-          '<div><strong style="color:#0f172a;">Reg No:</strong> <span style="color:#2563eb; font-weight:700;">' + (s.regNo || 'PENDING') + '</span></div>' +
-          '<div><strong style="color:#0f172a;">Father:</strong> ' + (s.father || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">Mother:</strong> ' + (s.mother || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">DOB:</strong> ' + (s.dob || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">Mobile:</strong> ' + (s.mobile1 || s.mobile || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">Transport:</strong> ' + (s.transport || 'School Transport') + '</div>' +
-        '</div>' +
-
-        '<div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:8.5px; font-weight:700; color:#64748b; border-top:1px dashed #cbd5e1; padding-top:4px; margin-top:2px;">' +
-          '<span>Guardian Sign</span>' +
-          '<span style="color:#1e3a8a;">Principal Sign</span>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-
-    '<div style="margin-top:14px;">' +
-      '<button class="btn-download-img" style="background:#1e3a8a; color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 10px rgba(30,58,138,0.25);" onclick="window.print()"><i class="fa fa-print"></i> Print Card</button>' +
-    '</div>' +
-  '</div>';
-
-  container.innerHTML = cardHtml;
-}
-
-// 8. RENDER RESULTS TAB
-function renderStudentResults(s) {
-  var container = document.getElementById("studentResultsContainer");
-  if (!container) return;
-
-  var marksList = [];
-  if (typeof schoolDB !== "undefined" && typeof schoolDB.getMarks === "function") {
-    marksList = schoolDB.getMarks();
-  } else {
+    // Fetch Marks
     try {
-      marksList = JSON.parse(localStorage.getItem("ak_school_marks") || "[]");
-    } catch(e) {
-      marksList = [];
+      var resMarks = await fetch(CLOUD_SYNC_URL + "?action=getMarks");
+      var jsonMarks = await resMarks.json();
+      if (jsonMarks && jsonMarks.data && Array.isArray(jsonMarks.data)) {
+        localStorage.setItem("ak_school_marks", JSON.stringify(jsonMarks.data));
+        console.log("Fetched Marks from Cloud Sheet: " + jsonMarks.data.length);
+      }
+    } catch(err) {
+      console.warn("Could not fetch marks from Cloud:", err);
     }
   }
+};
 
-  var studentMarks = marksList.filter(function(m) {
-    return String(m.studentId || m.regNo) === String(s.id || s.regNo) ||
-           (isClassEqual(m.className, s.className) && parseInt(m.rollNo, 10) === parseInt(s.rollNo, 10));
-  });
-
-  if (!studentMarks || studentMarks.length === 0) {
-    container.innerHTML = '<div style="text-align:center; padding:35px 20px; color:#64748b;">' +
-      '<i class="fas fa-file-invoice" style="font-size:38px; color:#cbd5e1; margin-bottom:10px;"></i>' +
-      '<p style="font-weight:600; font-size:14px;">Abhi is student ka koi exam report card publish nahi hua hai.</p>' +
-      '<small>Examinations section marks finalize kar raha hai.</small>' +
-      '</div>';
-    return;
-  }
-
-  var resHtml = '<div style="overflow-x:auto; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 4px 12px rgba(0,0,0,0.04);">' +
-    '<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left; background:#fff;">' +
-    '<thead><tr style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:#ffffff;">' +
-    '<th style="padding:10px 12px;">Exam / Term</th>' +
-    '<th style="padding:10px;">Hindi</th>' +
-    '<th style="padding:10px;">English</th>' +
-    '<th style="padding:10px;">Math</th>' +
-    '<th style="padding:10px;">EVS / Science</th>' +
-    '<th style="padding:10px;">Grand Total</th>' +
-    '<th style="padding:10px;">Percentage</th>' +
-    '</tr></thead><tbody>';
-
-  studentMarks.forEach(function(m) {
-    var pct = parseFloat(m.percentage || 0);
-    var badgeColor = pct >= 60 ? "#16a34a" : (pct >= 40 ? "#d97706" : "#dc2626");
-    var badgeBg = pct >= 60 ? "#dcfce7" : (pct >= 40 ? "#fef3c7" : "#fee2e2");
-
-    resHtml += '<tr style="border-bottom:1px solid #f1f5f9;">' +
-      '<td style="padding:10px 12px; font-weight:700; color:#1e293b;"><i class="fas fa-award" style="color:#d97706; margin-right:5px;"></i> ' + (m.term || 'Term 1') + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.hindi || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.english || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.math || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.evs || m.science || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:800; color:#1e3a8a; font-size:14px;">' + (m.grandTotal || m.total || 0) + '</td>' +
-      '<td style="padding:10px;"><span style="background:' + badgeBg + '; color:' + badgeColor + '; font-weight:800; padding:3px 8px; border-radius:12px; font-size:12px;">' + pct + '%</span></td>' +
-      '</tr>';
-  });
-
-  resHtml += '</tbody></table></div>';
-  container.innerHTML = resHtml;
-}
+// Page load hote hi cloud se data background me refresh karein
+(function() {
+  schoolDB.syncFromCloud();
+})();
