@@ -3,7 +3,7 @@
 // File: js/school-db.js
 // ==========================================
 
-var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwRDQuXVyKGKfCI-kifRPb-vzb8Uv2AIv7YzMSihcP5iKPlR9BJj-DVSSDp8q_VWTij/exec";
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxURSkEdeKaakEwF-brduB6hKXbeFQcIU9hNRcAJlXseNSQQO-1uqIKN0eeqA7PTKIAXA/exec";
 
 // Smart Class Normalizer: Class 3, 4, 5 (numeric 3, 4, 5 ya "Class 5") ko handle karta hai
 function normalizeClassName(cls) {
