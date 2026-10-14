@@ -395,6 +395,7 @@ async function renderTeacherQuizList() {
 
   var allAttemptsCombined = (cachedSheetAttempts || []).concat(localAttempts);
 
+  // Helper: Live Attempts Counter
   function getLiveQuizAttemptCount(quiz) {
     var qId = String(quiz.id || "").trim();
     var qTitle = String(quiz.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -417,13 +418,36 @@ async function renderTeacherQuizList() {
     return Object.keys(uMap).length;
   }
 
-  // 3. Date-wise Grouping Engine
+  // 3. SMART DATE-WISE GROUPING ENGINE (Fixes Merging Into Today's Date)
   var groups = {};
   for (var i = 0; i < activeTeacherQuizzes.length; i++) {
     var item = activeTeacherQuizzes[i];
-    var rawDate = item.createdAt || item.date || item.timestamp;
-    var dObj = rawDate ? new Date(rawDate) : new Date();
-    var dateLabel = isNaN(dObj.getTime()) ? "Older Quizzes" : dObj.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' });
+
+    // Priority: createdAt -> Created_At -> timestamp -> date
+    var rawDate = item.createdAt || item.Created_At || item.timestamp || item.Timestamp || item.date || item.Date;
+    var dObj = null;
+
+    if (rawDate) {
+      var parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime())) {
+        dObj = parsed;
+      }
+    }
+
+    // Fallback: Agar date field na ho, toh Quiz ID (e.g. qz_1791909706143) se timestamp extract karo
+    if (!dObj) {
+      var idStr = String(item.id || item.Quiz_ID || "");
+      var timeMatch = idStr.match(/\d{12,}/);
+      if (timeMatch) {
+        var fromId = new Date(parseInt(timeMatch[0], 10));
+        if (!isNaN(fromId.getTime())) {
+          dObj = fromId;
+        }
+      }
+    }
+
+    // Format: "13 Oct 2026", "14 Oct 2026" ya "Older Quizzes"
+    var dateLabel = dObj ? dObj.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' }) : "Older Quizzes";
 
     if (!groups[dateLabel]) {
       groups[dateLabel] = [];
@@ -443,7 +467,7 @@ async function renderTeacherQuizList() {
     var groupId = "quizGroup_" + gIndex;
 
     html += '<div style="margin-bottom:12px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff;">' +
-      // Accordion Header (Click to Expand)
+      // Accordion Header (Click to Expand / Collapse)
       '<div onclick="toggleDateGroup(\'' + groupId + '\')" style="background:#f8fafc; padding:11px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none; border-bottom:1px solid #e2e8f0;">' +
       '<div style="font-weight:700; color:#1e293b; font-size:0.95rem;">' +
       '<i class="far fa-calendar-alt" style="color:#0284c7; margin-right:6px;"></i> ' + dateKey + ' ' +
@@ -452,7 +476,7 @@ async function renderTeacherQuizList() {
       '<div><i id="icon-' + groupId + '" class="fas fa-chevron-down" style="color:#64748b;"></i></div>' +
       '</div>' +
 
-      // Collapsible Content (BY DEFAULT SABHI CLOSED HAIN: display: none)
+      // Collapsible Content (Sabhi by default closed: display: none)
       '<div id="' + groupId + '" style="padding:10px; display:none;">';
 
     quizItems.forEach(function(entry) {
