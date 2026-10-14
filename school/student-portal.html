@@ -1,292 +1,189 @@
-// ==========================================
-// STUDENT PORTAL ENGINE - ASSENT PUBLIC SCHOOL
-// ==========================================
-
-var currentStudent = null;
-
-// Smart Class Normalizer: Handles "5", "Class 5", "Class-5", "Nur & Play", etc.
-function normalizeClass(cls) {
-  return String(cls || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function isClassEqual(classA, classB) {
-  var a = normalizeClass(classA);
-  var b = normalizeClass(classB);
-  if (!a || !b) return false;
-  if (a === b || a === ("class" + b) || ("class" + a) === b) return true;
-  if ((a.includes("nur") || a.includes("play")) && (b.includes("nur") || b.includes("play"))) return true;
-  return false;
-}
-
-// 1. GATEWAY: STUDENT VERIFICATION & LOGIN
-function verifyStudentCandidate() {
-  var selectedClass = document.getElementById("loginClass").value.trim();
-  var enteredRoll = parseInt(document.getElementById("loginRoll").value, 10);
-
-  if (isNaN(enteredRoll)) {
-    alert("Kripya valid Roll Number enter karein!");
-    return;
-  }
-
-  // Fetch students from school-db.js cache or cloud
-  var studentsList = [];
-  if (typeof schoolDB !== "undefined" && typeof schoolDB.getStudents === "function") {
-    studentsList = schoolDB.getStudents();
-  } else {
-    try {
-      studentsList = JSON.parse(localStorage.getItem("ak_school_students") || "[]");
-    } catch(e) {
-      studentsList = [];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal - Assent Public School</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Tab Strip Styling */
+    .tab-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
     }
-  }
-
-  if (!studentsList || studentsList.length === 0) {
-    alert("Students data abhi cloud sheet se load ho raha hai. Kripya 2 second baad dobara prayas karein!");
-    return;
-  }
-
-  // Find candidate by Class and Roll Number using smart matcher
-  var candidate = studentsList.find(function(s) {
-    var rollMatch = parseInt(s.rollNo || s.roll, 10) === enteredRoll;
-    var classMatch = isClassEqual(s.className || s.class, selectedClass);
-    return rollMatch && classMatch;
-  });
-
-  if (!candidate) {
-    alert("Student record nahi mila!\nClass: " + selectedClass + " | Roll No: " + enteredRoll + "\nKripya Class aur Roll Number verify karein.");
-    return;
-  }
-
-  currentStudent = candidate;
-
-  // Transition UI to Workspace
-  document.getElementById("studentAuthOverlay").style.display = "none";
-  document.getElementById("studentWorkspace").style.display = "block";
-
-  // Modern Eye-Catching Banner
-  var welcomeElem = document.getElementById("welcomeBanner");
-  if (welcomeElem) {
-    welcomeElem.innerHTML = '<span style="color:#d97706;"><i class="fas fa-user-graduate"></i></span> Welcome, ' + 
-      '<span style="background: linear-gradient(135deg, #1e3a8a, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight:800;">' + 
-      (candidate.name || "Student") + '</span> ' +
-      '<small style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:20px; font-weight:700; margin-left:8px; display:inline-block; vertical-align:middle;">Class: ' + (candidate.className || candidate.class) + ' | Roll: ' + (candidate.rollNo || candidate.roll) + '</small>';
-  }
-
-  populateStudentProfile(candidate);
-  renderStudentIDCard(candidate);
-  renderStudentResults(candidate);
-}
-
-// 2. LOGOUT / EXIT
-function logoutStudent() {
-  currentStudent = null;
-  document.getElementById("studentWorkspace").style.display = "none";
-  document.getElementById("studentAuthOverlay").style.display = "flex";
-  document.getElementById("loginRoll").value = "";
-}
-
-// 3. TAB NAVIGATION
-function switchTab(tabId) {
-  var panes = document.querySelectorAll(".tab-pane");
-  panes.forEach(function(pane) {
-    pane.classList.remove("active");
-  });
-
-  var btns = document.querySelectorAll(".tab-btn");
-  btns.forEach(function(btn) {
-    btn.classList.remove("active");
-  });
-
-  var targetPane = document.getElementById(tabId);
-  if (targetPane) targetPane.classList.add("active");
-
-  if (window.event && window.event.currentTarget) {
-    window.event.currentTarget.classList.add("active");
-  }
-}
-
-// 4. POPULATE PROFILE TAB
-function populateStudentProfile(s) {
-  document.getElementById("stuRegNo").value = s.regNo || "";
-  document.getElementById("stuFather").value = s.father || "";
-  document.getElementById("stuMother").value = s.mother || "";
-  document.getElementById("stuGender").value = s.gender || "Male";
-  document.getElementById("stuTransport").value = s.transport || "School Transport";
-  document.getElementById("stuMob1").value = s.mobile1 || s.mobile || "";
-  document.getElementById("stuMob2").value = s.mobile2 || "";
-  document.getElementById("stuDOB").value = s.dob || "";
-}
-
-// 5. SAVE PROFILE SELF-UPDATE
-function saveStudentSelfDetails(e) {
-  e.preventDefault();
-  if (!currentStudent) return;
-
-  currentStudent.regNo = document.getElementById("stuRegNo").value.trim();
-  currentStudent.father = document.getElementById("stuFather").value.trim();
-  currentStudent.mother = document.getElementById("stuMother").value.trim();
-  currentStudent.gender = document.getElementById("stuGender").value;
-  currentStudent.transport = document.getElementById("stuTransport").value;
-  currentStudent.mobile1 = document.getElementById("stuMob1").value.trim();
-  currentStudent.mobile2 = document.getElementById("stuMob2").value.trim();
-  currentStudent.dob = document.getElementById("stuDOB").value;
-
-  // Save to Local DB
-  if (typeof schoolDB !== "undefined" && typeof schoolDB.updateStudent === "function") {
-    schoolDB.updateStudent(currentStudent);
-  }
-
-  // Sync to Cloud Sheet if API is configured
-  if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
-    try {
-      fetch(CLOUD_SYNC_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "updateStudentDetails", student: currentStudent })
-      });
-    } catch(err) {
-      console.warn("Cloud sync error:", err);
+    .tab-btn {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
     }
-  }
-
-  alert("Profile information successfully update ho gayi!");
-  renderStudentIDCard(currentStudent);
-}
-
-// 6. PHOTO PREVIEW HANDLER
-function previewStudentPhoto(input) {
-  if (input.files && input.files[0]) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      if (currentStudent) {
-        currentStudent.photo = e.target.result;
-        renderStudentIDCard(currentStudent);
-      }
-    };
-    reader.readAsDataURL(input.files[0]);
-  }
-}
-
-// 7. RENDER OFFICIAL 6:9 ASPECT RATIO EYE-CATCHING ID CARD
-function renderStudentIDCard(s) {
-  var container = document.getElementById("idCardContainer");
-  if (!container) return;
-
-  var photoSrc = s.photo || "https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(s.name || "Student");
-
-  var cardHtml = '<div class="id-card-wrapper" style="display:flex; flex-direction:column; align-items:center; padding:15px 0;">' +
-    // Outer ID Card Box with 6:9 Portrait Aspect Ratio
-    '<div class="official-id-card-6x9" id="officialCardNode" style="width:280px; height:420px; aspect-ratio:6/9; background:#ffffff; border:2px solid #0f172a; border-radius:14px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.15); display:flex; flex-direction:column; justify-content:space-between; position:relative; font-family:\'Segoe UI\', Tahoma, sans-serif;">' +
-      
-      // Top Decorative Color Strip & Header
-      '<div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color:#fff; text-align:center; padding:10px 8px; border-bottom:3px solid #d97706;">' +
-        '<div style="font-size:13px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">ASSENT PUBLIC SCHOOL</div>' +
-        '<div style="font-size:9px; color:#93c5fd; letter-spacing:0.3px;">Singhiya Khurd, Samastipur, Bihar - 848101</div>' +
-        '<div style="font-size:8.5px; background:rgba(217, 119, 6, 0.25); color:#fef3c7; border:1px solid rgba(255,255,255,0.2); border-radius:10px; display:inline-block; padding:1px 8px; margin-top:3px; font-weight:600;">IDENTITY CARD • 2026-27</div>' +
-      '</div>' +
-
-      // Card Main Body
-      '<div style="padding:10px 14px; flex:1; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">' +
-        
-        // Photo Slot with Glow Frame
-        '<div style="width:82px; height:94px; margin:0 auto; border:2.5px solid #1e3a8a; border-radius:8px; overflow:hidden; background:#e2e8f0; box-shadow:0 4px 8px rgba(0,0,0,0.1);">' +
-          '<img src="' + photoSrc + '" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">' +
-        '</div>' +
-
-        // Student Name & Class Banner
-        '<div style="text-align:center; margin-top:4px;">' +
-          '<h4 style="margin:0; color:#0f172a; font-size:13px; text-transform:uppercase; font-weight:800; letter-spacing:0.4px;">' + (s.name || 'STUDENT NAME') + '</h4>' +
-          '<div style="font-size:10.5px; font-weight:700; color:#1e3a8a; background:#e0e7ff; border-radius:12px; display:inline-block; padding:2px 10px; margin-top:2px;">' +
-            'Class: ' + (s.className || s.class || '—') + ' | Roll No: ' + (s.rollNo || s.roll || '—') +
-          '</div>' +
-        '</div>' +
-
-        // Detail Records Table
-        '<div style="font-size:10px; line-height:1.6; background:#ffffff; padding:6px 10px; border-radius:8px; border:1px solid #e2e8f0; box-shadow:inset 0 1px 3px rgba(0,0,0,0.03); color:#334155;">' +
-          '<div><strong style="color:#0f172a;">Reg No:</strong> <span style="color:#2563eb; font-weight:700;">' + (s.regNo || 'PENDING') + '</span></div>' +
-          '<div><strong style="color:#0f172a;">Father:</strong> ' + (s.father || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">Mother:</strong> ' + (s.mother || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">DOB:</strong> ' + (s.dob || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">Mobile:</strong> ' + (s.mobile1 || s.mobile || '—') + '</div>' +
-          '<div><strong style="color:#0f172a;">Transport:</strong> ' + (s.transport || 'School Transport') + '</div>' +
-        '</div>' +
-
-        // Official Signatures
-        '<div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:8.5px; font-weight:700; color:#64748b; border-top:1px dashed #cbd5e1; padding-top:4px; margin-top:2px;">' +
-          '<span>Guardian Sign</span>' +
-          '<span style="color:#1e3a8a;">Principal Sign</span>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-
-    // Action Buttons
-    '<div style="margin-top:14px; display:flex; gap:10px;">' +
-      '<button class="btn-download-img" style="background:#1e3a8a; color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:700; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 10px rgba(30,58,138,0.25);" onclick="window.print()"><i class="fa fa-print"></i> Print Card</button>' +
-    '</div>' +
-  '</div>';
-
-  container.innerHTML = cardHtml;
-}
-
-// 8. RENDER RESULTS TAB (Modern Glassmorphism Table)
-function renderStudentResults(s) {
-  var container = document.getElementById("studentResultsContainer");
-  if (!container) return;
-
-  var marksList = [];
-  if (typeof schoolDB !== "undefined" && typeof schoolDB.getMarks === "function") {
-    marksList = schoolDB.getMarks();
-  } else {
-    try {
-      marksList = JSON.parse(localStorage.getItem("ak_school_marks") || "[]");
-    } catch(e) {
-      marksList = [];
+    .tab-btn:hover { background: #e2e8f0; }
+    .tab-btn.active {
+      background: #1e3a8a;
+      color: #ffffff;
+      border-color: #1e3a8a;
+      box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
     }
-  }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
 
-  var studentMarks = marksList.filter(function(m) {
-    return String(m.studentId || m.regNo) === String(s.id || s.regNo) ||
-           (isClassEqual(m.className, s.className) && parseInt(m.rollNo, 10) === parseInt(s.rollNo, 10));
-  });
+    /* 6:9 Standard Vertical ID Card Styling */
+    .official-id-card-6x9 {
+      width: 280px;
+      height: 420px;
+      aspect-ratio: 6 / 9;
+      background: #ffffff;
+      border: 2px solid #0f172a;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body class="school-bg">
 
-  if (!studentMarks || studentMarks.length === 0) {
-    container.innerHTML = '<div style="text-align:center; padding:35px 20px; color:#64748b;">' +
-      '<i class="fas fa-file-invoice" style="font-size:38px; color:#cbd5e1; margin-bottom:10px;"></i>' +
-      '<p style="font-weight:600; font-size:14px;">Abhi is student ka koi exam report card publish nahi hua hai.</p>' +
-      '<small>Examinations section marks finalize kar raha hai.</small>' +
-      '</div>';
-    return;
-  }
+  <!-- Gatekeeper: Class + Roll Number Gateway -->
+  <div id="studentAuthOverlay" class="auth-gate-box">
+    <div class="auth-card">
+      <h2><i class="fa fa-graduation-cap"></i> Student Login</h2>
+      <div class="form-group">
+        <label>Select Class:</label>
+        <select id="loginClass" class="input-ctrl">
+          <option value="Nur & Play">Nur & Play</option>
+          <option value="LKG">LKG</option>
+          <option value="UKG">UKG</option>
+          <option value="1">Class 1</option>
+          <option value="2">Class 2</option>
+          <option value="3">Class 3</option>
+          <option value="4">Class 4</option>
+          <option value="5">Class 5</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Enter Roll Number:</label>
+        <input type="number" id="loginRoll" class="input-ctrl" placeholder="e.g. 1, 2, 3">
+      </div>
+      <button onclick="verifyStudentCandidate()" class="btn-gold-wide">Proceed</button>
+      <a href="index.html" class="text-link mt-2"><i class="fa fa-arrow-left"></i> Back to School Home</a>
+    </div>
+  </div>
 
-  var resHtml = '<div style="overflow-x:auto; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 4px 12px rgba(0,0,0,0.04);">' +
-    '<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left; background:#fff;">' +
-    '<thead><tr style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:#ffffff;">' +
-    '<th style="padding:10px 12px;">Exam / Term</th>' +
-    '<th style="padding:10px;">Hindi</th>' +
-    '<th style="padding:10px;">English</th>' +
-    '<th style="padding:10px;">Math</th>' +
-    '<th style="padding:10px;">EVS / Science</th>' +
-    '<th style="padding:10px;">Grand Total</th>' +
-    '<th style="padding:10px;">Percentage</th>' +
-    '</tr></thead><tbody>';
+  <!-- Workspace Container (Post-Verification) -->
+  <div id="studentWorkspace" style="display:none;" class="student-workspace-container">
+    <div class="workspace-header">
+      <h2 id="welcomeBanner">Welcome, Student</h2>
+      <button onclick="logoutStudent()" class="btn-sm-danger"><i class="fa fa-sign-out-alt"></i> Exit</button>
+    </div>
 
-  studentMarks.forEach(function(m) {
-    var pct = parseFloat(m.percentage || 0);
-    var badgeColor = pct >= 60 ? "#16a34a" : (pct >= 40 ? "#d97706" : "#dc2626");
-    var badgeBg = pct >= 60 ? "#dcfce7" : (pct >= 40 ? "#fef3c7" : "#fee2e2");
+    <!-- Navigation Tab Strip -->
+    <div class="tab-strip">
+      <button class="tab-btn active" onclick="switchTab('profileTab')"><i class="fa fa-user-edit"></i> Profile Details</button>
+      <button class="tab-btn" onclick="switchTab('idCardTab')"><i class="fa fa-id-card"></i> Student ID Card</button>
+      <button class="tab-btn" onclick="switchTab('resultTab')"><i class="fa fa-poll"></i> Results</button>
+      <button class="tab-btn" onclick="switchTab('admitCardTab')"><i class="fa fa-ticket-alt"></i> Admit Card</button>
+      <button class="tab-btn" onclick="switchTab('feeTab')"><i class="fa fa-receipt"></i> Fee Status</button>
+    </div>
 
-    resHtml += '<tr style="border-bottom:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'#fff\'">' +
-      '<td style="padding:10px 12px; font-weight:700; color:#1e293b;"><i class="fas fa-award" style="color:#d97706; margin-right:5px;"></i> ' + (m.term || 'Term 1') + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.hindi || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.english || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.math || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:600;">' + (m.evs || m.science || 0) + '</td>' +
-      '<td style="padding:10px; font-weight:800; color:#1e3a8a; font-size:14px;">' + (m.grandTotal || m.total || 0) + '</td>' +
-      '<td style="padding:10px;"><span style="background:' + badgeBg + '; color:' + badgeColor + '; font-weight:800; padding:3px 8px; border-radius:12px; font-size:12px;">' + pct + '%</span></td>' +
-      '</tr>';
-  });
+    <!-- Tab 1: Profile View & Self-Update -->
+    <div id="profileTab" class="tab-pane active">
+      <form id="studentDetailForm" onsubmit="saveStudentSelfDetails(event)" class="card-p4">
+        <h3>Personal & Transport Information</h3>
+        <div class="grid-2col">
+          <div>
+            <label>Register No (Admission ID):</label>
+            <input type="text" id="stuRegNo" class="input-ctrl" placeholder="Enter Registration Number">
+          </div>
+          <div>
+            <label>Father's Name:</label>
+            <input type="text" id="stuFather" class="input-ctrl" required placeholder="Enter Father's Name">
+          </div>
+          <div>
+            <label>Mother's Name:</label>
+            <input type="text" id="stuMother" class="input-ctrl" required placeholder="Enter Mother's Name">
+          </div>
+          <div>
+            <label>Gender:</label>
+            <select id="stuGender" class="input-ctrl">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div>
+            <label>Transport Mode:</label>
+            <select id="stuTransport" class="input-ctrl">
+              <option value="School Transport">School Transport</option>
+              <option value="Own Private Mode">Own Private Mode</option>
+            </select>
+          </div>
+          <div>
+            <label>Primary Mobile (Mobile 1):</label>
+            <input type="tel" id="stuMob1" class="input-ctrl" required placeholder="Enter Primary Mobile">
+          </div>
+          <div>
+            <label>Secondary Mobile (Mobile 2):</label>
+            <input type="tel" id="stuMob2" class="input-ctrl" placeholder="Optional Alternate Mobile">
+          </div>
+          <div>
+            <label>Date of Birth:</label>
+            <input type="date" id="stuDOB" class="input-ctrl" required>
+          </div>
+        </div>
+        <div class="form-group mt-3">
+          <label>Upload Photograph:</label>
+          <input type="file" id="stuPhotoInput" accept="image/*" onchange="previewStudentPhoto(this)">
+        </div>
+        <button type="submit" class="btn-gold-wide mt-3">Update & Save Profile</button>
+      </form>
+    </div>
 
-  resHtml += '</tbody></table></div>';
-  container.innerHTML = resHtml;
-}
+    <!-- Tab 2: Official 6:9 ID Card Container -->
+    <div id="idCardTab" class="tab-pane">
+      <div id="idCardContainer"></div>
+    </div>
+
+    <!-- Tab 3: Results -->
+    <div id="resultTab" class="tab-pane">
+      <div class="card-p4">
+        <h3>Examination Results</h3>
+        <div id="studentResultsContainer">
+          <p style="color:#64748b; text-align:center; padding:20px;">Abhi koi result publish nahi kiya gaya hai.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Admit Card -->
+    <div id="admitCardTab" class="tab-pane">
+      <div class="card-p4">
+        <h3>Examination Admit Card</h3>
+        <p style="color:#64748b; text-align:center; padding:20px;">Admit card exam schedule aane par available hoga.</p>
+      </div>
+    </div>
+
+    <!-- Tab 5: Fee Status -->
+    <div id="feeTab" class="tab-pane">
+      <div class="card-p4">
+        <h3>Fee & Dues Record</h3>
+        <p style="color:#64748b; text-align:center; padding:20px;">Fee receipt counter record update ho raha hai.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/school-db.js"></script>
+  <script src="js/student-portal.js"></script>
+</body>
+</html>
