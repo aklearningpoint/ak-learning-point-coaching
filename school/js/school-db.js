@@ -3,11 +3,9 @@
 // File: js/school-db.js
 // ==========================================
 
-// APNA GOOGLE APPS SCRIPT WEB APP URL YAHAN DALEIN
-var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwPq117WjFvE6cRjVkWjZz9cR1gZ7xV3h8q9y2/exec"; 
-// Note: Agar aapka naya deployment URL alag hai toh upar wali string me paste kar sakte hain.
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwRDQuXVyKGKfCI-kifRPb-vzb8Uv2AIv7YzMSihcP5iKPlR9BJj-DVSSDp8q_VWTij/exec";
 
-// Smart Class Normalizer: "5", "Class 5", "Class-5", "Nur & Play" sabko ek jaisa samajhta hai
+// Smart Class Normalizer: Class 3, 4, 5 (numeric 3, 4, 5 ya "Class 5") ko handle karta hai
 function normalizeClassName(cls) {
   return String(cls || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -31,7 +29,7 @@ var schoolDB = {
     }
   },
 
-  // 2. GET STUDENTS BY CLASS (Smart match for 3, 4, 5, UKG, etc.)
+  // 2. GET STUDENTS BY CLASS (Smart match for 3, 4, 5, UKG, Nur, etc.)
   getStudentsByClass: function(targetClass) {
     var all = this.getStudents();
     if (!targetClass || targetClass === "All") return all;
@@ -86,8 +84,8 @@ var schoolDB = {
     }
     localStorage.setItem("ak_school_marks", JSON.stringify(marksList));
 
-    // Cloud Sheet Sync
-    if (CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+    // Cloud Sync
+    if (CLOUD_SYNC_URL) {
       try {
         fetch(CLOUD_SYNC_URL, {
           method: "POST",
@@ -99,9 +97,9 @@ var schoolDB = {
     }
   },
 
-  // 7. FETCH ALL DATA FROM CLOUD SHEET (Students + Marks)
+  // 7. FETCH ALL DATA FROM CLOUD SHEET
   syncFromCloud: async function() {
-    if (!CLOUD_SYNC_URL || CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) return;
+    if (!CLOUD_SYNC_URL) return;
 
     // Fetch Students
     try {
@@ -129,7 +127,5 @@ var schoolDB = {
   }
 };
 
-// Page load hote hi cloud se data background me refresh karein
-(function() {
-  schoolDB.syncFromCloud();
-})();
+// Immediate background fetch
+schoolDB.syncFromCloud();
