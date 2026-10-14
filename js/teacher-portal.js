@@ -175,7 +175,7 @@ function toggleMaterialInputFields() {
 }
 
 // SAVE & DISPATCH TO STUDY MATERIAL REPOSITORY
-function saveTeacherMaterial() {
+async function saveTeacherMaterial() {
   var title = document.getElementById("matTitle").value.trim();
   var className = document.getElementById("matClass").value;
   var subject = document.getElementById("matSubject").value;
@@ -185,15 +185,13 @@ function saveTeacherMaterial() {
   var desc = document.getElementById("matDesc").value.trim();
 
   if (!title) {
-    alert("Material Title bharna mandatory hai!");
+    alert("Material Title bharna zaroori hai!");
     return;
   }
-
   if (type === "TEXT" && !textContent) {
     alert("Text Notes format ke liye content likhna zaroori hai!");
     return;
   }
-
   if (type !== "TEXT" && !url) {
     alert(type + " file link / URL dalna zaroori hai!");
     return;
@@ -212,17 +210,29 @@ function saveTeacherMaterial() {
     timestamp: new Date().toISOString()
   };
 
-  // 1. LocalStorage Me Store Karein
+  // 1. LocalStorage Me Save
   var materials = getTeacherData("ak_study_materials", []);
   materials.unshift(newMat);
   setTeacherData("ak_study_materials", materials);
 
-  // 2. Remote Sync
-  if (typeof API !== "undefined" && API.post) {
-    API.post("saveMaterial", newMat);
+  // 2. Google Spreadsheet Me Automatic Sync
+  if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL && !CLOUD_SYNC_URL.includes("APNA_DEPLOYED")) {
+    try {
+      fetch(CLOUD_SYNC_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "saveMaterial",
+          material: newMat
+        })
+      });
+    } catch(e) {
+      console.warn("Could not sync material to Sheet:", e);
+    }
   }
 
-  alert("Study Material (" + type + ") safaltapoorvak publish ho gaya!");
+  alert("Study Material safaltapoorvak publish aur Google Sheet me save ho gaya!");
   var modal = document.getElementById("teacherMaterialModal");
   if (modal) modal.remove();
 }
