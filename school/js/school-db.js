@@ -3,9 +3,10 @@
 // File: js/school-db.js
 // ==========================================
 
-var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwIKnHHCjTXrh_rJjA--9v16W0jPdrN-xpqVFqOhJzUxycYf5r_vu31jxHH7oT878788Q/exec";
+// Screenshot 7 wala active working Web App URL:
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxURSkEdeKaaKEwF-brduB6hKXbeFQcl5yS9F5/exec";
 
-// Smart Class Normalizer: Class 3, 4, 5 (numeric 3, 4, 5 ya "Class 5") ko handle karta hai
+// Smart Class Normalizer: Class 3, 4, 5 (numeric 3, 4, 5 ya "Class 5") ko match karta hai
 function normalizeClassName(cls) {
   return String(cls || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -20,6 +21,16 @@ function matchClass(classA, classB) {
 }
 
 var schoolDB = {
+  // Fix for dashboard-app.js:10 crash
+  ADS_PPT: [
+    { title: "Admissions Open", desc: "Session 2026-2027 admissions are open!", img: "" }
+  ],
+  CONFIG: {
+    ADS_PPT: [
+      { title: "Admissions Open", desc: "Session 2026-2027 admissions are open!", img: "" }
+    ]
+  },
+
   // 1. GET ALL STUDENTS
   getStudents: function() {
     try {
@@ -84,7 +95,6 @@ var schoolDB = {
     }
     localStorage.setItem("ak_school_marks", JSON.stringify(marksList));
 
-    // Cloud Sync
     if (CLOUD_SYNC_URL) {
       try {
         fetch(CLOUD_SYNC_URL, {
@@ -127,9 +137,9 @@ var schoolDB = {
   }
 };
 
-// Immediate background fetch
-schoolDB.syncFromCloud();
-
-// Dono casing support karega: schoolDB aur SchoolDB
+// Aliases support
 window.schoolDB = schoolDB;
 window.SchoolDB = schoolDB;
+
+// Background fetch trigger
+schoolDB.syncFromCloud();
