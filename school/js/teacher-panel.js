@@ -250,30 +250,106 @@ function handleSoftDelete(studentId, className) {
   }
 }
 
+// 1. EDITABLE INSPECT MODAL
 function inspectStudentProfile(id) {
   const students = getGlobalStudentsList();
   const s = students.find(st => String(st.id || st.regNo) === String(id));
   if (!s) return;
 
-  document.getElementById("modalStudentName").innerText = s.name + " (Roll " + (s.rollNo || s.roll) + " - Class " + (s.className || s.class) + ")";
+  activeSelectedStudent = s;
+
+  document.getElementById("modalStudentName").innerText = "Edit: " + s.name + " (" + (s.className || s.class) + " - Roll " + (s.rollNo || s.roll) + ")";
+  
   document.getElementById("modalStudentBody").innerHTML = `
-    <p><b>Register No:</b> ${s.regNo || 'PENDING'}</p>
-    <p><b>Class:</b> ${s.className || s.class}</p>
-    <p><b>Father's Name:</b> ${s.father || 'Not provided'}</p>
-    <p><b>Mother's Name:</b> ${s.mother || 'Not provided'}</p>
-    <p><b>Date of Birth:</b> ${s.dob || 'Not provided'}</p>
-    <p><b>Primary Mobile:</b> ${s.mobile1 || s.mobile || 'Not provided'}</p>
-    <p><b>Secondary Mobile:</b> ${s.mobile2 || 'N/A'}</p>
-    <p><b>Transport Mode:</b> ${s.transport || 'School Transport'}</p>
-    <p><b>Fee Due Balance:</b> ₹${s.fees ? s.fees.due : 0}</p>
+    <form id="editStudentForm" onsubmit="saveEditedStudentProfile(event)" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:12px; font-weight:700;">Student Full Name:</label>
+          <input type="text" id="editStuName" class="input-ctrl" value="${s.name || ''}" required>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Register No (ID):</label>
+          <input type="text" id="editStuReg" class="input-ctrl" value="${s.regNo || ''}">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Father's Name:</label>
+          <input type="text" id="editStuFather" class="input-ctrl" value="${s.father || ''}">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Mother's Name:</label>
+          <input type="text" id="editStuMother" class="input-ctrl" value="${s.mother || ''}">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Primary Mobile (Mobile 1):</label>
+          <input type="tel" id="editStuMob1" class="input-ctrl" value="${s.mobile1 || s.mobile || ''}">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Secondary Mobile (Mobile 2):</label>
+          <input type="tel" id="editStuMob2" class="input-ctrl" value="${s.mobile2 || ''}">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Gender:</label>
+          <select id="editStuGender" class="input-ctrl">
+            <option value="Male" ${s.gender === "Male" ? "selected" : ""}>Male</option>
+            <option value="Female" ${s.gender === "Female" ? "selected" : ""}>Female</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700;">Transport Mode:</label>
+          <select id="editStuTransport" class="input-ctrl">
+            <option value="School Transport" ${s.transport === "School Transport" ? "selected" : ""}>School Transport</option>
+            <option value="Own Private Mode" ${s.transport === "Own Private Mode" ? "selected" : ""}>Own Private Mode</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+        <button type="button" onclick="closeStudentModal()" class="btn-sm-danger" style="padding:8px 16px;">Cancel</button>
+        <button type="submit" class="btn-gold" style="padding:8px 20px;"><i class="fa fa-save"></i> Save Changes to Sheet</button>
+      </div>
+    </form>
   `;
   document.getElementById("studentDetailModal").style.display = "flex";
 }
 
-function closeStudentModal() {
-  document.getElementById("studentDetailModal").style.display = "none";
-}
+// 2. SAVE EDITED DETAILS DIRECTLY TO LOCAL & GOOGLE SHEET
+function saveEditedStudentProfile(e) {
+  e.preventDefault();
+  if (!activeSelectedStudent) return;
 
+  const students = getGlobalStudentsList();
+  const idx = students.findIndex(st => String(st.id || st.regNo) === String(activeSelectedStudent.id || activeSelectedStudent.regNo));
+
+  if (idx !== -1) {
+    students[idx].name = document.getElementById("editStuName").value.trim();
+    students[idx].regNo = document.getElementById("editStuReg").value.trim();
+    students[idx].father = document.getElementById("editStuFather").value.trim();
+    students[idx].mother = document.getElementById("editStuMother").value.trim();
+    students[idx].mobile1 = document.getElementById("editStuMob1").value.trim();
+    students[idx].mobile2 = document.getElementById("editStuMob2").value.trim();
+    students[idx].gender = document.getElementById("editStuGender").value;
+    students[idx].transport = document.getElementById("editStuTransport").value;
+
+    saveGlobalStudentsList(students);
+
+    // Google Sheet Cloud Sync
+    if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL) {
+      try {
+        fetch(CLOUD_SYNC_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "updateStudentDetails", student: students[idx] })
+        });
+      } catch(err) {
+        console.warn("Cloud sync error:", err);
+      }
+    }
+
+    alert("✅ Student details Google Sheet aur system dono me update ho gayi!");
+    closeStudentModal();
+    renderManageStudents();
+  }
+}
 // 5. Fee Search (Roll vs Register No)
 function searchFeeByRoll() {
   const cls = document.getElementById("feeSearchClass").value;
