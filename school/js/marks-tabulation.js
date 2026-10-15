@@ -417,3 +417,36 @@ function syncMarksToCloud(marksPayload) {
     } catch (e) {}
   }
 }
+
+// Direct Client-Side A4 Landscape PDF Downloader
+function downloadLedgerPDF() {
+  const element = document.getElementById("tabulationLedgerContainer") || document.querySelector(".table-responsive") || document.getElementById("tabulationBody").closest("table");
+  
+  if (!element) {
+    alert("Tabulation table nahi mili! Kripya pehle Class aur Term select karein.");
+    return;
+  }
+
+  // Dynamic Filename jaise: Assent_Marks_Class_5_Term_1.pdf
+  const filename = `Assent_Marks_${currentClass.replace(/\s+/g, '_')}_${currentTerm.replace(/\s+/g, '_')}.pdf`;
+
+  const opt = {
+    margin:       [10, 10, 10, 10], // top, left, bottom, right in mm
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  };
+
+  // Temporary styling for crisp PDF output
+  const originalBackground = element.style.background;
+  element.style.background = "#ffffff";
+
+  // Generate & Trigger Download
+  html2pdf().set(opt).from(element).save().then(() => {
+    element.style.background = originalBackground;
+  }).catch((err) => {
+    console.error("PDF generation failed:", err);
+    alert("PDF create karne me issue aaya. Backup ke liye Print option use karein.");
+  });
+}
