@@ -1,37 +1,36 @@
 // ==========================================
-// SCHOOL DATABASE & CLOUD SYNC ENGINE - ASSENT PUBLIC SCHOOL
+// SCHOOL DATABASE & CLOUD SYNC ENGINE
 // File: js/school-db.js
 // ==========================================
 
-// Screenshot 7 wala active working Web App URL:
-var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbxURSkEdeKaaKEwF-brduB6hKXbeFQcl5yS9F5/exec";
+// APNA STEP 1 WALA WEB APP URL YAHAN PASTE KAREIN
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwRDQuXVyKGKfCI-kifRPb-vzb8Uv2AIv7YzMSihcP5iKPlR9BJj-DVSSDp8q_VWTij/exec";
 
-// Smart Class Normalizer: Class 3, 4, 5 (numeric 3, 4, 5 ya "Class 5") ko match karta hai
-function normalizeClassName(cls) {
+// Smart Class Normalizer: '5', 'Class 5', 'Class-5', 'Nur & Play' sabko match karega
+function normalizeClassKey(cls) {
   return String(cls || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function matchClass(classA, classB) {
-  var a = normalizeClassName(classA);
-  var b = normalizeClassName(classB);
-  if (!a || !b) return false;
-  if (a === b || a === ("class" + b) || ("class" + a) === b) return true;
-  if ((a.includes("nur") || a.includes("play")) && (b.includes("nur") || b.includes("play"))) return true;
+function isMatchingClass(a, b) {
+  var k1 = normalizeClassKey(a);
+  var k2 = normalizeClassKey(b);
+  if (!k1 || !k2) return false;
+  if (k1 === k2 || k1 === ("class" + k2) || ("class" + k1) === k2) return true;
+  if ((k1.includes("nur") || k1.includes("play")) && (k2.includes("nur") || k2.includes("play"))) return true;
   return false;
 }
 
-var schoolDB = {
-  // Fix for dashboard-app.js:10 crash
+var SchoolDB = {
+  // Fix for dashboard-app.js crash
   ADS_PPT: [
-    { title: "Admissions Open", desc: "Session 2026-2027 admissions are open!", img: "" }
+    { title: "Admissions Open", desc: "Welcome to Assent Public School Session 2026-2027. Admissions are open!", img: "" }
   ],
   CONFIG: {
     ADS_PPT: [
-      { title: "Admissions Open", desc: "Session 2026-2027 admissions are open!", img: "" }
+      { title: "Admissions Open", desc: "Welcome to Assent Public School Session 2026-2027. Admissions are open!", img: "" }
     ]
   },
 
-  // 1. GET ALL STUDENTS
   getStudents: function() {
     try {
       return JSON.parse(localStorage.getItem("ak_school_students") || "[]");
@@ -40,16 +39,14 @@ var schoolDB = {
     }
   },
 
-  // 2. GET STUDENTS BY CLASS (Smart match for 3, 4, 5, UKG, Nur, etc.)
-  getStudentsByClass: function(targetClass) {
-    var all = this.getStudents();
-    if (!targetClass || targetClass === "All") return all;
-    return all.filter(function(s) {
-      return matchClass(s.className || s.class, targetClass);
+  getStudentsByClass: function(cls) {
+    var list = this.getStudents();
+    if (!cls || cls === "All") return list;
+    return list.filter(function(s) {
+      return isMatchingClass(s.className || s.class, cls);
     });
   },
 
-  // 3. GET ALL MARKS
   getMarks: function() {
     try {
       return JSON.parse(localStorage.getItem("ak_school_marks") || "[]");
@@ -58,42 +55,26 @@ var schoolDB = {
     }
   },
 
-  // 4. GET MARKS BY CLASS & TERM
-  getMarksByClass: function(targetClass, term) {
-    var all = this.getMarks();
-    return all.filter(function(m) {
-      var cMatch = matchClass(m.className || m.class, targetClass);
-      var tMatch = term ? (String(m.term).toLowerCase() === String(term).toLowerCase()) : true;
-      return cMatch && tMatch;
+  getMarksByClass: function(cls, term) {
+    var marks = this.getMarks();
+    return marks.filter(function(m) {
+      var cOk = isMatchingClass(m.className || m.class, cls);
+      var tOk = term ? (String(m.term).toLowerCase() === String(term).toLowerCase()) : true;
+      return cOk && tOk;
     });
   },
 
-  // 5. UPDATE SINGLE STUDENT RECORD
-  updateStudent: function(studentObj) {
+  updateStudent: function(stu) {
     var list = this.getStudents();
-    var idx = list.findIndex(function(s) {
-      return String(s.id || s.regNo) === String(studentObj.id || studentObj.regNo);
+    var idx = list.findIndex(function(x) {
+      return String(x.id || x.regNo) === String(stu.id || stu.regNo);
     });
     if (idx !== -1) {
-      list[idx] = Object.assign({}, list[idx], studentObj);
+      list[idx] = Object.assign({}, list[idx], stu);
     } else {
-      list.push(studentObj);
+      list.push(stu);
     }
     localStorage.setItem("ak_school_students", JSON.stringify(list));
-  },
-
-  // 6. SAVE STUDENT MARKS
-  saveMarks: function(marksRecord) {
-    var marksList = this.getMarks();
-    var idx = marksList.findIndex(function(m) {
-      return String(m.studentId) === String(marksRecord.studentId) && String(m.term) === String(marksRecord.term);
-    });
-    if (idx !== -1) {
-      marksList[idx] = Object.assign({}, marksList[idx], marksRecord);
-    } else {
-      marksList.push(marksRecord);
-    }
-    localStorage.setItem("ak_school_marks", JSON.stringify(marksList));
 
     if (CLOUD_SYNC_URL) {
       try {
@@ -101,45 +82,41 @@ var schoolDB = {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "saveMarks", marks: marksRecord })
+          body: JSON.stringify({ action: "updateStudentDetails", student: stu })
         });
       } catch(e) {}
     }
   },
 
-  // 7. FETCH ALL DATA FROM CLOUD SHEET
   syncFromCloud: async function() {
     if (!CLOUD_SYNC_URL) return;
 
-    // Fetch Students
+    // 1. Fetch Students
     try {
       var res = await fetch(CLOUD_SYNC_URL + "?action=getStudents");
       var json = await res.json();
-      if (json && json.data && Array.isArray(json.data)) {
+      if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
         localStorage.setItem("ak_school_students", JSON.stringify(json.data));
         console.log("Fetched Students from Cloud Sheet: " + json.data.length);
       }
     } catch(err) {
-      console.warn("Could not fetch students from Cloud:", err);
+      console.warn("Students fetch issue:", err);
     }
 
-    // Fetch Marks
+    // 2. Fetch Marks
     try {
-      var resMarks = await fetch(CLOUD_SYNC_URL + "?action=getMarks");
-      var jsonMarks = await resMarks.json();
-      if (jsonMarks && jsonMarks.data && Array.isArray(jsonMarks.data)) {
-        localStorage.setItem("ak_school_marks", JSON.stringify(jsonMarks.data));
-        console.log("Fetched Marks from Cloud Sheet: " + jsonMarks.data.length);
+      var mRes = await fetch(CLOUD_SYNC_URL + "?action=getMarks");
+      var mJson = await mRes.json();
+      if (mJson && mJson.data && Array.isArray(mJson.data) && mJson.data.length > 0) {
+        localStorage.setItem("ak_school_marks", JSON.stringify(mJson.data));
+        console.log("Fetched Marks from Cloud Sheet: " + mJson.data.length);
       }
     } catch(err) {
-      console.warn("Could not fetch marks from Cloud:", err);
+      console.warn("Marks fetch issue:", err);
     }
   }
 };
 
-// Aliases support
-window.schoolDB = schoolDB;
-window.SchoolDB = schoolDB;
-
-// Background fetch trigger
-schoolDB.syncFromCloud();
+window.SchoolDB = SchoolDB;
+window.schoolDB = SchoolDB;
+SchoolDB.syncFromCloud();
