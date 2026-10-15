@@ -6,6 +6,10 @@
   <title>Marks Register & Tabulation - Assent Public School</title>
   <link rel="stylesheet" href="css/school-theme.css?v=3.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Client-side PDF Generator Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
     /* Marks Tabulation Embedded Self-Contained Styles */
     .tabulation-wrapper {
@@ -72,6 +76,21 @@
     }
     .btn-gold-action:hover { background: #c59b27; }
     
+    .btn-green-action {
+      background: #15803d;
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    .btn-green-action:hover { background: #166534; }
+
     /* Master Tabulation Table Styles */
     .table-box {
       width: 100%;
@@ -263,13 +282,16 @@
 
     <!-- Master Tabulation Ledger -->
     <div class="panel-card" id="ledgerPrintWrapper">
-      <div class="screen-ledger-head" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="screen-ledger-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
           <h2 style="color:#0f172a; margin:0;">ASSENT PUBLIC SCHOOL</h2>
           <p style="margin:2px 0; color:#64748b; font-size:0.9rem;">Singhiya Khurd, Samastipur, Bihar - 848101</p>
           <h4 id="ledgerSubTitle" style="color:#0f172a; margin-top:4px;">TABULATION REGISTER - Class: Nur & Play • Term 1</h4>
         </div>
-        <button onclick="window.print()" class="btn-gold-action no-print" style="margin-top:0;"><i class="fa fa-print"></i> Print Landscape Sheet</button>
+        <div class="no-print" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button onclick="window.print()" class="btn-gold-action" style="margin-top:0;"><i class="fa fa-print"></i> Print Landscape Sheet</button>
+          <button onclick="downloadLedgerPDF()" class="btn-green-action" style="margin-top:0;"><i class="fa fa-file-pdf"></i> Download PDF</button>
+        </div>
       </div>
 
       <div class="table-box">
@@ -279,8 +301,8 @@
         </table>
       </div>
 
-      <!-- Signature Row for Print Output -->
-      <div class="signature-row">
+      <!-- Signature Row for Print & PDF Output -->
+      <div class="signature-row" id="pdfSignatureRow">
         <div>Class Teacher Signature</div>
         <div>Checked By</div>
         <div>Director / Principal Signature</div>
