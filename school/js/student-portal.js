@@ -436,7 +436,7 @@ function renderResults(s) {
           '<div style="margin-top:4px;">Class Teacher</div>' +
         '</div>' +
         '<div style="text-align:center;">' +
-          '<div><b>M. K. Aryan</b></div>' +
+          '<div><b>G. K. Thakur</b></div>' +
           '<div style="margin-top:2px; font-size:11px; color:#475569;">Director (Assent Public School)</div>' +
         '</div>' +
         '<div style="text-align:center;">' +
