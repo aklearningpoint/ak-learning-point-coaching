@@ -6,41 +6,118 @@
   <title>Student Portal - Assent Public School</title>
   <link rel="stylesheet" href="css/school-theme.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Client-side PDF Exporter Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
-    /* Tab Strip Styling */
-    .tab-strip {
+    /* TOP BROAD RIBBON */
+    .student-top-ribbon {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: #ffffff;
+      padding: 16px 22px;
+      border-radius: 14px;
+      margin-bottom: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+      border-bottom: 3px solid #d97706;
+    }
+    .ribbon-info h2 {
+      margin: 0;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .ribbon-badges {
+      margin-top: 6px;
       display: flex;
       gap: 8px;
+      align-items: center;
       flex-wrap: wrap;
-      margin-bottom: 20px;
     }
-    .tab-btn {
-      background: #f1f5f9;
-      color: #334155;
-      border: 1px solid #cbd5e1;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: 600;
+    .ribbon-badge-tag {
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .ribbon-photo-frame {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 3px solid #d97706;
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+    .ribbon-photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* 5 DASHBOARD ACTION CARDS */
+    .dashboard-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .portal-action-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
       cursor: pointer;
-      display: inline-flex;
+      transition: all 0.22s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
       align-items: center;
       gap: 8px;
-      transition: all 0.2s ease;
     }
-    .tab-btn:hover { background: #e2e8f0; }
-    .tab-btn.active {
+    .portal-action-card i {
+      font-size: 22px;
+      color: #1e3a8a;
+      transition: 0.2s;
+    }
+    .portal-action-card span {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+    }
+    .portal-action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(30, 58, 138, 0.12);
+      border-color: #93c5fd;
+    }
+    .portal-action-card.active {
       background: #1e3a8a;
-      color: #ffffff;
       border-color: #1e3a8a;
-      box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
+      box-shadow: 0 4px 12px rgba(30, 58, 138, 0.28);
     }
+    .portal-action-card.active i, .portal-action-card.active span {
+      color: #ffffff;
+    }
+
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
 
     /* 6:9 Standard Vertical ID Card Styling */
+    .id-card-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+    }
     .official-id-card-6x9 {
-      width: 280px;
-      height: 420px;
+      width: 290px;
+      height: 440px;
       aspect-ratio: 6 / 9;
       background: #ffffff;
       border: 2px solid #0f172a;
@@ -53,15 +130,16 @@
       justify-content: space-between;
     }
 
-    /* Print Optimization: Sirf ID card print hoga */
+    /* Print Optimization: Clean A4 Output */
     @media print {
       body * {
         visibility: hidden;
       }
+      #printableArea, #printableArea *,
       #idCardContainer, #idCardContainer * {
         visibility: visible;
       }
-      #idCardContainer {
+      #printableArea, #idCardContainer {
         position: absolute;
         left: 0;
         top: 0;
@@ -69,7 +147,7 @@
         display: flex;
         justify-content: center;
       }
-      .btn-download-img, button {
+      .no-print, button {
         display: none !important;
       }
     }
@@ -105,22 +183,49 @@
 
   <!-- Workspace Container (Post-Verification) -->
   <div id="studentWorkspace" style="display:none;" class="student-workspace-container">
-    <div class="workspace-header">
-      <h2 id="welcomeBanner">Welcome, Student</h2>
-      <button onclick="logoutStudent()" class="btn-sm-danger"><i class="fa fa-sign-out-alt"></i> Exit</button>
+    
+    <!-- TOP BROAD RIBBON WITH NAME, BADGES & PHOTO -->
+    <div class="student-top-ribbon">
+      <div class="ribbon-info">
+        <h2 id="welcomeBanner">Welcome, Student</h2>
+        <div class="ribbon-badges">
+          <span class="ribbon-badge-tag" id="ribbonClassBadge">Class: —</span>
+          <span class="ribbon-badge-tag" id="ribbonRollBadge">Roll: —</span>
+          <span class="ribbon-badge-tag" id="ribbonRegBadge">Reg: —</span>
+          <button onclick="logoutStudent()" class="btn-sm-danger" style="margin-left:8px; padding:3px 10px; border-radius:12px; cursor:pointer;"><i class="fa fa-sign-out-alt"></i> Exit</button>
+        </div>
+      </div>
+      <div class="ribbon-photo-frame">
+        <img id="ribbonStudentPhoto" src="https://api.dicebear.com/7.x/bottts/svg?seed=student" alt="Student Photo">
+      </div>
     </div>
 
-    <!-- Navigation Tab Strip -->
-    <div class="tab-strip">
-      <button class="tab-btn active" onclick="switchTab('profileTab')"><i class="fa fa-user-edit"></i> Profile Details</button>
-      <button class="tab-btn" onclick="switchTab('idCardTab')"><i class="fa fa-id-card"></i> Student ID Card</button>
-      <button class="tab-btn" onclick="switchTab('resultTab')"><i class="fa fa-poll"></i> Results</button>
-      <button class="tab-btn" onclick="switchTab('admitCardTab')"><i class="fa fa-ticket-alt"></i> Admit Card</button>
-      <button class="tab-btn" onclick="switchTab('feeTab')"><i class="fa fa-receipt"></i> Fee Status</button>
+    <!-- 5 ACTION CARDS (TABS) -->
+    <div class="dashboard-cards-grid no-print">
+      <div class="portal-action-card active" onclick="switchTab('profileTab', this)">
+        <i class="fa fa-user-edit"></i>
+        <span>Profile Details</span>
+      </div>
+      <div class="portal-action-card" onclick="switchTab('idCardTab', this)">
+        <i class="fa fa-id-card"></i>
+        <span>Student ID Card</span>
+      </div>
+      <div class="portal-action-card" onclick="switchTab('resultTab', this)">
+        <i class="fa fa-award"></i>
+        <span>Examination Results</span>
+      </div>
+      <div class="portal-action-card" onclick="switchTab('admitCardTab', this)">
+        <i class="fa fa-ticket-alt"></i>
+        <span>Admit Card</span>
+      </div>
+      <div class="portal-action-card" onclick="switchTab('feeTab', this)">
+        <i class="fa fa-receipt"></i>
+        <span>Fee Status</span>
+      </div>
     </div>
 
     <!-- Tab 1: Profile View & Self-Update -->
-    <div id="profileTab" class="tab-pane active">
+    <div id="profileTab" class="tab-pane active no-print">
       <form id="studentDetailForm" onsubmit="saveStudentSelfDetails(event)" class="card-p4">
         <h3>Personal & Transport Information</h3>
         <div class="grid-2col">
@@ -179,21 +284,16 @@
 
     <!-- Tab 2: Official 6:9 ID Card Container -->
     <div id="idCardTab" class="tab-pane">
-      <div id="idCardContainer"></div>
+      <div id="idCardContainer" class="id-card-wrapper"></div>
     </div>
 
-    <!-- Tab 3: Results -->
+    <!-- Tab 3: Complete Results & A4 Sheet -->
     <div id="resultTab" class="tab-pane">
-      <div class="card-p4">
-        <h3>Examination Results</h3>
-        <div id="studentResultsContainer">
-          <p style="color:#64748b; text-align:center; padding:20px;">Abhi koi result publish nahi kiya gaya hai.</p>
-        </div>
-      </div>
+      <div id="studentResultsContainer"></div>
     </div>
 
     <!-- Tab 4: Admit Card -->
-    <div id="admitCardTab" class="tab-pane">
+    <div id="admitCardTab" class="tab-pane no-print">
       <div class="card-p4">
         <h3>Examination Admit Card</h3>
         <p style="color:#64748b; text-align:center; padding:20px;">Admit card exam schedule aane par available hoga.</p>
@@ -201,7 +301,7 @@
     </div>
 
     <!-- Tab 5: Fee Status -->
-    <div id="feeTab" class="tab-pane">
+    <div id="feeTab" class="tab-pane no-print">
       <div class="card-p4">
         <h3>Fee & Dues Record</h3>
         <p style="color:#64748b; text-align:center; padding:20px;">Fee receipt counter record update ho raha hai.</p>
