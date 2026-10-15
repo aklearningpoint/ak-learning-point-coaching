@@ -4,7 +4,7 @@
 // ==========================================
 
 // APNA STEP 1 WALA WEB APP URL YAHAN PASTE KAREIN
-var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwRDQuXVyKGKfCI-kifRPb-vzb8Uv2AIv7YzMSihcP5iKPlR9BJj-DVSSDp8q_VWTij/exec";
+var CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwIKnHHCjTXrh_rJjA--9v16W0jPdrN-xpqVFqOhJzUxycYf5r_vu31jxHH7oT878788Q/exec";
 
 // Smart Class Normalizer: '5', 'Class 5', 'Class-5', 'Nur & Play' sabko match karega
 function normalizeClassKey(cls) {
