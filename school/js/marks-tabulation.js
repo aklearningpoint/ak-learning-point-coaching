@@ -418,35 +418,30 @@ function syncMarksToCloud(marksPayload) {
   }
 }
 
-// Direct Client-Side A4 Landscape PDF Downloader
+// A4 Landscape Direct PDF Generator
 function downloadLedgerPDF() {
-  const element = document.getElementById("tabulationLedgerContainer") || document.querySelector(".table-responsive") || document.getElementById("tabulationBody").closest("table");
-  
+  const element = document.getElementById("ledgerPrintWrapper");
   if (!element) {
-    alert("Tabulation table nahi mili! Kripya pehle Class aur Term select karein.");
+    alert("Ledger table nahi mili!");
     return;
   }
 
-  // Dynamic Filename jaise: Assent_Marks_Class_5_Term_1.pdf
-  const filename = `Assent_Marks_${currentClass.replace(/\s+/g, '_')}_${currentTerm.replace(/\s+/g, '_')}.pdf`;
+  const sig = document.getElementById("pdfSignatureRow");
+  if (sig) sig.style.display = "flex";
 
   const opt = {
-    margin:       [10, 10, 10, 10], // top, left, bottom, right in mm
-    filename:     filename,
+    margin:       [8, 8, 8, 8],
+    filename:     `Assent_Ledger_${currentClass.replace(/\s+/g, '_')}_${currentTerm.replace(/\s+/g, '_')}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
   };
 
-  // Temporary styling for crisp PDF output
-  const originalBackground = element.style.background;
-  element.style.background = "#ffffff";
-
-  // Generate & Trigger Download
   html2pdf().set(opt).from(element).save().then(() => {
-    element.style.background = originalBackground;
+    if (sig) sig.style.display = "";
   }).catch((err) => {
-    console.error("PDF generation failed:", err);
-    alert("PDF create karne me issue aaya. Backup ke liye Print option use karein.");
+    console.error("PDF generation error:", err);
+    if (sig) sig.style.display = "";
+    alert("PDF generate nahi ho saka, kripya Print option use karein.");
   });
 }
