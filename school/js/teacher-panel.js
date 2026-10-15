@@ -155,19 +155,24 @@ function submitRapidStudent() {
     fees: { total: 0, paid: 0, due: 0 }
   };
 
+  // Local state update
   students.push(newStudent);
   saveGlobalStudentsList(students);
 
-  // Cloud sync if available
+  // Direct Cloud Google Sheet Sync
   if (typeof CLOUD_SYNC_URL !== "undefined" && CLOUD_SYNC_URL) {
     try {
       fetch(CLOUD_SYNC_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "updateStudentDetails", student: newStudent })
+        body: JSON.stringify({ action: "addStudent", student: newStudent })
+      }).then(function() {
+        console.log("Student successfully sent to Cloud Sheet:", newStudent.name);
       });
-    } catch(err) {}
+    } catch(err) {
+      console.warn("Cloud sync error:", err);
+    }
   }
 
   nameInput.value = "";
