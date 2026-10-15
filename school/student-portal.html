@@ -52,6 +52,27 @@
       flex-direction: column;
       justify-content: space-between;
     }
+
+    /* Print Optimization: Sirf ID card print hoga */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #idCardContainer, #idCardContainer * {
+        visibility: visible;
+      }
+      #idCardContainer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+      .btn-download-img, button {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body class="school-bg">
@@ -142,10 +163,16 @@
             <input type="date" id="stuDOB" class="input-ctrl" required>
           </div>
         </div>
+
+        <!-- Photo Section with File Upload + Live Camera Button -->
         <div class="form-group mt-3">
-          <label>Upload Photograph:</label>
-          <input type="file" id="stuPhotoInput" accept="image/*" onchange="previewStudentPhoto(this)">
+          <label>Student Photograph:</label>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:5px;">
+            <input type="file" id="stuPhotoInput" accept="image/*" onchange="previewStudentPhoto(this)" class="input-ctrl" style="max-width:220px;">
+            <button type="button" onclick="openStudentCamera()" class="tab-btn" style="background:#2563eb; color:#fff; border:none; padding:8px 14px; cursor:pointer;"><i class="fas fa-camera"></i> Open Camera</button>
+          </div>
         </div>
+
         <button type="submit" class="btn-gold-wide mt-3">Update & Save Profile</button>
       </form>
     </div>
