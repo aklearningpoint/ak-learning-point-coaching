@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coaching Teacher Workspace & YouTube PPT Hub - AK Learning Point</title>
+  <link rel="stylesheet" href="css/school-theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- PowerPoint Generator Library (Client-Side) -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+  <style>
+    .teacher-container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .top-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      color: #fff;
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border-bottom: 3px solid #d97706;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    }
+    .panel-card {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 15px;
+    }
+    .input-ctrl {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-top: 5px;
+    }
+    .quiz-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+    .quiz-card:hover {
+      border-color: #93c5fd;
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    }
+    .btn-pptx {
+      background: #dc2626;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: 0.2s ease;
+    }
+    .btn-pptx:hover {
+      background: #b91c1c;
+      transform: translateY(-2px);
+    }
+    .btn-preview {
+      background: #1e3a8a;
+      color: #ffffff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #e2e8f0;
+      color: #334155;
+    }
+  </style>
+</head>
+<body class="school-bg">
+
+  <div class="teacher-container">
+    
+    <!-- Top Navigation Header -->
+    <header class="top-header-bar">
+      <div>
+        <h2 style="margin:0; font-size:1.35rem; letter-spacing:0.5px;">
+          <i class="fa fa-chalkboard-teacher"></i> Coaching Teacher Workspace
+        </h2>
+        <small style="color:#93c5fd;">AK Learning Point • YouTube PPT & Question Manager</small>
+      </div>
+      <div>
+        <a href="index.html" style="color:#fef3c7; text-decoration:none; font-weight:700; font-size:13px; margin-right:12px;">
+          <i class="fa fa-home"></i> Home
+        </a>
+        <a href="learning-hub.html" style="color:#ffffff; text-decoration:none; font-weight:700; font-size:13px;">
+          <i class="fa fa-graduation-cap"></i> Learning Hub
+        </a>
+      </div>
+    </header>
+
+    <!-- Quiz Selection & Filters -->
+    <div class="panel-card">
+      <h3 style="margin-top:0; color:#0f172a;"><i class="fa fa-filter text-gold"></i> Select Class & Subject</h3>
+      <div class="filter-grid">
+        <div>
+          <label style="font-weight:700; font-size:12px;">Class:</label>
+          <select id="filterClass" class="input-ctrl" onchange="filterAvailableQuizzes()">
+            <option value="ALL">-- All Classes --</option>
+            <option value="Class 7">Class 7</option>
+            <option value="Class 8">Class 8</option>
+            <option value="Class 9">Class 9</option>
+            <option value="Class 10">Class 10</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-weight:700; font-size:12px;">Subject:</label>
+          <select id="filterSubject" class="input-ctrl" onchange="filterAvailableQuizzes()">
+            <option value="ALL">-- All Subjects --</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Science">Science (Physics/Chem/Bio)</option>
+            <option value="English">English Grammar</option>
+            <option value="Social Science">Social Science</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quizzes List & Export Section -->
+    <div class="panel-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; color:#0f172a;"><i class="fa fa-list-alt"></i> Available Quizzes</h3>
+        <span id="quizCountText" style="font-size:12px; color:#64748b; font-weight:700;">Loading sets...</span>
+      </div>
+
+      <div id="quizListContainer">
+        <!-- Quizzes will be populated dynamically here -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Non-destructive Scripts Integration -->
+  <script src="js/quiz-pptx-exporter.js"></script>
+  <script src="js/content-modules.js"></script>
+  <script src="js/quiz.js"></script>
+  
+  <script>
+    // Safe Bridge to Read Quizzes from Memory or Fallback
+    var allQuizzesCache = [];
+
+    window.addEventListener("DOMContentLoaded", function() {
+      loadQuizzesToPortal();
+    });
+
+    function loadQuizzesToPortal() {
+      // 1. Try to read from global window/content modules
+      if (typeof window.COACHING_QUIZZES !== "undefined" && Array.isArray(window.COACHING_QUIZZES)) {
+        allQuizzesCache = window.COACHING_QUIZZES;
+      } else {
+        // 2. Default Local Storage or Structured Fallback
+        try {
+          var local = localStorage.getItem("ak_coaching_quizzes");
+          allQuizzesCache = local ? JSON.parse(local) : [];
+        } catch(e) {
+          allQuizzesCache = [];
+        }
+      }
+
+      // If empty, provide built-in chapter presets for instant use
+      if (allQuizzesCache.length === 0) {
+        allQuizzesCache = [
+          {
+            id: "q_math_9_number",
+            title: "Number System - Real Numbers",
+            className: "Class 9",
+            subject: "Mathematics",
+            questions: [
+              { question: "Is zero a rational number?", optionA: "Yes", optionB: "No", optionC: "Cannot be determined", optionD: "None of these", correctOption: "A", explanation: "Zero can be written in p/q form as 0/1 where p and q are integers and q is not equal to 0." },
+              { question: "Every rational number is:", optionA: "A natural number", optionB: "An integer", optionC: "A real number", optionD: "A whole number", correctOption: "C", explanation: "The collection of all rational and irrational numbers together forms the collection of Real Numbers." }
+            ]
+          },
+          {
+            id: "q_sci_9_motion",
+            title: "Motion & Laws of Force",
+            className: "Class 9",
+            subject: "Science",
+            questions: [
+              { question: "What is the SI unit of acceleration?", optionA: "m/s", optionB: "m/s²", optionC: "km/h", optionD: "Newton", correctOption: "B", explanation: "Acceleration is the rate of change of velocity per unit time. Unit = (m/s)/s = m/s²." },
+              { question: "Inertia is the property of a body due to which it resists a change in its state of:", optionA: "Rest only", optionB: "Motion only", optionC: "Rest or uniform motion", optionD: "Direction only", correctOption: "C", explanation: "Newton's First Law defines inertia as resistance to change in state of rest or uniform motion." }
+            ]
+          },
+          {
+            id: "q_eng_tense",
+            title: "English Grammar - Tenses Mastery",
+            className: "Class 8",
+            subject: "English",
+            questions: [
+              { question: "Identify the tense: 'He has been living here since 2020.'", optionA: "Past Perfect", optionB: "Present Perfect Continuous", optionC: "Future Continuous", optionD: "Present Perfect", correctOption: "B", explanation: "'has/have + been + verb-ing' indicates Present Perfect Continuous tense." }
+            ]
+          }
+        ];
+      }
+
+      filterAvailableQuizzes();
+    }
+
+    function filterAvailableQuizzes() {
+      var selectedClass = document.getElementById("filterClass").value;
+      var selectedSub = document.getElementById("filterSubject").value;
+      var container = document.getElementById("quizListContainer");
+
+      var filtered = allQuizzesCache.filter(function(q) {
+        var matchCls = (selectedClass === "ALL") || (q.className === selectedClass);
+        var matchSub = (selectedSub === "ALL") || (q.subject === selectedSub);
+        return matchCls && matchSub;
+      });
+
+      document.getElementById("quizCountText").innerText = filtered.length + " quiz sets found";
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">Is selection me koi quiz nahi mila.</p>';
+        return;
+      }
+
+      var html = "";
+      filtered.forEach(function(q, idx) {
+        var qCount = q.questions ? q.questions.length : 0;
+        html += `
+          <div class="quiz-card">
+            <div>
+              <div style="font-weight:800; font-size:15px; color:#0f172a; margin-bottom:4px;">
+                ${q.title}
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span class="badge" style="background:#dbeafe; color:#1e40af;">${q.className}</span>
+                <span class="badge" style="background:#fef3c7; color:#92400e;">${q.subject}</span>
+                <span class="badge">${qCount} Questions</span>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center;">
+              <a href="learning-hub.html" class="btn-preview"><i class="fa fa-eye"></i> View in Hub</a>
+              <button onclick="exportSingleQuizAsPPT(${idx})" class="btn-pptx">
+                <i class="fa fa-file-powerpoint"></i> Export YouTube PPT
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      window.currentFilteredQuizzes = filtered;
+    }
+
+    function exportSingleQuizAsPPT(index) {
+      var quiz = window.currentFilteredQuizzes[index];
+      if (!quiz) return;
+
+      if (typeof generateYouTubeQuizPPT === "function") {
+        generateYouTubeQuizPPT(quiz.title + " (" + quiz.className + ")", quiz.questions);
+      } else {
+        alert("PPT Exporter file nahi mili. Check js/quiz-pptx-exporter.js");
+      }
+    }
+  </script>
+</body>
+</html>
