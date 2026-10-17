@@ -54,6 +54,7 @@ function renderTeacherDashboard() {
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0;" onclick="showTeacherSection(\'maker\')">+ Create Quiz (Smart Parser)</button>' +
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#0284c7;" onclick="showTeacherSection(\'list\')">Manage Quizzes & Leaderboards</button>' +
     '<button class="btn-primary" style="width:auto; padding:6px 14px; font-size:0.85rem; margin:0; background:#d97706; display:inline-flex; align-items:center; gap:6px; color:#fff;" onclick="openTeacherMaterialModal()"><i class="fas fa-upload"></i> Post Material</button>' +
+   '<button onclick="window.location.href=\'teacher-portal.html\'" class="btn-primary" style="background:#dc2626; color:#ffffff; margin-left:6px; border-radius:20px; font-weight:700;"><i class="fas fa-file-powerpoint"></i> YouTube PPT Hub</button>' +
     '</div>' +
     '<div id="teacherContentBody" style="flex:1; overflow-y:auto; padding:16px; max-width:850px; margin:0 auto; width:100%;"></div>' +
     '</div>';
