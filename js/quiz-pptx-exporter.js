@@ -1,41 +1,41 @@
 // ==========================================================
 // YOUTUBE VIDEO PPTX EXPORTER FOR AK LEARNING POINT
-// File: js/quiz-pptx-exporter.js (Preview-Matched Style & Robust Answer Parser)
+// File: js/quiz-pptx-exporter.js (Sheet 0=A, 1=B, 2=C, 3=D Aligned)
 // ==========================================================
 
 function resolveCorrectKey(raw, optA, optB, optC, optD) {
   if (raw === undefined || raw === null) return "A";
   var str = String(raw).trim();
 
-  // 1. Direct Text check for "Option A", "Option B", etc.
-  if (/option\s*a/i.test(str)) return "A";
-  if (/option\s*b/i.test(str)) return "B";
-  if (/option\s*c/i.test(str)) return "C";
-  if (/option\s*d/i.test(str)) return "D";
+  // 1. Direct Text check for "Option B", "Option A", etc.
+  if (/\boption\s*b\b/i.test(str)) return "B";
+  if (/\boption\s*c\b/i.test(str)) return "C";
+  if (/\boption\s*d\b/i.test(str)) return "D";
+  if (/\boption\s*a\b/i.test(str)) return "A";
 
   // 2. Direct Letter check
   var up = str.toUpperCase();
-  if (up === "A") return "A";
   if (up === "B") return "B";
   if (up === "C") return "C";
   if (up === "D") return "D";
+  if (up === "A") return "A";
 
-  // 3. Number check: 1 = A, 2 = B, 3 = C, 4 = D (0 is also A)
+  // 3. Exact Google Sheet 0-index Match: 0=A, 1=B, 2=C, 3=D
   var numMatch = str.match(/\d+/);
   if (numMatch) {
     var val = parseInt(numMatch[0], 10);
-    if (val === 1 || val === 0) return "A";
-    if (val === 2) return "B";
-    if (val === 3) return "C";
-    if (val === 4) return "D";
+    if (val === 1) return "B";
+    if (val === 2) return "C";
+    if (val === 3) return "D";
+    if (val === 0) return "A";
   }
 
   // 4. Exact text matching fallback
   var target = str.toLowerCase();
-  if (target && target === String(optA).trim().toLowerCase()) return "A";
-  if (target && target === String(optB).trim().toLowerCase()) return "B";
-  if (target && target === String(optC).trim().toLowerCase()) return "C";
-  if (target && target === String(optD).trim().toLowerCase()) return "D";
+  if (target && optB && target === String(optB).trim().toLowerCase()) return "B";
+  if (target && optC && target === String(optC).trim().toLowerCase()) return "C";
+  if (target && optD && target === String(optD).trim().toLowerCase()) return "D";
+  if (target && optA && target === String(optA).trim().toLowerCase()) return "A";
 
   return "A";
 }
