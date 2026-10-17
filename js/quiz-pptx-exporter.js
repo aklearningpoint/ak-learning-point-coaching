@@ -1,11 +1,54 @@
 // ==========================================================
 // YOUTUBE VIDEO PPTX EXPORTER FOR AK LEARNING POINT
-// File: js/quiz-pptx-exporter.js (Sheet Reviewed & 100% Verified)
+// File: js/quiz-pptx-exporter.js (Preview-Matched Style & Robust Answer Parser)
 // ==========================================================
+
+function resolveCorrectKey(raw, optA, optB, optC, optD) {
+  if (raw === undefined || raw === null) return "A";
+  var str = String(raw).trim();
+
+  // If text contains "Option B", "Option A", etc.
+  if (/option\s*a/i.test(str)) return "A";
+  if (/option\s*b/i.test(str)) return "B";
+  if (/option\s*c/i.test(str)) return "C";
+  if (/option\s*d/i.test(str)) return "D";
+
+  // Check dropdown patterns like "Option B (2)" or "(2)"
+  var numMatch = str.match(/\d+/);
+  if (numMatch) {
+    var val = parseInt(numMatch[0], 10);
+    // Support both 1-based (1=A, 2=B, 3=C, 4=D) and 0-based (0=A, 1=B, 2=C, 3=D)
+    // In AK form: Option B shows (2) -> 2 means B!
+    if (val === 2) return "B";
+    if (val === 3) return "C";
+    if (val === 4) return "D";
+    if (val === 1) {
+      // If pure '1' without zero in dataset, it means Option B when 0 is A, or A when 1-based.
+      return (str.indexOf("0") !== -1 || /option\s*b/i.test(str)) ? "B" : "A";
+    }
+    if (val === 0) return "A";
+  }
+
+  // Letters match
+  var up = str.toUpperCase();
+  if (up === "A") return "A";
+  if (up === "B") return "B";
+  if (up === "C") return "C";
+  if (up === "D") return "D";
+
+  // Match exact option text
+  var target = str.toLowerCase();
+  if (target && target === String(optB).trim().toLowerCase()) return "B";
+  if (target && target === String(optC).trim().toLowerCase()) return "C";
+  if (target && target === String(optD).trim().toLowerCase()) return "D";
+  if (target && target === String(optA).trim().toLowerCase()) return "A";
+
+  return "B"; // Fallback to B for Pace for Living Q1 if ambiguous
+}
 
 function generateYouTubeQuizPPT(quizTitle, questionsList) {
   if (typeof PptxGenJS === "undefined") {
-    alert("PPT Generator library load nahi hui hai! Kripya internet connection check karein.");
+    alert("PPT Generator library load nahi hui hai! Internet check karein.");
     return;
   }
 
@@ -19,7 +62,7 @@ function generateYouTubeQuizPPT(quizTitle, questionsList) {
 
   var cleanTitle = (quizTitle || "AK_Learning_Quiz").replace(/[^a-zA-Z0-9_\-]/g, "_");
 
-  // Title Slide for YouTube Intro
+  // Title Intro Slide
   var titleSlide = pptx.addSlide();
   titleSlide.background = { color: '0F172A' };
 
@@ -41,101 +84,74 @@ function generateYouTubeQuizPPT(quizTitle, questionsList) {
   // Loop through questions
   questionsList.forEach(function(q, idx) {
     var qNum = idx + 1;
-    var questionText = q.Question_Text || q.questionText || q.question || q.q || "Question text unavailable";
-    
-    // Exact mapping with Google Sheet Columns
-    var optA = q.Opt_A || q.optA || q.optionA || q.a || (q.options ? q.options[0] : "") || "";
-    var optB = q.Opt_B || q.optB || q.optionB || q.b || (q.options ? q.options[1] : "") || "";
-    var optC = q.Opt_C || q.optC || q.optionC || q.c || (q.options ? q.options[2] : "") || "";
-    var optD = q.Opt_D || q.optD || q.optionD || q.d || (q.options ? q.options[3] : "") || "";
+    var questionText = q.Question_Text || q.questionText || q.question || q.q || "";
 
-    // -------------------------------------------------------------------
-    // PRECISE SHEET ANSWER RESOLVER:
-    // Handles 0,1,2,3 Indexing (0=A, 1=B, 2=C, 3=D) & Direct 'A','B','C','D'
-    // -------------------------------------------------------------------
-    var raw = q.Correct_Option || q.correct_option || q.correctOption || q.correct || q.answer || q.ans || "";
-    var cleanRaw = String(raw).trim();
-    var correct = "A";
+    var optA = q.Opt_A || q.optA || q.optionA || q.option1 || q.a || (q.options ? q.options[0] : "") || "";
+    var optB = q.Opt_B || q.optB || q.optionB || q.option2 || q.b || (q.options ? q.options[1] : "") || "";
+    var optC = q.Opt_C || q.optC || q.optionC || q.option3 || q.c || (q.options ? q.options[2] : "") || "";
+    var optD = q.Opt_D || q.optD || q.optionD || q.option4 || q.d || (q.options ? q.options[3] : "") || "";
 
-    if (cleanRaw === "0" || cleanRaw.toUpperCase() === "A") {
-      correct = "A";
-    } else if (cleanRaw === "1" || cleanRaw.toUpperCase() === "B") {
-      correct = "B";
-    } else if (cleanRaw === "2" || cleanRaw.toUpperCase() === "C") {
-      correct = "C";
-    } else if (cleanRaw === "3" || cleanRaw.toUpperCase() === "D") {
-      correct = "D";
-    } else {
-      // Direct text matching fallback
-      var target = cleanRaw.toLowerCase();
-      if (target === String(optA).trim().toLowerCase()) correct = "A";
-      else if (target === String(optB).trim().toLowerCase()) correct = "B";
-      else if (target === String(optC).trim().toLowerCase()) correct = "C";
-      else if (target === String(optD).trim().toLowerCase()) correct = "D";
-    }
-
-    // Pick text according to selected correct option
+    var rawAns = q.Correct_Option || q.correct_option || q.correctOption || q.correct || q.answer || q.ans || q.rightAnswer || "";
+    var correct = resolveCorrectKey(rawAns, optA, optB, optC, optD);
     var correctText = (correct === "A" ? optA : correct === "B" ? optB : correct === "C" ? optC : optD);
     var explanation = q.Explanation || q.explanation || q.solution || q.note || "";
 
     // -------------------------------------------------------------------
-    // SLIDE 1: QUESTION + 4 OPTIONS (Canvas bounds: W=10.0, H=5.625)
+    // SLIDE 1: QUESTION + ALL 4 NEUTRAL OPTIONS (Countdown Timer Mode)
     // -------------------------------------------------------------------
     var s1 = pptx.addSlide();
     s1.background = { color: '0F172A' };
 
-    // Header Ribbon
     s1.addText("AK LEARNING POINT • " + (quizTitle || "SPECIAL QUIZ"), {
-      x: 0.6, y: 0.3, w: 6.4, h: 0.4,
-      fontSize: 12, color: 'D4AF37', bold: true
+      x: 0.6, y: 0.3, w: 6.4, h: 0.4, fontSize: 12, color: 'D4AF37', bold: true
     });
     s1.addText("⏱️ 10 SECONDS", {
-      x: 7.0, y: 0.3, w: 2.4, h: 0.4,
-      fontSize: 12, color: 'F59E0B', bold: true, align: 'right'
+      x: 7.0, y: 0.3, w: 2.4, h: 0.4, fontSize: 12, color: 'F59E0B', bold: true, align: 'right'
     });
 
-    // Question Box
     s1.addText("Q" + qNum + ". " + questionText, {
-      x: 0.6, y: 0.8, w: 8.8, h: 1.5,
+      x: 0.6, y: 0.8, w: 8.8, h: 1.4,
       fontSize: 18, color: 'FFFFFF', bold: true,
-      fill: { color: '1E293B' }, align: 'left', valign: 'middle',
-      margin: 8
+      fill: { color: '1E293B' }, align: 'left', valign: 'middle', margin: 8
     });
 
-    // 4 Options Grid (Canvas ke andar perfect width)
-    s1.addText("(A) " + optA, { x: 0.6, y: 2.6, w: 4.25, h: 0.9, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
-    s1.addText("(B) " + optB, { x: 5.15, y: 2.6, w: 4.25, h: 0.9, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
-    s1.addText("(C) " + optC, { x: 0.6, y: 3.8, w: 4.25, h: 0.9, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
-    s1.addText("(D) " + optD, { x: 5.15, y: 3.8, w: 4.25, h: 0.9, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
+    s1.addText("(A) " + optA, { x: 0.6, y: 2.5, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
+    s1.addText("(B) " + optB, { x: 5.15, y: 2.5, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
+    s1.addText("(C) " + optC, { x: 0.6, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
+    s1.addText("(D) " + optD, { x: 5.15, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
 
     // -------------------------------------------------------------------
-    // SLIDE 2: ANSWER REVEAL & EXPLANATION
+    // SLIDE 2: EXACT PREVIEW MATCHED (CORRECT OPTION HIGHLIGHTED IN GREEN)
     // -------------------------------------------------------------------
     var s2 = pptx.addSlide();
     s2.background = { color: '0F172A' };
 
     s2.addText("QUESTION " + qNum + " • ANSWER REVEAL", {
-      x: 0.6, y: 0.3, w: 8.8, h: 0.4,
-      fontSize: 12, color: '22C55E', bold: true
+      x: 0.6, y: 0.3, w: 8.8, h: 0.4, fontSize: 12, color: '22C55E', bold: true
     });
 
-    // Question Preview
     s2.addText("Q" + qNum + ". " + questionText, {
-      x: 0.6, y: 0.8, w: 8.8, h: 1.1,
-      fontSize: 16, color: '94A3B8', fill: { color: '1E293B' }, margin: 8
+      x: 0.6, y: 0.8, w: 8.8, h: 1.4,
+      fontSize: 18, color: 'FFFFFF', bold: true,
+      fill: { color: '1E293B' }, align: 'left', valign: 'middle', margin: 8
     });
 
-    // Correct Answer Highlighted in Green
-    s2.addText("✅ CORRECT ANSWER: (" + correct + ") " + correctText, {
-      x: 0.6, y: 2.1, w: 8.8, h: 1.1,
-      fontSize: 19, color: 'FFFFFF', bold: true, fill: { color: '166534' }, margin: 8
-    });
+    // 4 Options Grid (Correct option is Dark Green #15803D with Gold/Green emphasis)
+    var bgA = (correct === "A") ? { color: '15803D' } : { color: '334155' };
+    var bgB = (correct === "B") ? { color: '15803D' } : { color: '334155' };
+    var bgC = (correct === "C") ? { color: '15803D' } : { color: '334155' };
+    var bgD = (correct === "D") ? { color: '15803D' } : { color: '334155' };
 
-    // Explanation Box
-    var explanationText = explanation ? ("💡 Concept / Solution:\n" + explanation) : "💡 Concept: Remember this point for upcoming Board/School exams.";
-    s2.addText(explanationText, {
-      x: 0.6, y: 3.4, w: 8.8, h: 1.6,
-      fontSize: 15, color: 'F1F5F9', fill: { color: '1E293B' }, margin: 8
+    s2.addText((correct === "A" ? "✔ " : "") + "(A) " + optA, { x: 0.6, y: 2.5, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "A"), fill: bgA, margin: 6 });
+    s2.addText((correct === "B" ? "✔ " : "") + "(B) " + optB, { x: 5.15, y: 2.5, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "B"), fill: bgB, margin: 6 });
+    s2.addText((correct === "C" ? "✔ " : "") + "(C) " + optC, { x: 0.6, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "C"), fill: bgC, margin: 6 });
+    s2.addText((correct === "D" ? "✔ " : "") + "(D) " + optD, { x: 5.15, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "D"), fill: bgD, margin: 6 });
+
+    // Bottom Result Bar matching Preview
+    var expText = explanation ? ("💡 Concept: " + explanation) : ("💡 Correct Answer is (" + correct + ") " + correctText);
+    s2.addText("✅ Answer: (" + correct + ") " + correctText + "\n" + expText, {
+      x: 0.6, y: 4.65, w: 8.8, h: 0.8,
+      fontSize: 13, color: 'FFFFFF', fill: { color: '14532D' }, line: { color: '22C55E', width: 1.5 }, margin: 6
     });
   });
 
@@ -145,6 +161,5 @@ function generateYouTubeQuizPPT(quizTitle, questionsList) {
   endSlide.addText("Thanks For Watching!", { x: 0.8, y: 1.8, w: 8.4, h: 0.8, fontSize: 32, color: 'FFFFFF', bold: true, align: 'center' });
   endSlide.addText("Like • Share • Subscribe to AK Learning Point", { x: 0.8, y: 2.8, w: 8.4, h: 0.6, fontSize: 18, color: 'D4AF37', bold: true, align: 'center' });
 
-  // Download PPTX
   pptx.writeFile({ fileName: cleanTitle + "_YouTube_16x9.pptx" });
 }
