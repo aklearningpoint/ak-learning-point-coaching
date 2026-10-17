@@ -152,10 +152,8 @@
     </div>
   </div>
 
-  <!-- Standard Scripts Load -->
+  <!-- Scripts -->
   <script src="js/api.js"></script>
-  <script src="js/content-modules.js"></script>
-  <script src="js/quiz.js"></script>
 
   <script>
     var allQuizzesCache = [];
@@ -163,7 +161,7 @@
     var currentVerifyIndex = 0;
     var isAnswerRevealed = false;
 
-    // Helper: 0=A, 1=B, 2=C, 3=D Solver
+    // Direct Sheet 0=A, 1=B, 2=C, 3=D Logic
     function getCleanCorrectKey(q, optA, optB, optC, optD) {
       var val = (q.Correct_Option !== undefined && q.Correct_Option !== null) ? q.Correct_Option :
                 (q.correct_option !== undefined && q.correct_option !== null) ? q.correct_option :
@@ -192,38 +190,14 @@
       return "A";
     }
 
-    window.addEventListener("DOMContentLoaded", function() {
-      syncAndLoadQuizzes();
-    });
-
-    async function syncAndLoadQuizzes() {
-      // 1. Try local storage first for instant load
-      try {
-        var local = localStorage.getItem("ak_quizzes") || localStorage.getItem("ak_coaching_quizzes") || localStorage.getItem("ak_teacher_quizzes");
-        if (local) {
-          allQuizzesCache = JSON.parse(local);
-          filterAvailableQuizzes();
-        }
-      } catch(e) {}
-
-      // 2. Fetch fresh list from API if available
-      if (typeof API !== "undefined" && API.get) {
-        try {
-          var res = await API.get("getAllQuizzes");
-          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-            allQuizzesCache = res.data;
-            localStorage.setItem("ak_quizzes", JSON.stringify(res.data));
-          }
-        } catch(e) {}
-      }
-
-      filterAvailableQuizzes();
-    }
-
     function filterAvailableQuizzes() {
-      var selectedClass = document.getElementById("filterClass").value;
-      var selectedSub = document.getElementById("filterSubject").value;
+      var filterClassElem = document.getElementById("filterClass");
+      var filterSubElem = document.getElementById("filterSubject");
       var container = document.getElementById("quizListContainer");
+      if (!container) return;
+
+      var selectedClass = filterClassElem ? filterClassElem.value : "ALL";
+      var selectedSub = filterSubElem ? filterSubElem.value : "ALL";
 
       var filtered = allQuizzesCache.filter(function(q) {
         var c = q.className || q.class_tag || q.class || "";
@@ -233,7 +207,10 @@
         return matchCls && matchSub;
       });
 
-      document.getElementById("quizCountText").innerText = filtered.length + " quiz sets available";
+      var countElem = document.getElementById("quizCountText");
+      if (countElem) {
+        countElem.innerText = filtered.length + " quiz sets available";
+      }
 
       if (filtered.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:#64748b; padding:30px;">Is selection me abhi koi quiz nahi mila.</p>';
@@ -247,38 +224,75 @@
         var cls = q.className || q.class_tag || "General";
         var sub = q.subject || "All Subjects";
 
-        html += `
-          <div class="quiz-card">
-            <div>
-              <div style="font-weight:800; font-size:15px; color:#0f172a; margin-bottom:4px;">${quizTitle}</div>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <span class="badge" style="background:#dbeafe; color:#1e40af;">${cls}</span>
-                <span class="badge" style="background:#fef3c7; color:#92400e;">${sub}</span>
-                <span class="badge">${qCount} Questions</span>
-              </div>
-            </div>
-            <div style="display:flex; gap:10px; align-items:center;">
-              <button onclick="startInAppVerification(${idx})" class="btn-verify"><i class="fa fa-play-circle"></i> Preview & Verify</button>
-              <button onclick="exportSingleQuizAsPPT(${idx})" class="btn-pptx"><i class="fa fa-file-powerpoint"></i> Export YouTube PPT</button>
-            </div>
-          </div>
-        `;
+        html += '<div class="quiz-card">' +
+          '<div>' +
+            '<div style="font-weight:800; font-size:15px; color:#0f172a; margin-bottom:4px;">' + quizTitle + '</div>' +
+            '<div style="display:flex; gap:6px; align-items:center;">' +
+              '<span class="badge" style="background:#dbeafe; color:#1e40af;">' + cls + '</span>' +
+              '<span class="badge" style="background:#fef3c7; color:#92400e;">' + sub + '</span>' +
+              '<span class="badge">' + qCount + ' Questions</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex; gap:10px; align-items:center;">' +
+            '<button onclick="startInAppVerification(' + idx + ')" class="btn-verify"><i class="fa fa-play-circle"></i> Preview & Verify</button>' +
+            '<button onclick="exportSingleQuizAsPPT(' + idx + ')" class="btn-pptx"><i class="fa fa-file-powerpoint"></i> Export YouTube PPT</button>' +
+          '</div>' +
+        '</div>';
       });
 
       container.innerHTML = html;
       window.currentFilteredQuizzes = filtered;
     }
 
-    // PREVIEW PLAYER CONTROLLER
+    async function syncAndLoadQuizzes() {
+      allQuizzesCache = [];
+
+      // 1. Direct Local Storage Lookup
+      try {
+        var keys = ["ak_quizzes_cache", "ak_coaching_quizzes", "ak_teacher_quizzes", "sch_quizzes"];
+        for (var k = 0; k < keys.length; k++) {
+          var stored = localStorage.getItem(keys[k]);
+          if (stored) {
+            var parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              allQuizzesCache = parsed;
+              break;
+            }
+          }
+        }
+      } catch(e) {}
+
+      // 2. Fetch via API if available
+      if (typeof API !== "undefined" && API.get) {
+        try {
+          var res = await API.get("getLiveQuizzes");
+          if (!res || !res.data) res = await API.get("getAllQuizzes");
+          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+            allQuizzesCache = res.data;
+            localStorage.setItem("ak_quizzes_cache", JSON.stringify(res.data));
+          }
+        } catch(err) {}
+      }
+
+      filterAvailableQuizzes();
+    }
+
+    window.addEventListener("DOMContentLoaded", function() {
+      syncAndLoadQuizzes();
+    });
+
+    // PREVIEW PLAYER
     async function startInAppVerification(idx) {
       var quiz = window.currentFilteredQuizzes[idx];
       if (!quiz) return;
 
       var questions = quiz.questions;
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
-        if (typeof API !== "undefined" && API.get && (quiz.id || quiz.quiz_id)) {
+        var qId = quiz.quiz_id || quiz.id;
+        if (typeof API !== "undefined" && API.get && qId) {
           try {
-            var qRes = await API.get("getQuestions", { quizId: quiz.id || quiz.quiz_id });
+            var qRes = await API.get("getQuestionsByQuizId", { quiz_id: qId });
+            if (!qRes || !qRes.data) qRes = await API.get("getQuestions", { quizId: qId });
             if (qRes && qRes.data) questions = qRes.data;
           } catch(e) {}
         }
@@ -303,7 +317,7 @@
 
       var q = currentVerifyingQuiz.questions[currentVerifyIndex];
       var total = currentVerifyingQuiz.questions.length;
-      document.getElementById("previewMeta").innerText = `Question ${currentVerifyIndex + 1} of ${total}`;
+      document.getElementById("previewMeta").innerText = "Question " + (currentVerifyIndex + 1) + " of " + total;
 
       var questionText = q.Question_Text || q.questionText || q.question || q.q || "";
       var optA = q.Opt_A || q.optA || q.optionA || q.option1 || (q.options ? q.options[0] : "") || "";
@@ -315,28 +329,24 @@
       var correctText = (correct === "A" ? optA : correct === "B" ? optB : correct === "C" ? optC : optD);
 
       var stage = document.getElementById("slideStage");
-      var html = `
-        <div style="font-size:12px; color:#d4af37; font-weight:bold; margin-bottom:6px;">AK LEARNING POINT • LIVE SLIDE PREVIEW</div>
-        <div style="background:#1e293b; padding:16px; border-radius:8px; font-size:18px; font-weight:bold; margin-bottom:16px;">
-          Q${currentVerifyIndex + 1}. ${questionText}
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
-          <div class="stage-opt ${isAnswerRevealed && correct === 'A' ? 'correct' : ''}">(A) ${optA}</div>
-          <div class="stage-opt ${isAnswerRevealed && correct === 'B' ? 'correct' : ''}">(B) ${optB}</div>
-          <div class="stage-opt ${isAnswerRevealed && correct === 'C' ? 'correct' : ''}">(C) ${optC}</div>
-          <div class="stage-opt ${isAnswerRevealed && correct === 'D' ? 'correct' : ''}">(D) ${optD}</div>
-        </div>
-      `;
+      var html = '<div style="font-size:12px; color:#d4af37; font-weight:bold; margin-bottom:6px;">AK LEARNING POINT • LIVE SLIDE PREVIEW</div>' +
+        '<div style="background:#1e293b; padding:16px; border-radius:8px; font-size:18px; font-weight:bold; margin-bottom:16px;">' +
+          'Q' + (currentVerifyIndex + 1) + '. ' + questionText +
+        '</div>' +
+        '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">' +
+          '<div class="stage-opt ' + (isAnswerRevealed && correct === 'A' ? 'correct' : '') + '">(A) ' + optA + '</div>' +
+          '<div class="stage-opt ' + (isAnswerRevealed && correct === 'B' ? 'correct' : '') + '">(B) ' + optB + '</div>' +
+          '<div class="stage-opt ' + (isAnswerRevealed && correct === 'C' ? 'correct' : '') + '">(C) ' + optC + '</div>' +
+          '<div class="stage-opt ' + (isAnswerRevealed && correct === 'D' ? 'correct' : '') + '">(D) ' + optD + '</div>' +
+        '</div>';
 
       if (isAnswerRevealed) {
-        html += `
-          <div style="background:#14532d; border:1.5px solid #22c55e; padding:12px; border-radius:8px; font-size:16px; font-weight:bold; color:#fff;">
-            ✅ Answer: (${correct}) ${correctText}
-          </div>
-          <div style="margin-top:8px; font-size:13px; color:#94a3b8;">
-            ${q.Explanation || q.explanation || "Concept: Verified for YouTube record."}
-          </div>
-        `;
+        html += '<div style="background:#14532d; border:1.5px solid #22c55e; padding:12px; border-radius:8px; font-size:16px; font-weight:bold; color:#fff;">' +
+            '✅ Answer: (' + correct + ') ' + correctText +
+          '</div>' +
+          '<div style="margin-top:8px; font-size:13px; color:#94a3b8;">' +
+            (q.Explanation || q.explanation || "Concept: Verified for YouTube record.") +
+          '</div>';
       }
 
       stage.innerHTML = html;
@@ -379,22 +389,24 @@
       if (!quiz) return;
       var questions = quiz.questions;
       if (!questions || questions.length === 0) {
-        if (typeof API !== "undefined" && API.get && (quiz.id || quiz.quiz_id)) {
-          var qRes = await API.get("getQuestions", { quizId: quiz.id || quiz.quiz_id });
+        var qId = quiz.quiz_id || quiz.id;
+        if (typeof API !== "undefined" && API.get && qId) {
+          var qRes = await API.get("getQuestionsByQuizId", { quiz_id: qId });
+          if (!qRes || !qRes.data) qRes = await API.get("getQuestions", { quizId: qId });
           if (qRes && qRes.data) questions = qRes.data;
         }
       }
       executePptxDownload((quiz.title || "Quiz"), questions || []);
     }
 
-    // EMBEDDED 16:9 PPTX EXPORTER
+    // PPTX GENERATOR ENGINE
     function executePptxDownload(quizTitle, questionsList) {
       if (typeof PptxGenJS === "undefined") {
-        alert("PPT library not ready!");
+        alert("PowerPoint library load nahi hui hai! Kripya internet connection check karein.");
         return;
       }
       if (!questionsList || questionsList.length === 0) {
-        alert("Export ke liye questions nahi mile!");
+        alert("Export karne ke liye questions nahi mile!");
         return;
       }
 
@@ -403,14 +415,12 @@
 
       var cleanTitle = (quizTitle || "AK_Quiz").replace(/[^a-zA-Z0-9_\-]/g, "_");
 
-      // Title Slide
       var titleSlide = pptx.addSlide();
       titleSlide.background = { color: '0F172A' };
       titleSlide.addText("AK LEARNING POINT", { x: 0.8, y: 1.2, w: 8.4, h: 0.6, fontSize: 24, color: 'D4AF37', bold: true, align: 'center' });
       titleSlide.addText(quizTitle || "Objective Practice Set", { x: 0.8, y: 2.0, w: 8.4, h: 1.2, fontSize: 32, color: 'FFFFFF', bold: true, align: 'center' });
       titleSlide.addText("Complete Chapter MCQs • Video Solution", { x: 0.8, y: 3.4, w: 8.4, h: 0.5, fontSize: 16, color: '94A3B8', align: 'center' });
 
-      // Questions Loop
       questionsList.forEach(function(q, idx) {
         var qNum = idx + 1;
         var questionText = q.Question_Text || q.questionText || q.question || q.q || "";
@@ -423,7 +433,7 @@
         var correctText = (correct === "A" ? optA : correct === "B" ? optB : correct === "C" ? optC : optD);
         var explanation = q.Explanation || q.explanation || "";
 
-        // Slide 1: Neutral
+        // Slide 1: Question
         var s1 = pptx.addSlide();
         s1.background = { color: '0F172A' };
         s1.addText("AK LEARNING POINT • " + (quizTitle || "QUIZ"), { x: 0.6, y: 0.3, w: 6.4, h: 0.4, fontSize: 12, color: 'D4AF37', bold: true });
@@ -434,7 +444,7 @@
         s1.addText("(C) " + optC, { x: 0.6, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
         s1.addText("(D) " + optD, { x: 5.15, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', fill: { color: '334155' }, margin: 6 });
 
-        // Slide 2: Reveal & Highlight
+        // Slide 2: Answer
         var s2 = pptx.addSlide();
         s2.background = { color: '0F172A' };
         s2.addText("QUESTION " + qNum + " • ANSWER REVEAL", { x: 0.6, y: 0.3, w: 8.8, h: 0.4, fontSize: 12, color: '22C55E', bold: true });
@@ -447,4 +457,22 @@
 
         s2.addText((correct === "A" ? "✔ " : "") + "(A) " + optA, { x: 0.6, y: 2.5, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "A"), fill: bgA, margin: 6 });
         s2.addText((correct === "B" ? "✔ " : "") + "(B) " + optB, { x: 5.15, y: 2.5, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "B"), fill: bgB, margin: 6 });
-        s2.addText((correct === "C" ? "✔ " : "") + "(C) " + optC, { x: 0.6, y: 3.6, w
+        s2.addText((correct === "C" ? "✔ " : "") + "(C) " + optC, { x: 0.6, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "C"), fill: bgC, margin: 6 });
+        s2.addText((correct === "D" ? "✔ " : "") + "(D) " + optD, { x: 5.15, y: 3.6, w: 4.25, h: 0.85, fontSize: 15, color: 'FFFFFF', bold: (correct === "D"), fill: bgD, margin: 6 });
+
+        var expText = explanation ? ("💡 Concept: " + explanation) : ("💡 Correct Answer: (" + correct + ") " + correctText);
+        s2.addText("✅ Answer: (" + correct + ") " + correctText + "\n" + expText, {
+          x: 0.6, y: 4.65, w: 8.8, h: 0.8, fontSize: 13, color: 'FFFFFF', fill: { color: '14532D' }, line: { color: '22C55E', width: 1.5 }, margin: 6
+        });
+      });
+
+      var endSlide = pptx.addSlide();
+      endSlide.background = { color: '0F172A' };
+      endSlide.addText("Thanks For Watching!", { x: 0.8, y: 1.8, w: 8.4, h: 0.8, fontSize: 32, color: 'FFFFFF', bold: true, align: 'center' });
+      endSlide.addText("Like • Share • Subscribe to AK Learning Point", { x: 0.8, y: 2.8, w: 8.4, h: 0.6, fontSize: 18, color: 'D4AF37', bold: true, align: 'center' });
+
+      pptx.writeFile({ fileName: cleanTitle + "_YouTube_16x9.pptx" });
+    }
+  </script>
+</body>
+</html>
