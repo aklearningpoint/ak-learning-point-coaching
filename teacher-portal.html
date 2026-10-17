@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/school-theme.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- PowerPoint Generator Library (Client-Side) -->
+  <!-- PowerPoint Generator Library -->
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
   <style>
@@ -74,7 +74,7 @@
       background: #dc2626;
       color: #ffffff;
       border: none;
-      padding: 10px 18px;
+      padding: 10px 16px;
       border-radius: 8px;
       font-weight: 700;
       font-size: 13px;
@@ -82,14 +82,10 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: 0.2s ease;
     }
-    .btn-pptx:hover {
-      background: #b91c1c;
-      transform: translateY(-2px);
-    }
-    .btn-preview {
-      background: #1e3a8a;
+    .btn-pptx:hover { background: #b91c1c; }
+    .btn-verify {
+      background: #2563eb;
       color: #ffffff;
       border: none;
       padding: 10px 16px;
@@ -100,8 +96,8 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      text-decoration: none;
     }
+    .btn-verify:hover { background: #1d4ed8; }
     .badge {
       display: inline-block;
       padding: 3px 8px;
@@ -110,6 +106,73 @@
       font-weight: 700;
       background: #e2e8f0;
       color: #334155;
+    }
+
+    /* IN-APP 16:9 PREVIEW PLAYER MODAL */
+    .player-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(5px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+    .player-box {
+      width: 100%;
+      max-width: 900px;
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .player-header {
+      background: #1e293b;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      color: #fff;
+    }
+    .player-slide-stage {
+      padding: 30px 24px;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #fff;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.99); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .player-controls {
+      background: #1e293b;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #334155;
+    }
+    .stage-opt {
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #334155;
+      color: #fff;
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+    .stage-opt.correct {
+      background: #15803d !important;
+      border: 1.5px solid #22c55e;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -120,17 +183,14 @@
     <!-- Top Navigation Header -->
     <header class="top-header-bar">
       <div>
-        <h2 style="margin:0; font-size:1.35rem; letter-spacing:0.5px;">
+        <h2 style="margin:0; font-size:1.35rem;">
           <i class="fa fa-chalkboard-teacher"></i> Coaching Teacher Workspace
         </h2>
         <small style="color:#93c5fd;">AK Learning Point • YouTube PPT & Question Manager</small>
       </div>
       <div>
-        <a href="index.html" style="color:#fef3c7; text-decoration:none; font-weight:700; font-size:13px; margin-right:12px;">
+        <a href="index.html" style="color:#fef3c7; text-decoration:none; font-weight:700; font-size:13px;">
           <i class="fa fa-home"></i> Home
-        </a>
-        <a href="learning-hub.html" style="color:#ffffff; text-decoration:none; font-weight:700; font-size:13px;">
-          <i class="fa fa-graduation-cap"></i> Learning Hub
         </a>
       </div>
     </header>
@@ -157,8 +217,8 @@
           <select id="filterSubject" class="input-ctrl" onchange="filterAvailableQuizzes()">
             <option value="ALL">-- All Subjects --</option>
             <option value="Mathematics">Mathematics</option>
-            <option value="Science">Science (Physics/Chem/Bio)</option>
-            <option value="English">English Grammar</option>
+            <option value="Science">Science</option>
+            <option value="English">English</option>
             <option value="Social Science">Social Science</option>
             <option value="Hindi">Hindi</option>
           </select>
@@ -173,11 +233,33 @@
         <span id="quizCountText" style="font-size:12px; color:#64748b; font-weight:700;">Connecting Cloud Sheet...</span>
       </div>
 
-      <div id="quizListContainer">
-        <!-- Quizzes populated dynamically -->
-      </div>
+      <div id="quizListContainer"></div>
     </div>
 
+  </div>
+
+  <!-- IN-APP SLIDE PLAYER (NO PPT DOWNLOAD REQUIRED TO VERIFY) -->
+  <div class="player-overlay" id="previewModal">
+    <div class="player-box">
+      <div class="player-header">
+        <div>
+          <strong id="previewTitle" style="color:#d4af37; font-size:15px;">Quiz Verification Player</strong>
+          <div id="previewMeta" style="font-size:12px; color:#94a3b8;">Question 1 of 50</div>
+        </div>
+        <button onclick="closePreviewModal()" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;"><i class="fa fa-times"></i></button>
+      </div>
+
+      <div class="player-slide-stage" id="slideStage"></div>
+
+      <div class="player-controls">
+        <button onclick="prevVerifySlide()" class="btn-verify" style="background:#475569;"><i class="fa fa-arrow-left"></i> Previous</button>
+        <button id="btnRevealAns" onclick="toggleAnswerReveal()" class="btn-verify" style="background:#d97706;"><i class="fa fa-eye"></i> Show Answer</button>
+        <div style="display:flex; gap:8px;">
+          <button onclick="nextVerifySlide()" class="btn-verify">Next <i class="fa fa-arrow-right"></i></button>
+          <button onclick="downloadFromPreview()" class="btn-pptx"><i class="fa fa-download"></i> Download PPT</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Unified Engine Scripts -->
@@ -188,13 +270,15 @@
   
   <script>
     var allQuizzesCache = [];
+    var currentVerifyingQuiz = null;
+    var currentVerifyIndex = 0;
+    var isAnswerRevealed = false;
 
     window.addEventListener("DOMContentLoaded", function() {
       syncAndLoadQuizzes();
     });
 
     async function syncAndLoadQuizzes() {
-      // 1. Try to read from Cloud Sheet via API
       if (typeof API !== "undefined" && API.get) {
         try {
           var res = await API.get("getAllQuizzes");
@@ -205,7 +289,6 @@
         } catch(e) {}
       }
 
-      // 2. If API is offline/waiting, read from Content-Modules Local Cache
       if (allQuizzesCache.length === 0) {
         try {
           var local = localStorage.getItem("ak_teacher_quizzes") || localStorage.getItem("ak_coaching_quizzes");
@@ -213,32 +296,6 @@
         } catch(e) {
           allQuizzesCache = [];
         }
-      }
-
-      // 3. Fallback Presets if fresh browser
-      if (allQuizzesCache.length === 0) {
-        allQuizzesCache = [
-          {
-            id: "q_math_9_real",
-            title: "Number System - Real Numbers",
-            className: "Class 9",
-            subject: "Mathematics",
-            questions: [
-              { question: "Is zero a rational number?", optionA: "Yes", optionB: "No", optionC: "Cannot be determined", optionD: "None of these", correctOption: "A", explanation: "Zero can be written in p/q form as 0/1 where p and q are integers and q is not equal to 0." },
-              { question: "Every rational number is:", optionA: "A natural number", optionB: "An integer", optionC: "A real number", optionD: "A whole number", correctOption: "C", explanation: "The collection of all rational and irrational numbers together forms the collection of Real Numbers." }
-            ]
-          },
-          {
-            id: "q_sci_9_force",
-            title: "Motion & Laws of Force",
-            className: "Class 9",
-            subject: "Science",
-            questions: [
-              { question: "What is the SI unit of acceleration?", optionA: "m/s", optionB: "m/s²", optionC: "km/h", optionD: "Newton", correctOption: "B", explanation: "Acceleration is the rate of change of velocity per unit time. Unit = (m/s)/s = m/s²." },
-              { question: "Inertia is the property of a body due to which it resists a change in its state of:", optionA: "Rest only", optionB: "Motion only", optionC: "Rest or uniform motion", optionD: "Direction only", correctOption: "C", explanation: "Newton's First Law defines inertia as resistance to change in state of rest or uniform motion." }
-            ]
-          }
-        ];
       }
 
       filterAvailableQuizzes();
@@ -270,7 +327,6 @@
         var quizTitle = q.title || q.quiz_title || "Objective Test";
         var cls = q.className || q.class_tag || "General";
         var sub = q.subject || "All Subjects";
-        var qId = q.id || q.quiz_id || idx;
 
         html += `
           <div class="quiz-card">
@@ -278,7 +334,7 @@
               <div style="font-weight:800; font-size:15px; color:#0f172a; margin-bottom:4px;">
                 ${quizTitle}
               </div>
-              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <div style="display:flex; gap:6px; align-items:center;">
                 <span class="badge" style="background:#dbeafe; color:#1e40af;">${cls}</span>
                 <span class="badge" style="background:#fef3c7; color:#92400e;">${sub}</span>
                 <span class="badge">${qCount} Questions</span>
@@ -286,10 +342,10 @@
             </div>
 
             <div style="display:flex; gap:10px; align-items:center;">
-              <!-- DIRECT LINK TO EXACT QUIZ IN LEARNING HUB -->
-              <a href="learning-hub.html?quizId=${encodeURIComponent(qId)}" class="btn-preview">
-                <i class="fa fa-play-circle"></i> Play in Hub
-              </a>
+              <!-- DIRECT IN-APP PLAYER BUTTON -->
+              <button onclick="startInAppVerification(${idx})" class="btn-verify">
+                <i class="fa fa-play-circle"></i> Preview & Verify
+              </button>
               <button onclick="exportSingleQuizAsPPT(${idx})" class="btn-pptx">
                 <i class="fa fa-file-powerpoint"></i> Export YouTube PPT
               </button>
@@ -302,16 +358,16 @@
       window.currentFilteredQuizzes = filtered;
     }
 
-    async function exportSingleQuizAsPPT(index) {
-      var quiz = window.currentFilteredQuizzes[index];
+    // -------------------------------------------------------------------
+    // IN-APP SLIDE PLAYER ENGINE (Verify On-Screen)
+    // -------------------------------------------------------------------
+    async function startInAppVerification(idx) {
+      var quiz = window.currentFilteredQuizzes[idx];
       if (!quiz) return;
 
       var questions = quiz.questions;
-
-      // Agar questions sheet se fetch nahi hue hain (sirf metadata load hua tha)
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
         if (typeof API !== "undefined" && API.get && (quiz.id || quiz.quiz_id)) {
-          alert("Sheet se questions fetch ho rahe hain, PPT download shuru ho rahi hai...");
           try {
             var qRes = await API.get("getQuestions", { quizId: quiz.id || quiz.quiz_id });
             if (qRes && qRes.data) questions = qRes.data;
@@ -319,10 +375,111 @@
         }
       }
 
+      if (!questions || questions.length === 0) {
+        alert("Is quiz ke questions load nahi ho paaye.");
+        return;
+      }
+
+      currentVerifyingQuiz = { ...quiz, questions: questions };
+      currentVerifyIndex = 0;
+      isAnswerRevealed = false;
+
+      document.getElementById("previewTitle").innerText = currentVerifyingQuiz.title || "Quiz Verification";
+      document.getElementById("previewModal").style.display = "flex";
+      renderPlayerSlide();
+    }
+
+    function renderPlayerSlide() {
+      var q = currentVerifyingQuiz.questions[currentVerifyIndex];
+      var total = currentVerifyingQuiz.questions.length;
+      document.getElementById("previewMeta").innerText = `Question ${currentVerifyIndex + 1} of ${total}`;
+
+      var optA = q.Opt_A || q.optA || q.optionA || q.a || (q.options ? q.options[0] : "") || "";
+      var optB = q.Opt_B || q.optB || q.optionB || q.b || (q.options ? q.options[1] : "") || "";
+      var optC = q.Opt_C || q.optC || q.optionC || q.c || (q.options ? q.options[2] : "") || "";
+      var optD = q.Opt_D || q.optD || q.optionD || q.d || (q.options ? q.options[3] : "") || "";
+
+      var raw = q.Correct_Option || q.correct_option || q.correctOption || q.correct || q.answer || q.ans || "";
+      var cleanRaw = String(raw).trim();
+      var correct = "A";
+      if (cleanRaw === "0" || cleanRaw.toUpperCase() === "A") correct = "A";
+      else if (cleanRaw === "1" || cleanRaw.toUpperCase() === "B") correct = "B";
+      else if (cleanRaw === "2" || cleanRaw.toUpperCase() === "C") correct = "C";
+      else if (cleanRaw === "3" || cleanRaw.toUpperCase() === "D") correct = "D";
+
+      var stage = document.getElementById("slideStage");
+      var html = `
+        <div style="font-size:12px; color:#d4af37; font-weight:bold; margin-bottom:6px;">AK LEARNING POINT • LIVE SLIDE PREVIEW</div>
+        <div style="background:#1e293b; padding:16px; border-radius:8px; font-size:18px; font-weight:bold; margin-bottom:16px;">
+          Q${currentVerifyIndex + 1}. ${q.Question_Text || q.questionText || q.question || ""}
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+          <div class="stage-opt ${isAnswerRevealed && correct === 'A' ? 'correct' : ''}">(A) ${optA}</div>
+          <div class="stage-opt ${isAnswerRevealed && correct === 'B' ? 'correct' : ''}">(B) ${optB}</div>
+          <div class="stage-opt ${isAnswerRevealed && correct === 'C' ? 'correct' : ''}">(C) ${optC}</div>
+          <div class="stage-opt ${isAnswerRevealed && correct === 'D' ? 'correct' : ''}">(D) ${optD}</div>
+        </div>
+      `;
+
+      if (isAnswerRevealed) {
+        var correctText = (correct === "A" ? optA : correct === "B" ? optB : correct === "C" ? optC : optD);
+        html += `
+          <div style="background:#14532d; border:1.5px solid #22c55e; padding:12px; border-radius:8px; font-size:16px; font-weight:bold; color:#fff;">
+            ✅ Answer: (${correct}) ${correctText}
+          </div>
+          <div style="margin-top:8px; font-size:13px; color:#94a3b8;">
+            ${q.Explanation || q.explanation || "Concept: Verified for YouTube record."}
+          </div>
+        `;
+      }
+
+      stage.innerHTML = html;
+      document.getElementById("btnRevealAns").innerHTML = isAnswerRevealed ? '<i class="fa fa-eye-slash"></i> Hide Answer' : '<i class="fa fa-eye"></i> Show Answer';
+    }
+
+    function toggleAnswerReveal() {
+      isAnswerRevealed = !isAnswerRevealed;
+      renderPlayerSlide();
+    }
+
+    function nextVerifySlide() {
+      if (currentVerifyIndex < currentVerifyingQuiz.questions.length - 1) {
+        currentVerifyIndex++;
+        isAnswerRevealed = false;
+        renderPlayerSlide();
+      }
+    }
+
+    function prevVerifySlide() {
+      if (currentVerifyIndex > 0) {
+        currentVerifyIndex--;
+        isAnswerRevealed = false;
+        renderPlayerSlide();
+      }
+    }
+
+    function closePreviewModal() {
+      document.getElementById("previewModal").style.display = "none";
+    }
+
+    function downloadFromPreview() {
+      if (currentVerifyingQuiz && typeof generateYouTubeQuizPPT === "function") {
+        generateYouTubeQuizPPT(currentVerifyingQuiz.title, currentVerifyingQuiz.questions);
+      }
+    }
+
+    async function exportSingleQuizAsPPT(index) {
+      var quiz = window.currentFilteredQuizzes[index];
+      if (!quiz) return;
+      var questions = quiz.questions;
+      if (!questions || questions.length === 0) {
+        if (typeof API !== "undefined" && API.get && (quiz.id || quiz.quiz_id)) {
+          var qRes = await API.get("getQuestions", { quizId: quiz.id || quiz.quiz_id });
+          if (qRes && qRes.data) questions = qRes.data;
+        }
+      }
       if (typeof generateYouTubeQuizPPT === "function") {
-        generateYouTubeQuizPPT((quiz.title || "Quiz") + " (" + (quiz.className || "") + ")", questions);
-      } else {
-        alert("PPT Exporter function nahi mila. js/quiz-pptx-exporter.js check karein.");
+        generateYouTubeQuizPPT((quiz.title || "Quiz"), questions);
       }
     }
   </script>
