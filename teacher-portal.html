@@ -389,23 +389,29 @@
       renderPlayerSlide();
     }
 
-    function renderPlayerSlide() {
+   function renderPlayerSlide() {
       var q = currentVerifyingQuiz.questions[currentVerifyIndex];
       var total = currentVerifyingQuiz.questions.length;
       document.getElementById("previewMeta").innerText = `Question ${currentVerifyIndex + 1} of ${total}`;
 
-      var optA = q.Opt_A || q.optA || q.optionA || q.a || (q.options ? q.options[0] : "") || "";
-      var optB = q.Opt_B || q.optB || q.optionB || q.b || (q.options ? q.options[1] : "") || "";
-      var optC = q.Opt_C || q.optC || q.optionC || q.c || (q.options ? q.options[2] : "") || "";
-      var optD = q.Opt_D || q.optD || q.optionD || q.d || (q.options ? q.options[3] : "") || "";
+      var optA = q.Opt_A || q.optA || q.optionA || q.option1 || q.a || (q.options ? q.options[0] : "") || "";
+      var optB = q.Opt_B || q.optB || q.optionB || q.option2 || q.b || (q.options ? q.options[1] : "") || "";
+      var optC = q.Opt_C || q.optC || q.optionC || q.option3 || q.c || (q.options ? q.options[2] : "") || "";
+      var optD = q.Opt_D || q.optD || q.optionD || q.option4 || q.d || (q.options ? q.options[3] : "") || "";
 
       var raw = q.Correct_Option || q.correct_option || q.correctOption || q.correct || q.answer || q.ans || "";
-      var cleanRaw = String(raw).trim();
+      
+      // Smart Resolver: handles "Option B (2)", "2", "B", etc.
       var correct = "A";
-      if (cleanRaw === "0" || cleanRaw.toUpperCase() === "A") correct = "A";
-      else if (cleanRaw === "1" || cleanRaw.toUpperCase() === "B") correct = "B";
-      else if (cleanRaw === "2" || cleanRaw.toUpperCase() === "C") correct = "C";
-      else if (cleanRaw === "3" || cleanRaw.toUpperCase() === "D") correct = "D";
+      if (typeof resolveCorrectKey === "function") {
+        correct = resolveCorrectKey(raw, optA, optB, optC, optD);
+      } else {
+        var str = String(raw).trim();
+        if (/option\s*b/i.test(str) || str === "2" || str.toUpperCase() === "B") correct = "B";
+        else if (/option\s*c/i.test(str) || str === "3" || str.toUpperCase() === "C") correct = "C";
+        else if (/option\s*d/i.test(str) || str === "4" || str.toUpperCase() === "D") correct = "D";
+        else correct = "A";
+      }
 
       var stage = document.getElementById("slideStage");
       var html = `
