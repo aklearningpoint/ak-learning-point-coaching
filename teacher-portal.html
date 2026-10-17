@@ -389,7 +389,7 @@
       renderPlayerSlide();
     }
 
-   function renderPlayerSlide() {
+  function renderPlayerSlide() {
       var q = currentVerifyingQuiz.questions[currentVerifyIndex];
       var total = currentVerifyingQuiz.questions.length;
       document.getElementById("previewMeta").innerText = `Question ${currentVerifyIndex + 1} of ${total}`;
@@ -400,16 +400,35 @@
       var optD = q.Opt_D || q.optD || q.optionD || q.option4 || q.d || (q.options ? q.options[3] : "") || "";
 
       var raw = q.Correct_Option || q.correct_option || q.correctOption || q.correct || q.answer || q.ans || "";
-      
-      // Smart Resolver: handles "Option B (2)", "2", "B", etc.
+      var str = String(raw).trim();
       var correct = "A";
-      if (typeof resolveCorrectKey === "function") {
-        correct = resolveCorrectKey(raw, optA, optB, optC, optD);
-      } else {
-        var str = String(raw).trim();
-        if (/option\s*b/i.test(str) || str === "2" || str.toUpperCase() === "B") correct = "B";
-        else if (/option\s*c/i.test(str) || str === "3" || str.toUpperCase() === "C") correct = "C";
-        else if (/option\s*d/i.test(str) || str === "4" || str.toUpperCase() === "D") correct = "D";
+
+      // 1. Direct Text Checking with Strict Word Boundaries
+      if (/\boption\s*a\b/i.test(str)) {
+        correct = "A";
+      } else if (/\boption\s*b\b/i.test(str)) {
+        correct = "B";
+      } else if (/\boption\s*c\b/i.test(str)) {
+        correct = "C";
+      } else if (/\boption\s*d\b/i.test(str)) {
+        correct = "D";
+      } 
+      // 2. Direct Numbers Checking (1 = A, 2 = B, 3 = C, 4 = D)
+      else if (str === "1" || str === "0" || str.toUpperCase() === "A") {
+        correct = "A";
+      } else if (str === "2" || str.toUpperCase() === "B") {
+        correct = "B";
+      } else if (str === "3" || str.toUpperCase() === "C") {
+        correct = "C";
+      } else if (str === "4" || str.toUpperCase() === "D") {
+        correct = "D";
+      }
+      // 3. Option Text Matching (Agar sheet me exact answer ka text likha ho)
+      else {
+        var lower = str.toLowerCase();
+        if (optB && lower === String(optB).trim().toLowerCase()) correct = "B";
+        else if (optC && lower === String(optC).trim().toLowerCase()) correct = "C";
+        else if (optD && lower === String(optD).trim().toLowerCase()) correct = "D";
         else correct = "A";
       }
 
@@ -442,7 +461,6 @@
       stage.innerHTML = html;
       document.getElementById("btnRevealAns").innerHTML = isAnswerRevealed ? '<i class="fa fa-eye-slash"></i> Hide Answer' : '<i class="fa fa-eye"></i> Show Answer';
     }
-
     function toggleAnswerReveal() {
       isAnswerRevealed = !isAnswerRevealed;
       renderPlayerSlide();
