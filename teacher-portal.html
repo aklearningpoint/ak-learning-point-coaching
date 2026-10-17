@@ -408,25 +408,27 @@
       var optD = q.Opt_D || q.optD || q.optionD || q.option4 || (q.options ? q.options[3] : "") || q.d || "";
 
       // 3. Robust 0=A, 1=B, 2=C, 3=D Logic
+      // 3. Robust 0=A, 1=B, 2=C, 3=D Logic (Direct Key-Finder)
       var keys = ["A", "B", "C", "D"];
-      var raw = (q.Correct_Option !== undefined && q.Correct_Option !== null) 
-                  ? q.Correct_Option 
-                  : (q.correct_option !== undefined ? q.correct_option : (q.correctOption !== undefined ? q.correctOption : (q.correct !== undefined ? q.correct : q.answer)));
-      
-      var correct = "A";
-      var strRaw = String(raw).trim();
+      var val = (q.Correct_Option != null) ? q.Correct_Option :
+                (q.correct_option != null) ? q.correct_option :
+                (q.correctOption != null) ? q.correctOption :
+                (q.correct != null) ? q.correct :
+                (q.answer != null) ? q.answer :
+                (q.ans != null) ? q.ans : "";
 
-      // Agar direct letter A/B/C/D diya ho
-      if (strRaw.toUpperCase() === "A") correct = "A";
-      else if (strRaw.toUpperCase() === "B") correct = "B";
-      else if (strRaw.toUpperCase() === "C") correct = "C";
-      else if (strRaw.toUpperCase() === "D") correct = "D";
-      else {
-        // Agar sheet se direct number 0, 1, 2, 3 aaye
-        var num = parseInt(strRaw, 10);
-        if (!isNaN(num) && num >= 0 && num <= 3) {
-          correct = keys[num];
-        }
+      var strRaw = String(val).trim();
+      var correct = "A";
+
+      if (strRaw === "1" || strRaw.toUpperCase() === "B") {
+        correct = "B";
+      } else if (strRaw === "2" || strRaw.toUpperCase() === "C") {
+        correct = "C";
+      } else if (strRaw === "3" || strRaw.toUpperCase() === "D") {
+        correct = "D";
+      } else if (strRaw === "0" || strRaw.toUpperCase() === "A") {
+        correct = "A";
+      }
       }
 
       var stage = document.getElementById("slideStage");
