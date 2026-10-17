@@ -162,30 +162,24 @@
     var isAnswerRevealed = false;
 
     // Direct Sheet 0=A, 1=B, 2=C, 3=D Logic
+   // Direct Sheet/App 0=A, 1=B, 2=C, 3=D Logic
     function getCleanCorrectKey(q, optA, optB, optC, optD) {
-      var val = (q.Correct_Option !== undefined && q.Correct_Option !== null) ? q.Correct_Option :
+      var keys = ["A", "B", "C", "D"];
+      
+      // Sabse pehle q.correctAnswer check karein (jo console me dikha)
+      var val = (q.correctAnswer !== undefined && q.correctAnswer !== null) ? q.correctAnswer :
+                (q.Correct_Option !== undefined && q.Correct_Option !== null) ? q.Correct_Option :
                 (q.correct_option !== undefined && q.correct_option !== null) ? q.correct_option :
-                (q.correctOption !== undefined && q.correctOption !== null) ? q.correctOption :
                 (q.correct !== undefined && q.correct !== null) ? q.correct :
-                (q.answer !== undefined && q.answer !== null) ? q.answer :
-                (q.ans !== undefined && q.ans !== null) ? q.ans : "";
+                (q.answer !== undefined && q.answer !== null) ? q.answer : 0;
 
-      var str = String(val).trim();
-      var numMatch = str.match(/\d+/);
-      if (numMatch) {
-        var n = parseInt(numMatch[0], 10);
-        if (n === 0) return "A";
-        if (n === 1) return "B";
-        if (n === 2) return "C";
-        if (n === 3) return "D";
+      var num = parseInt(val, 10);
+      if (!isNaN(num) && num >= 0 && num <= 3) {
+        return keys[num];
       }
 
-      var u = str.toUpperCase();
+      var u = String(val).trim().toUpperCase();
       if (u === "A" || u === "B" || u === "C" || u === "D") return u;
-      if (/\boption\s*a\b/i.test(str)) return "A";
-      if (/\boption\s*b\b/i.test(str)) return "B";
-      if (/\boption\s*c\b/i.test(str)) return "C";
-      if (/\boption\s*d\b/i.test(str)) return "D";
 
       return "A";
     }
