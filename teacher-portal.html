@@ -394,49 +394,21 @@
       var total = currentVerifyingQuiz.questions.length;
       document.getElementById("previewMeta").innerText = `Question ${currentVerifyIndex + 1} of ${total}`;
 
-      var optA = q.Opt_A || q.optA || q.optionA || q.option1 || q.a || (q.options ? q.options[0] : "") || "";
-      var optB = q.Opt_B || q.optB || q.optionB || q.option2 || q.b || (q.options ? q.options[1] : "") || "";
-      var optC = q.Opt_C || q.optC || q.optionC || q.option3 || q.c || (q.options ? q.options[2] : "") || "";
-      var optD = q.Opt_D || q.optD || q.optionD || q.option4 || q.d || (q.options ? q.options[3] : "") || "";
+      var optA = q.Opt_A || q.optA || q.optionA || "";
+      var optB = q.Opt_B || q.optB || q.optionB || "";
+      var optC = q.Opt_C || q.optC || q.optionC || "";
+      var optD = q.Opt_D || q.optD || q.optionD || "";
 
-      var raw = q.Correct_Option || q.correct_option || q.correctOption || q.correct || q.answer || q.ans || "";
-      var str = String(raw).trim();
-      var correct = "A";
-
-      // 1. Direct Text Checking with Strict Word Boundaries
-      if (/\boption\s*a\b/i.test(str)) {
-        correct = "A";
-      } else if (/\boption\s*b\b/i.test(str)) {
-        correct = "B";
-      } else if (/\boption\s*c\b/i.test(str)) {
-        correct = "C";
-      } else if (/\boption\s*d\b/i.test(str)) {
-        correct = "D";
-      } 
-      // 2. Direct Numbers Checking (1 = A, 2 = B, 3 = C, 4 = D)
-      else if (str === "1" || str === "0" || str.toUpperCase() === "A") {
-        correct = "A";
-      } else if (str === "2" || str.toUpperCase() === "B") {
-        correct = "B";
-      } else if (str === "3" || str.toUpperCase() === "C") {
-        correct = "C";
-      } else if (str === "4" || str.toUpperCase() === "D") {
-        correct = "D";
-      }
-      // 3. Option Text Matching (Agar sheet me exact answer ka text likha ho)
-      else {
-        var lower = str.toLowerCase();
-        if (optB && lower === String(optB).trim().toLowerCase()) correct = "B";
-        else if (optC && lower === String(optC).trim().toLowerCase()) correct = "C";
-        else if (optD && lower === String(optD).trim().toLowerCase()) correct = "D";
-        else correct = "A";
-      }
+      // Simple 0=A, 1=B, 2=C, 3=D Logic
+      var keys = ["A", "B", "C", "D"];
+      var raw = (q.Correct_Option !== undefined && q.Correct_Option !== null) ? q.Correct_Option : (q.correct_option || 0);
+      var correct = keys[parseInt(raw, 10)] || "A";
 
       var stage = document.getElementById("slideStage");
       var html = `
         <div style="font-size:12px; color:#d4af37; font-weight:bold; margin-bottom:6px;">AK LEARNING POINT • LIVE SLIDE PREVIEW</div>
         <div style="background:#1e293b; padding:16px; border-radius:8px; font-size:18px; font-weight:bold; margin-bottom:16px;">
-          Q${currentVerifyIndex + 1}. ${q.Question_Text || q.questionText || q.question || ""}
+          Q${currentVerifyIndex + 1}. ${q.Question_Text || q.questionText || ""}
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
           <div class="stage-opt ${isAnswerRevealed && correct === 'A' ? 'correct' : ''}">(A) ${optA}</div>
