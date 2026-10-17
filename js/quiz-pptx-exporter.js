@@ -7,43 +7,37 @@ function resolveCorrectKey(raw, optA, optB, optC, optD) {
   if (raw === undefined || raw === null) return "A";
   var str = String(raw).trim();
 
-  // If text contains "Option B", "Option A", etc.
+  // 1. Direct Text check for "Option A", "Option B", etc.
   if (/option\s*a/i.test(str)) return "A";
   if (/option\s*b/i.test(str)) return "B";
   if (/option\s*c/i.test(str)) return "C";
   if (/option\s*d/i.test(str)) return "D";
 
-  // Check dropdown patterns like "Option B (2)" or "(2)"
-  var numMatch = str.match(/\d+/);
-  if (numMatch) {
-    var val = parseInt(numMatch[0], 10);
-    // Support both 1-based (1=A, 2=B, 3=C, 4=D) and 0-based (0=A, 1=B, 2=C, 3=D)
-    // In AK form: Option B shows (2) -> 2 means B!
-    if (val === 2) return "B";
-    if (val === 3) return "C";
-    if (val === 4) return "D";
-    if (val === 1) {
-      // If pure '1' without zero in dataset, it means Option B when 0 is A, or A when 1-based.
-      return (str.indexOf("0") !== -1 || /option\s*b/i.test(str)) ? "B" : "A";
-    }
-    if (val === 0) return "A";
-  }
-
-  // Letters match
+  // 2. Direct Letter check
   var up = str.toUpperCase();
   if (up === "A") return "A";
   if (up === "B") return "B";
   if (up === "C") return "C";
   if (up === "D") return "D";
 
-  // Match exact option text
+  // 3. Number check: 1 = A, 2 = B, 3 = C, 4 = D (0 is also A)
+  var numMatch = str.match(/\d+/);
+  if (numMatch) {
+    var val = parseInt(numMatch[0], 10);
+    if (val === 1 || val === 0) return "A";
+    if (val === 2) return "B";
+    if (val === 3) return "C";
+    if (val === 4) return "D";
+  }
+
+  // 4. Exact text matching fallback
   var target = str.toLowerCase();
+  if (target && target === String(optA).trim().toLowerCase()) return "A";
   if (target && target === String(optB).trim().toLowerCase()) return "B";
   if (target && target === String(optC).trim().toLowerCase()) return "C";
   if (target && target === String(optD).trim().toLowerCase()) return "D";
-  if (target && target === String(optA).trim().toLowerCase()) return "A";
 
-  return "B"; // Fallback to B for Pace for Living Q1 if ambiguous
+  return "A";
 }
 
 function generateYouTubeQuizPPT(quizTitle, questionsList) {
