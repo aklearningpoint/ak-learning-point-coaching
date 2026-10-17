@@ -143,6 +143,9 @@
           <label style="font-weight:700; font-size:12px;">Class:</label>
           <select id="filterClass" class="input-ctrl" onchange="filterAvailableQuizzes()">
             <option value="ALL">-- All Classes --</option>
+            <option value="Class 4">Class 4</option>
+            <option value="Class 5">Class 5</option>
+            <option value="Class 6">Class 6</option>
             <option value="Class 7">Class 7</option>
             <option value="Class 8">Class 8</option>
             <option value="Class 9">Class 9</option>
@@ -157,6 +160,7 @@
             <option value="Science">Science (Physics/Chem/Bio)</option>
             <option value="English">English Grammar</option>
             <option value="Social Science">Social Science</option>
+            <option value="Hindi">Hindi</option>
           </select>
         </div>
       </div>
@@ -166,48 +170,56 @@
     <div class="panel-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <h3 style="margin:0; color:#0f172a;"><i class="fa fa-list-alt"></i> Available Quizzes</h3>
-        <span id="quizCountText" style="font-size:12px; color:#64748b; font-weight:700;">Loading sets...</span>
+        <span id="quizCountText" style="font-size:12px; color:#64748b; font-weight:700;">Connecting Cloud Sheet...</span>
       </div>
 
       <div id="quizListContainer">
-        <!-- Quizzes will be populated dynamically here -->
+        <!-- Quizzes populated dynamically -->
       </div>
     </div>
 
   </div>
 
-  <!-- Non-destructive Scripts Integration -->
-  <script src="js/quiz-pptx-exporter.js"></script>
+  <!-- Unified Engine Scripts -->
+  <script src="js/api.js"></script>
   <script src="js/content-modules.js"></script>
   <script src="js/quiz.js"></script>
+  <script src="js/quiz-pptx-exporter.js"></script>
   
   <script>
-    // Safe Bridge to Read Quizzes from Memory or Fallback
     var allQuizzesCache = [];
 
     window.addEventListener("DOMContentLoaded", function() {
-      loadQuizzesToPortal();
+      syncAndLoadQuizzes();
     });
 
-    function loadQuizzesToPortal() {
-      // 1. Try to read from global window/content modules
-      if (typeof window.COACHING_QUIZZES !== "undefined" && Array.isArray(window.COACHING_QUIZZES)) {
-        allQuizzesCache = window.COACHING_QUIZZES;
-      } else {
-        // 2. Default Local Storage or Structured Fallback
+    async function syncAndLoadQuizzes() {
+      // 1. Try to read from Cloud Sheet via API
+      if (typeof API !== "undefined" && API.get) {
         try {
-          var local = localStorage.getItem("ak_coaching_quizzes");
-          allQuizzesCache = local ? JSON.parse(local) : [];
+          var res = await API.get("getAllQuizzes");
+          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+            allQuizzesCache = res.data;
+            localStorage.setItem("ak_teacher_quizzes", JSON.stringify(res.data));
+          }
+        } catch(e) {}
+      }
+
+      // 2. If API is offline/waiting, read from Content-Modules Local Cache
+      if (allQuizzesCache.length === 0) {
+        try {
+          var local = localStorage.getItem("ak_teacher_quizzes") || localStorage.getItem("ak_coaching_quizzes");
+          if (local) allQuizzesCache = JSON.parse(local);
         } catch(e) {
           allQuizzesCache = [];
         }
       }
 
-      // If empty, provide built-in chapter presets for instant use
+      // 3. Fallback Presets if fresh browser
       if (allQuizzesCache.length === 0) {
         allQuizzesCache = [
           {
-            id: "q_math_9_number",
+            id: "q_math_9_real",
             title: "Number System - Real Numbers",
             className: "Class 9",
             subject: "Mathematics",
@@ -217,22 +229,13 @@
             ]
           },
           {
-            id: "q_sci_9_motion",
+            id: "q_sci_9_force",
             title: "Motion & Laws of Force",
             className: "Class 9",
             subject: "Science",
             questions: [
               { question: "What is the SI unit of acceleration?", optionA: "m/s", optionB: "m/s²", optionC: "km/h", optionD: "Newton", correctOption: "B", explanation: "Acceleration is the rate of change of velocity per unit time. Unit = (m/s)/s = m/s²." },
               { question: "Inertia is the property of a body due to which it resists a change in its state of:", optionA: "Rest only", optionB: "Motion only", optionC: "Rest or uniform motion", optionD: "Direction only", correctOption: "C", explanation: "Newton's First Law defines inertia as resistance to change in state of rest or uniform motion." }
-            ]
-          },
-          {
-            id: "q_eng_tense",
-            title: "English Grammar - Tenses Mastery",
-            className: "Class 8",
-            subject: "English",
-            questions: [
-              { question: "Identify the tense: 'He has been living here since 2020.'", optionA: "Past Perfect", optionB: "Present Perfect Continuous", optionC: "Future Continuous", optionD: "Present Perfect", correctOption: "B", explanation: "'has/have + been + verb-ing' indicates Present Perfect Continuous tense." }
             ]
           }
         ];
@@ -247,12 +250,14 @@
       var container = document.getElementById("quizListContainer");
 
       var filtered = allQuizzesCache.filter(function(q) {
-        var matchCls = (selectedClass === "ALL") || (q.className === selectedClass);
-        var matchSub = (selectedSub === "ALL") || (q.subject === selectedSub);
+        var c = q.className || q.class_tag || q.class || "";
+        var s = q.subject || "";
+        var matchCls = (selectedClass === "ALL") || (c.toLowerCase().includes(selectedClass.toLowerCase()));
+        var matchSub = (selectedSub === "ALL") || (s.toLowerCase().includes(selectedSub.toLowerCase()));
         return matchCls && matchSub;
       });
 
-      document.getElementById("quizCountText").innerText = filtered.length + " quiz sets found";
+      document.getElementById("quizCountText").innerText = filtered.length + " quiz sets available";
 
       if (filtered.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">Is selection me koi quiz nahi mila.</p>';
@@ -261,22 +266,30 @@
 
       var html = "";
       filtered.forEach(function(q, idx) {
-        var qCount = q.questions ? q.questions.length : 0;
+        var qCount = q.questions ? q.questions.length : (q.totalQuestions || "Set");
+        var quizTitle = q.title || q.quiz_title || "Objective Test";
+        var cls = q.className || q.class_tag || "General";
+        var sub = q.subject || "All Subjects";
+        var qId = q.id || q.quiz_id || idx;
+
         html += `
           <div class="quiz-card">
             <div>
               <div style="font-weight:800; font-size:15px; color:#0f172a; margin-bottom:4px;">
-                ${q.title}
+                ${quizTitle}
               </div>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <span class="badge" style="background:#dbeafe; color:#1e40af;">${q.className}</span>
-                <span class="badge" style="background:#fef3c7; color:#92400e;">${q.subject}</span>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <span class="badge" style="background:#dbeafe; color:#1e40af;">${cls}</span>
+                <span class="badge" style="background:#fef3c7; color:#92400e;">${sub}</span>
                 <span class="badge">${qCount} Questions</span>
               </div>
             </div>
 
             <div style="display:flex; gap:10px; align-items:center;">
-              <a href="learning-hub.html" class="btn-preview"><i class="fa fa-eye"></i> View in Hub</a>
+              <!-- DIRECT LINK TO EXACT QUIZ IN LEARNING HUB -->
+              <a href="learning-hub.html?quizId=${encodeURIComponent(qId)}" class="btn-preview">
+                <i class="fa fa-play-circle"></i> Play in Hub
+              </a>
               <button onclick="exportSingleQuizAsPPT(${idx})" class="btn-pptx">
                 <i class="fa fa-file-powerpoint"></i> Export YouTube PPT
               </button>
@@ -289,14 +302,27 @@
       window.currentFilteredQuizzes = filtered;
     }
 
-    function exportSingleQuizAsPPT(index) {
+    async function exportSingleQuizAsPPT(index) {
       var quiz = window.currentFilteredQuizzes[index];
       if (!quiz) return;
 
+      var questions = quiz.questions;
+
+      // Agar questions sheet se fetch nahi hue hain (sirf metadata load hua tha)
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        if (typeof API !== "undefined" && API.get && (quiz.id || quiz.quiz_id)) {
+          alert("Sheet se questions fetch ho rahe hain, PPT download shuru ho rahi hai...");
+          try {
+            var qRes = await API.get("getQuestions", { quizId: quiz.id || quiz.quiz_id });
+            if (qRes && qRes.data) questions = qRes.data;
+          } catch(e) {}
+        }
+      }
+
       if (typeof generateYouTubeQuizPPT === "function") {
-        generateYouTubeQuizPPT(quiz.title + " (" + quiz.className + ")", quiz.questions);
+        generateYouTubeQuizPPT((quiz.title || "Quiz") + " (" + (quiz.className || "") + ")", questions);
       } else {
-        alert("PPT Exporter file nahi mili. Check js/quiz-pptx-exporter.js");
+        alert("PPT Exporter function nahi mila. js/quiz-pptx-exporter.js check karein.");
       }
     }
   </script>
