@@ -1,4 +1,4 @@
-// Student Examination Engine, Board-Class Strict Filters, One-Time Lock & Ultra-Stylish Scorecard
+// Student Examination Engine, Board-Class Strict Filters, One-Time Lock & Ultra-Stylish Scorecard - AK Learning Point
 
 var selectedBoard = "";
 var selectedClass = "";
@@ -11,6 +11,7 @@ var remainingSeconds = 0;
 var perQuestionTimerInterval = null;
 var perQuestionRemaining = 0;
 var isTeacherTestingMode = false;
+var isQuizSubmissionInProgress = false;
 
 function getQuizStorageData(key, fallback) {
   try {
@@ -53,7 +54,8 @@ function openBoardSelectModal() {
     '</div>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
 
 // 2. Class Selection
@@ -94,7 +96,8 @@ function selectBoard(board) {
     '</div>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
 
 // 3. Subject Selection
@@ -130,10 +133,11 @@ function selectClass(className) {
     '</div>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
 
-// 4. Strict Matching & Loading (Loophole Fixed)
+// 4. Strict Matching & Loading
 function loadQuizListing(subject) {
   selectedSubject = subject;
 
@@ -152,7 +156,7 @@ function loadQuizListing(subject) {
 
   renderQuizCardsView(matchedQuizzes);
 
-  // Background Cloud Sync with Strict Filters
+  // Background Cloud Sync
   if (typeof API !== "undefined" && API.get) {
     API.get("getQuizzes", { board: selectedBoard, className: selectedClass, subject: selectedSubject })
       .then(function(res) {
@@ -181,6 +185,7 @@ function loadQuizListing(subject) {
 
 function renderQuizCardsView(quizzes) {
   var dynamicView = document.getElementById("dynamicView");
+  if (!dynamicView) return;
 
   if (!quizzes || quizzes.length === 0) {
     dynamicView.innerHTML = '<div class="modal-overlay" style="display:flex;">' +
@@ -245,7 +250,6 @@ function renderQuizCardsView(quizzes) {
 // WhatsApp Share with Live App Link
 function shareQuizWhatsAppByIndex(idx) {
   var q = window.activeLoadedQuizzes[idx];
-  // Direct Quiz Link with quizId Parameter
   var quizLink = window.location.origin + window.location.pathname + "?quizId=" + encodeURIComponent(q.id);
   var text = encodeURIComponent(
     "🎯 *AK Learning Point Coaching - Test Alert!*\n\n" +
@@ -296,7 +300,8 @@ function openQuizEntryModalByIndex(idx) {
     '</div>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
 
 function handleStartQuiz(e) {
@@ -386,6 +391,8 @@ function startPerQuestionTimer() {
 }
 
 function renderExamScreen() {
+  if (!currentQuiz || !currentQuiz.questions || !currentQuiz.questions[currentQuestionIndex]) return;
+
   var q = currentQuiz.questions[currentQuestionIndex];
   var totalQ = currentQuiz.questions.length;
 
@@ -407,14 +414,14 @@ function renderExamScreen() {
   }
 
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:white; z-index:3000; display:flex; flex-direction:column;">' +
-    '<div style="height:55px; background:var(--primary-navy); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
+    '<div style="height:55px; background:var(--primary-navy, #0f172a); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     (isTeacherTestingMode ? '<span style="background:#dc2626; color:white; font-size:0.75rem; padding:2px 6px; border-radius:4px; font-weight:bold;">TEACHER PREVIEW</span>' : '') +
     '<strong style="color:#fbbf24;">' + currentQuiz.title + '</strong>' +
     '</div>' +
     '<div style="display:flex; align-items:center; gap:12px;">' +
     '<span style="background:rgba(255,255,255,0.15); padding:4px 8px; border-radius:4px; font-weight:700;">' + timerDisplayHtml + '</span>' +
-    '<button onclick="submitQuizNow(false)" style="background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:600; cursor:pointer;">Submit</button>' +
+    '<button id="btnTopSubmitQuiz" onclick="submitQuizNow(false)" style="background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:600; cursor:pointer;">Submit</button>' +
     '</div>' +
     '</div>' +
     '<div style="flex:1; overflow-y:auto; padding:20px; max-width:700px; margin:0 auto; width:100%;">' +
@@ -422,16 +429,17 @@ function renderExamScreen() {
     '<span>Question ' + (currentQuestionIndex + 1) + ' of ' + totalQ + '</span>' +
     (currentQuiz.negativeMarking > 0 ? '<span style="color:#ef4444; font-size:0.85rem;">Penalty: -' + currentQuiz.negativeMarking + '</span>' : '') +
     '</div>' +
-    '<h3 style="font-size:1.15rem; margin-bottom:15px; color:#1e293b;">' + q.question + '</h3>' +
+    '<h3 style="font-size:1.15rem; margin-bottom:15px; color:#1e293b;">' + (q.question || q.Question_Text || "") + '</h3>' +
     '<div style="display:flex; flex-direction:column; gap:10px;">' + optionsHtml + '</div>' +
     '</div>' +
     '<div style="height:60px; border-top:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
     '<button class="btn-primary" style="width:auto; background:#64748b;" ' + (currentQuestionIndex === 0 ? 'disabled style="opacity:0.5;"' : '') + ' onclick="prevQuestion()">Previous</button>' +
-    (currentQuestionIndex === totalQ - 1 ? '<button class="btn-primary" style="width:auto; background:#16a34a;" onclick="submitQuizNow(false)">Finish & Submit</button>' : '<button class="btn-primary" style="width:auto;" onclick="nextQuestion()">Next</button>') +
+    (currentQuestionIndex === totalQ - 1 ? '<button id="btnBottomSubmitQuiz" class="btn-primary" style="width:auto; background:#16a34a;" onclick="submitQuizNow(false)">Finish & Submit</button>' : '<button class="btn-primary" style="width:auto;" onclick="nextQuestion()">Next</button>') +
     '</div>' +
     '</div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
 
 function selectQuizOption(optIndex) {
@@ -455,76 +463,51 @@ function nextQuestion() {
   }
 }
 
-// GLOBAL SUBMIT LOCK (Prevents duplicate triggers)
-var isQuizSubmissionInProgress = false;
-
-function submitQuiz(e) {
+// 5. Solid Submit Engine
+async function submitQuiz(e) {
   if (e && e.preventDefault) e.preventDefault();
 
-  // GUARD 1: Prevent rapid double-tap / double execution
   if (isQuizSubmissionInProgress) {
-    console.warn("Quiz submission already in progress. Duplicate blocked.");
+    console.warn("Quiz submission already in progress.");
     return;
   }
 
-  // GUARD 2: Teacher Preview Mode Check (Do not save preview marks to sheet/db)
-  if (window.isTeacherPreviewMode === true) {
-    // 2. Score & Answers Calculation for Preview
-    var prevCorrect = 0;
-    var prevWrong = 0;
-    var prevQuestions = window.currentQuizQuestions || (typeof currentQuiz !== "undefined" && currentQuiz?.questions) || [];
-    var prevTotalQ = prevQuestions.length || 1;
-
-    prevQuestions.forEach(function(q, idx) {
-      var selected = (window.userAnswers && window.userAnswers[idx] !== undefined) ? window.userAnswers[idx] : null;
-      if (selected !== null && selected !== undefined) {
-        if (selected === q.correctAnswer) prevCorrect++;
-        else prevWrong++;
+  // Teacher Preview Mode Guard
+  if (window.isTeacherPreviewMode === true || isTeacherTestingMode === true) {
+    var pCorrect = 0;
+    var pQuestions = (currentQuiz && currentQuiz.questions) ? currentQuiz.questions : [];
+    pQuestions.forEach(function(q, idx) {
+      if (userAnswers[idx] !== undefined && userAnswers[idx] === q.correctAnswer) {
+        pCorrect++;
       }
     });
-
-    var prevScore = prevCorrect;
-    var prevPct = ((prevScore / prevTotalQ) * 100).toFixed(1);
-
-    if (window.SecurityShield && typeof window.SecurityShield.deactivate === "function") {
-      window.SecurityShield.deactivate();
-    }
-
-    alert("Preview Mode: Marks not saved to database.\nScore: " + prevScore + " / " + prevTotalQ + " (" + prevPct + "%)");
+    alert("Teacher Preview Mode: Score = " + pCorrect + " / " + pQuestions.length);
+    closeDynamicView();
     return;
   }
 
   isQuizSubmissionInProgress = true;
+  clearInterval(quizTimerInterval);
+  clearInterval(perQuestionTimerInterval);
 
-  // Submit button visual lock
-  var submitBtn = document.getElementById("submitQuizBtn") || document.querySelector("button[onclick*='submitQuiz']");
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Submitting...";
-  }
+  var topBtn = document.getElementById("btnTopSubmitQuiz");
+  var btmBtn = document.getElementById("btnBottomSubmitQuiz");
+  if (topBtn) { topBtn.disabled = true; topBtn.innerText = "Saving..."; }
+  if (btmBtn) { btmBtn.disabled = true; btmBtn.innerText = "Saving..."; }
 
   try {
-    // 1. Participant Details Fetch
-    var studentName = (document.getElementById("studentName")?.value || 
-                       document.getElementById("quizStudentName")?.value || 
-                       (typeof currentQuiz !== "undefined" && currentQuiz?.participantName) || 
-                       "Student").trim();
+    var studentName = (currentQuiz && currentQuiz.participantName) ? currentQuiz.participantName.trim() : "Student";
+    var studentMobile = (currentQuiz && currentQuiz.participantMobile) ? currentQuiz.participantMobile.trim() : "N/A";
 
-    var studentMobile = (document.getElementById("studentMobile")?.value || 
-                         document.getElementById("quizStudentMobile")?.value || 
-                         (typeof currentQuiz !== "undefined" && currentQuiz?.participantMobile) || 
-                         "").trim();
-
-    // 2. Score & Answers Calculation
+    var questions = (currentQuiz && currentQuiz.questions) ? currentQuiz.questions : [];
+    var totalQ = questions.length;
     var correctCount = 0;
     var wrongCount = 0;
-    var deduction = 0;
-    var questions = window.currentQuizQuestions || (typeof currentQuiz !== "undefined" && currentQuiz?.questions) || [];
-    var totalQ = questions.length || 1;
+    var negativePenaltyRate = (currentQuiz && currentQuiz.negativeMarking) ? parseFloat(currentQuiz.negativeMarking) : 0;
 
     questions.forEach(function(q, idx) {
-      var selected = (window.userAnswers && window.userAnswers[idx] !== undefined) ? window.userAnswers[idx] : null;
-      if (selected !== null && selected !== undefined) {
+      var selected = userAnswers[idx];
+      if (selected !== undefined && selected !== null) {
         if (selected === q.correctAnswer) {
           correctCount++;
         } else {
@@ -533,12 +516,12 @@ function submitQuiz(e) {
       }
     });
 
-    var netScore = correctCount;
-    var pct = ((netScore / totalQ) * 100).toFixed(1);
-    var activeQuizId = (typeof currentQuiz !== "undefined" && currentQuiz?.id) || window.activeQuizId || "default_quiz";
-    var quizTitle = (typeof currentQuiz !== "undefined" && currentQuiz?.title) || "Practice Test";
+    var deduction = wrongCount * negativePenaltyRate;
+    var netScore = Math.max(0, correctCount - deduction);
+    var pct = totalQ > 0 ? ((netScore / totalQ) * 100).toFixed(1) : "0.0";
+    var activeQuizId = (currentQuiz && currentQuiz.id) ? currentQuiz.id : "default_quiz";
+    var quizTitle = (currentQuiz && currentQuiz.title) ? currentQuiz.title : "Practice Test";
 
-    // 3. Save to Local Storage (Instant Leaderboard & Scorecard)
     var nowTime = Date.now();
     var attemptRecord = {
       id: "att_" + nowTime,
@@ -550,79 +533,59 @@ function submitQuiz(e) {
       mobile: studentMobile,
       correctCount: correctCount,
       wrongCount: wrongCount,
+      deduction: deduction,
       score: netScore,
       total: totalQ,
       totalMarks: totalQ,
       percentage: pct,
-      answers: window.userAnswers || {},
+      answers: userAnswers,
       timestamp: nowTime
     };
 
-    var allAttempts = [];
-    try {
-      allAttempts = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
-      if (!Array.isArray(allAttempts)) allAttempts = [];
-    } catch (err) {
-      allAttempts = [];
-    }
+    // Save to Local Storage (Always unshift to Index 0)
+    var allAttempts = getQuizStorageData("ak_student_attempts", []);
+    allAttempts.unshift(attemptRecord);
+    setQuizStorageData("ak_student_attempts", allAttempts);
+    setQuizStorageData("ak_quiz_results", allAttempts);
 
-    // Strict Duplicate Check: pichhle 10 second me same student + quiz ka attempt aaya ho toh drop karein
-    var isAlreadySaved = allAttempts.some(function(prev) {
-      var sameName = (prev.studentName || prev.name) === (attemptRecord.studentName || attemptRecord.name);
-      var sameQuiz = String(prev.quizId) === String(attemptRecord.quizId);
-      var timeDiff = Math.abs(nowTime - (prev.timestamp || 0));
-      return sameName && sameQuiz && timeDiff < 10000;
-    });
+    // Active session pointer for instant ScoreCard image generation
+    window.lastSubmittedAttempt = attemptRecord;
 
-    if (!isAlreadySaved) {
-      allAttempts.unshift(attemptRecord);
-      localStorage.setItem("ak_student_attempts", JSON.stringify(allAttempts));
-      localStorage.setItem("ak_quiz_results", JSON.stringify(allAttempts));
-      console.log("Result saved successfully (Single entry):", attemptRecord);
-
-      // Auto-Sync to Google Sheet (QuizResults tab)
-      if (typeof SchoolDB !== "undefined" && typeof SchoolDB.pushToGoogleSheet === "function") {
-        SchoolDB.pushToGoogleSheet("QuizResults", allAttempts);
-      }
-    } else {
-      console.warn("Duplicate attempt prevented from saving!");
-    }
-
-    // 4. API Backend Push (agar available ho)
+    // Cloud / Sheet Sync
+    var cloudSynced = false;
     if (typeof API !== "undefined" && API.post) {
-      API.post("submitQuizAttempt", attemptRecord);
+      try {
+        await API.post("submitQuizAttempt", attemptRecord);
+        cloudSynced = true;
+      } catch (postErr) {}
     }
 
-    // 5. Security Shield Deactivate
+    if (!cloudSynced && typeof SchoolDB !== "undefined" && typeof SchoolDB.pushToGoogleSheet === "function") {
+      try {
+        await SchoolDB.pushToGoogleSheet("QuizResults", allAttempts);
+        cloudSynced = true;
+      } catch (dbErr) {}
+    }
+
     if (window.SecurityShield && typeof window.SecurityShield.deactivate === "function") {
       window.SecurityShield.deactivate();
     }
 
-    // 6. Scorecard Modal Render
-    if (typeof renderScorecardView === "function") {
-      renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
-    } else if (typeof showScorecardModal === "function") {
-      showScorecardModal(attemptRecord);
-    } else {
-      alert("Test Submitted!\nName: " + studentName + "\nScore: " + netScore + "/" + totalQ);
-    }
+    renderScorecardView(netScore, totalQ, pct, correctCount, wrongCount, deduction);
 
-  } catch (error) {
-    console.error("Critical Quiz Submit Error:", error);
-    alert("Submission error: " + error.message);
+  } catch (err) {
+    console.error("Submission failed:", err);
+    alert("Test submit karte waqt error aaya: " + err.message);
   } finally {
-    // 3 second lock release timer
     setTimeout(function() {
       isQuizSubmissionInProgress = false;
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Submit Quiz";
-      }
-    }, 3000);
+      if (topBtn) { topBtn.disabled = false; topBtn.innerText = "Submit"; }
+      if (btmBtn) { btmBtn.disabled = false; btmBtn.innerText = "Finish & Submit"; }
+    }, 2000);
   }
 }
 
-// 3. Ultra-Stylish Scorecard (Cursive Name, Trophy / Big Sad Emoji & Quotes)
+// 6. Scorecard View
 function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deduction) {
   var pctVal = parseFloat(pct);
   var badgeIcon = "";
@@ -631,7 +594,7 @@ function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deductio
   var bannerBg = "";
 
   if (pctVal >= 80) {
-    badgeIcon = '<div style="font-size:3.5rem; margin-bottom:5px; animation: bounce 1s infinite;">🏆</div>';
+    badgeIcon = '<div style="font-size:3.5rem; margin-bottom:5px;">🏆</div>';
     appreciationTitle = '🌟 Adbhut! Outstanding Topper!';
     appreciationQuote = '"Aapne kamaal kar diya! Aapki mehnat aur lagan ne aapko top rank par pahunchaya hai. Shaabash!"';
     bannerBg = 'linear-gradient(135deg, #1e3a8a, #065f46)';
@@ -647,21 +610,23 @@ function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deductio
     bannerBg = 'linear-gradient(135deg, #7f1d1d, #b91c1c)';
   }
 
+  var sName = (currentQuiz && currentQuiz.participantName) ? currentQuiz.participantName : "Student";
+  var qTitle = (currentQuiz && currentQuiz.title) ? currentQuiz.title : "Practice Test";
+
   var html = '<div class="modal-overlay" style="display:flex;">' +
     '<div class="modal-card" style="text-align:center; max-width:480px; border-radius:24px; padding:24px;">' +
     '<div class="modal-header" style="border:none; margin-bottom:8px;">' +
     '<h3 style="font-size:1.1rem; color:#0f172a;">Official Examination Result</h3>' +
     '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
     '</div>' +
-    (isTeacherTestingMode ? '<div style="background:#fee2e2; color:#dc2626; padding:6px; border-radius:8px; font-weight:bold; font-size:0.85rem; margin-bottom:10px;">⚠️ TEACHER TESTING MODE: Score NOT saved in Database</div>' : '') +
     '<div style="background:' + bannerBg + '; color:white; padding:22px; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.15); margin-bottom:16px;">' +
     badgeIcon +
     '<h2 style="color:#fbbf24; margin:0 0 4px; font-size:1.3rem; letter-spacing:0.5px;">AK Learning Point Coaching</h2>' +
     '<div style="margin-top:6px; font-size:0.9rem; opacity:0.9;">Student Candidate:</div>' +
-    '<div style="font-family:\'Brush Script MT\', \'Dancing Script\', cursive, serif; font-size:2.2rem; color:#ffffff; text-shadow:1px 2px 4px rgba(0,0,0,0.4); margin:2px 0 8px;">' +
-    (currentQuiz.participantName || "Anonymous") +
+    '<div style="font-family:\'Brush Script MT\', cursive, serif; font-size:2.2rem; color:#ffffff; text-shadow:1px 2px 4px rgba(0,0,0,0.4); margin:2px 0 8px;">' +
+    sName +
     '</div>' +
-    '<div style="font-size:0.85rem; opacity:0.85; margin-bottom:12px;">' + currentQuiz.title + '</div>' +
+    '<div style="font-size:0.85rem; opacity:0.85; margin-bottom:12px;">' + qTitle + '</div>' +
     '<div style="background:rgba(255,255,255,0.15); backdrop-filter:blur(5px); border-radius:14px; padding:12px; margin:10px 0;">' +
     '<div style="font-size:2.4rem; font-weight:900; color:#4ade80;">' + netScore + ' / ' + totalMarks + '</div>' +
     '<div style="font-size:1rem; font-weight:700; color:#f8fafc;">Accuracy: ' + pct + '%</div>' +
@@ -682,15 +647,16 @@ function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deductio
     '</div>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
 
 function shareResultWhatsApp(score, total, pct) {
   var liveUrl = window.location.origin + window.location.pathname;
   var text = encodeURIComponent(
     "🏆 *AK Learning Point Coaching - Scorecard*\n" +
-    "👤 Student: " + (currentQuiz.participantName || "Anonymous") + "\n" +
-    "📝 Test: " + currentQuiz.title + "\n" +
+    "👤 Student: " + ((currentQuiz && currentQuiz.participantName) || "Student") + "\n" +
+    "📝 Test: " + ((currentQuiz && currentQuiz.title) || "Practice Test") + "\n" +
     "🎯 Score: " + score + "/" + total + " (" + pct + "% Accuracy)\n\n" +
     "👉 Practice Link: " + liveUrl
   );
@@ -698,13 +664,14 @@ function shareResultWhatsApp(score, total, pct) {
 }
 
 function openSolutionVerification() {
+  if (!currentQuiz || !currentQuiz.questions) return;
   var solHtml = "";
   for (var idx = 0; idx < currentQuiz.questions.length; idx++) {
     var q = currentQuiz.questions[idx];
     var userChoice = userAnswers[idx];
-    var isCorrect = (userChoice === q.correctAnswer);
+    var isCorrect = (userChoice !== undefined && userChoice === q.correctAnswer);
     solHtml += '<div style="padding:12px; border-bottom:1px solid #e2e8f0; text-align:left;">' +
-      '<strong>Q' + (idx + 1) + ': ' + q.question + '</strong>' +
+      '<strong>Q' + (idx + 1) + ': ' + (q.question || q.Question_Text || "") + '</strong>' +
       '<div style="margin-top:6px; font-size:0.9rem;">' +
       '<p style="color:' + (isCorrect ? '#16a34a' : '#dc2626') + ';">Aapka Answer: ' + (userChoice !== undefined ? q.options[userChoice] : 'Not Attempted') + '</p>' +
       '<p style="color:#16a34a; font-weight:600;">Sahi Answer: ' + q.options[q.correctAnswer] + '</p>' +
@@ -725,9 +692,11 @@ function openSolutionVerification() {
     '</div>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = html;
 }
-// URL Deep-Linking: Link click karte hi direct Entry Screen open karna
+
+// URL Deep-Linking
 window.checkAndOpenDirectQuizFromUrl = function() {
   try {
     var urlParams = new URLSearchParams(window.location.search);
@@ -765,42 +734,35 @@ window.checkAndOpenDirectQuizFromUrl = function() {
   }
 };
 
-// Jab bhi page open ho, turant URL check karein
-// Jab bhi page open ho, turant URL check karein
 window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkAndOpenDirectQuizFromUrl, 300);
 });
 
-// Bridge for HTML button click compatibility
+// Global Bridge
 window.submitQuizNow = function(e) {
-  if (typeof submitQuiz === "function") {
-    submitQuiz(e);
-  } else {
-    console.error("submitQuiz function not found");
-  }
+  submitQuiz(e);
 };
-// Function: Score Card ko direct Image (PNG) ke roop me download karna
+
+// 7. Precise Scorecard Image Generator (Fixes the 5 vs 18 Scorecard Bug)
 function downloadScoreCardAsImage() {
-  var lastAttempt = null;
-  try {
-    var attempts = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
+  var target = window.lastSubmittedAttempt;
+  
+  if (!target) {
+    var attempts = getQuizStorageData("ak_student_attempts", []);
     if (attempts.length > 0) {
-      lastAttempt = attempts[attempts.length - 1];
+      target = attempts[0]; // Latest attempt is always at Index 0
     }
-  } catch(e) {
-    lastAttempt = null;
   }
 
-  var studentName = (lastAttempt && (lastAttempt.studentName || lastAttempt.name)) || 
-                    (document.getElementById("studentNameInput") ? document.getElementById("studentNameInput").value : "Student");
-  var mobile = (lastAttempt && lastAttempt.mobile) || "N/A";
-  var quizTitle = (lastAttempt && lastAttempt.quizTitle) || (typeof currentQuiz !== "undefined" && currentQuiz ? currentQuiz.title : "Practice Test");
-  var score = (lastAttempt && lastAttempt.score !== undefined) ? lastAttempt.score : (typeof userScore !== "undefined" ? userScore : 0);
-  var total = (lastAttempt && (lastAttempt.totalMarks || lastAttempt.total)) || (typeof totalQuestions !== "undefined" ? totalQuestions : 0);
-  var percentage = (lastAttempt && lastAttempt.percentage) || (total > 0 ? ((score / total) * 100).toFixed(1) : "0.0");
-  var dateStr = lastAttempt && lastAttempt.timestamp ? new Date(lastAttempt.timestamp).toLocaleDateString() : new Date().toLocaleDateString();
+  var studentName = (target && (target.studentName || target.name)) || 
+                    ((currentQuiz && currentQuiz.participantName) ? currentQuiz.participantName : "Student");
+  var mobile = (target && target.mobile) || ((currentQuiz && currentQuiz.participantMobile) ? currentQuiz.participantMobile : "N/A");
+  var quizTitle = (target && target.quizTitle) || ((currentQuiz && currentQuiz.title) ? currentQuiz.title : "Practice Test");
+  var score = (target && target.score !== undefined) ? target.score : 0;
+  var total = (target && (target.totalMarks || target.total)) || ((currentQuiz && currentQuiz.questions) ? currentQuiz.questions.length : 0);
+  var percentage = (target && target.percentage) || (total > 0 ? ((score / total) * 100).toFixed(1) : "0.0");
+  var dateStr = (target && target.timestamp) ? new Date(target.timestamp).toLocaleDateString() : new Date().toLocaleDateString();
 
-  // Canvas banayein
   var canvas = document.createElement("canvas");
   canvas.width = 800;
   canvas.height = 520;
@@ -840,7 +802,7 @@ function downloadScoreCardAsImage() {
   ctx.textAlign = "center";
   ctx.fillText("Quiz: " + quizTitle, 400, 153);
 
-  // Details (Left Column)
+  // Left Details
   ctx.textAlign = "left";
   ctx.fillStyle = "#475569";
   ctx.font = "15px Arial, sans-serif";
@@ -857,7 +819,7 @@ function downloadScoreCardAsImage() {
   ctx.fillStyle = "#16a34a";
   ctx.fillText("Verified & Submitted", 190, 330);
 
-  // Score Highlight Box (Right Column)
+  // Score Box
   ctx.fillStyle = "#eff6ff";
   ctx.fillRect(480, 195, 270, 150);
   ctx.lineWidth = 2;
@@ -894,7 +856,7 @@ function downloadScoreCardAsImage() {
   ctx.font = "bold 13px Arial, sans-serif";
   ctx.fillText("aklearningpoint.github.io", 400, 445);
 
-  // Image Download Trigger
+  // Direct PNG Download
   var imgURI = canvas.toDataURL("image/png");
   var dlLink = document.createElement("a");
   dlLink.download = (studentName.replace(/\s+/g, "_") || "ScoreCard") + "_Result.png";
