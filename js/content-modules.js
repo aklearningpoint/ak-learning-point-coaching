@@ -15,7 +15,7 @@ function setModuleData(key, data) {
   } catch (e) {}
 }
 
-// 1. Student Result Lookup (History & Detailed Scorecard)
+// 1. Student Result Lookup (History & Detailed Scorecard - Realtime Cloud Sync)
 function openResultLookupModal() {
   var html = '<div class="modal-overlay" style="display:flex;">' +
     '<div class="modal-card">' +
@@ -40,36 +40,81 @@ function openResultLookupModal() {
   document.getElementById("dynamicView").innerHTML = html;
 }
 
-function handleResultSearch(e) {
+async function handleResultSearch(e) {
   e.preventDefault();
-  var mob = document.getElementById("resLookupMobile").value.trim();
+  var mobInput = document.getElementById("resLookupMobile").value.trim();
   var listContainer = document.getElementById("resultLookupList");
-  listContainer.innerHTML = '<p style="text-align:center; color:#64748b;">Searching scorecards...</p>';
+  listContainer.innerHTML = '<p style="text-align:center; color:#64748b; padding:15px;"><i class="fas fa-spinner fa-spin"></i> Google Sheet se records khoje ja rahe hain...</p>';
 
-  var localAttempts = getModuleData("ak_student_attempts", []);
-  var attempts = [];
-  for (var i = 0; i < localAttempts.length; i++) {
-    if (String(localAttempts[i].mobile).trim() === mob) {
-      attempts.push(localAttempts[i]);
+  var allRecords = [];
+
+  // 1. Live Fetch from Google Sheet (Future updates and all rows)
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var cloudRes = await API.get("getAttempts");
+      if (cloudRes && cloudRes.status === "success" && Array.isArray(cloudRes.data) && cloudRes.data.length > 0) {
+        allRecords = cloudRes.data;
+      }
+    }
+  } catch (err) {
+    console.warn("Cloud fetch failed, checking local storage...", err);
+  }
+
+  // 2. Fallback to Local Storage if offline or network fails
+  if (allRecords.length === 0) {
+    var localAttempts = [];
+    try {
+      localAttempts = JSON.parse(localStorage.getItem("ak_student_attempts") || localStorage.getItem("ak_quiz_results") || "[]");
+    } catch (err) {
+      localAttempts = [];
+    }
+    allRecords = localAttempts;
+  }
+
+  // 3. Filter by Mobile Number (Case-insensitive & handles both Sheet & Local storage keys)
+  var matched = [];
+  for (var i = 0; i < allRecords.length; i++) {
+    var item = allRecords[i];
+    var itemMobile = String(item.Mobile || item.mobile || "").trim();
+    if (itemMobile === mobInput) {
+      matched.push({
+        attemptId: item.Attempt_ID || item.attemptId || item.id || ("att_" + i),
+        quizId: item.Quiz_ID || item.quizId || "",
+        quizTitle: item.Quiz_Title || item.quizTitle || "Online Exam",
+        studentName: item.Student_Name || item.studentName || item.name || "Student",
+        mobile: itemMobile,
+        score: item.Score !== undefined ? item.Score : (item.score !== undefined ? item.score : 0),
+        totalMarks: item.Total_Marks !== undefined ? item.Total_Marks : (item.totalMarks !== undefined ? item.totalMarks : (item.total || 0)),
+        percentage: item.Percentage !== undefined ? item.Percentage : (item.percentage !== undefined ? item.percentage : 0),
+        timestamp: item.Timestamp || item.timestamp || new Date().toISOString()
+      });
     }
   }
 
-  if (attempts.length === 0) {
-    listContainer.innerHTML = '<p style="text-align:center; color:#dc2626; padding:10px;">Is number se koi attempt record nahi mila!</p>';
+  if (matched.length === 0) {
+    listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:#dc2626;"><i class="fas fa-exclamation-circle fa-2x"></i><p style="margin-top:6px; font-weight:600;">Is number se koi attempt record nahi mila!</p><small style="color:#64748b;">Kripya wahi 10-digit mobile number dalein jo test dete waqt enter kiya tha.</small></div>';
     return;
   }
 
-  window.activeSearchedAttempts = attempts;
+  // Sort: Latest attempt first
+  matched.sort(function(a, b) {
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+
+  window.activeSearchedAttempts = matched;
+
   var itemsHtml = "";
-  for (var idx = 0; idx < attempts.length; idx++) {
-    var att = attempts[idx];
+  for (var idx = 0; idx < matched.length; idx++) {
+    var att = matched[idx];
+    var attemptDate = att.timestamp ? new Date(att.timestamp).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' }) : "Recent";
+
     itemsHtml += '<div class="section-card" style="margin-bottom:8px; padding:12px; cursor:pointer;" onclick="viewHistoricalScorecardByIndex(' + idx + ')">' +
       '<div style="flex:1;">' +
-      '<h4 style="font-size:0.95rem; color:#0f172a;">' + att.quizTitle + '</h4>' +
-      '<small style="color:#64748b;">Score: <strong>' + att.score + '/' + att.totalMarks + '</strong> (' + att.percentage + '%)</small>' +
-      '<div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Attempted: ' + new Date(att.timestamp || Date.now()).toLocaleDateString() + '</div>' +
+      '<h4 style="font-size:0.95rem; color:#0f172a; margin-bottom:3px;">' + att.quizTitle + '</h4>' +
+      '<small style="color:#64748b;">Score: <strong style="color:#0f172a;">' + att.score + '/' + att.totalMarks + '</strong> (' + att.percentage + '%)</small>' +
+      '<div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;"><i class="far fa-calendar-alt"></i> ' + attemptDate + '</div>' +
       '</div>' +
-      '<button class="btn-primary" style="width:auto; padding:5px 10px; font-size:0.8rem; background:#d97706; margin:0;">View</button>' +
+      '<button class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; background:#d97706; margin:0;">View</button>' +
       '</div>';
   }
 
@@ -92,7 +137,7 @@ function viewHistoricalScorecardByIndex(idx) {
     '</div>' +
     '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
     '</div>' +
-    '<div style="background:var(--primary-navy); color:white; padding:20px; border-radius:12px; margin-bottom:15px;">' +
+    '<div style="background:var(--primary-navy, #0f172a); color:white; padding:20px; border-radius:12px; margin-bottom:15px;">' +
     '<h2 style="color:#fbbf24; margin-bottom:4px;">AK Learning Point Coaching</h2>' +
     '<p style="font-size:0.85rem; opacity:0.8;">Student: <strong>' + att.studentName + '</strong></p>' +
     '<hr style="border:none; border-top:1px solid rgba(255,255,255,0.2); margin:12px 0;">' +
@@ -110,13 +155,31 @@ function viewHistoricalScorecardByIndex(idx) {
   document.getElementById("dynamicView").innerHTML = html;
 }
 
-// 2. Rewarding Quiz Tab
-function openRewardingQuizzes() {
-  var localQuizzes = getModuleData("ak_teacher_quizzes", []);
+// 2. Rewarding Quiz Tab (With Live Cloud Sync)
+async function openRewardingQuizzes() {
   var rewardingList = [];
-  for (var i = 0; i < localQuizzes.length; i++) {
-    if (localQuizzes[i].isRewarding && localQuizzes[i].status === "published") {
-      rewardingList.push(localQuizzes[i]);
+
+  // Try live fetch
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var res = await API.get("getQuizzes");
+      if (res && res.status === "success" && Array.isArray(res.data)) {
+        rewardingList = res.data.filter(function(q) {
+          return (q.isRewarding || q.Is_Rewarding) && (q.status === "published" || !q.status);
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Rewarding quiz cloud fetch failed:", e);
+  }
+
+  // Fallback to local
+  if (rewardingList.length === 0) {
+    var localQuizzes = getModuleData("ak_teacher_quizzes", []);
+    for (var i = 0; i < localQuizzes.length; i++) {
+      if (localQuizzes[i].isRewarding && localQuizzes[i].status === "published") {
+        rewardingList.push(localQuizzes[i]);
+      }
     }
   }
 
@@ -143,7 +206,7 @@ function openRewardingQuizzes() {
     listHtml += '<div class="section-card" style="margin-bottom:12px; border-left: 5px solid #dc2626;">' +
       '<div style="flex:1;">' +
       '<h3 style="font-size:1rem; color:#0f172a;">' + q.title + '</h3>' +
-      '<small style="color:#64748b;">' + q.className + ' • ' + q.subject + '</small>' +
+      '<small style="color:#64748b;">' + (q.className || "") + ' • ' + (q.subject || "") + '</small>' +
       '<div style="margin-top:8px;">' +
       '<button class="btn-primary" style="padding:6px 14px; font-size:0.85rem; width:auto; background:#dc2626;" onclick="openQuizEntryModalByIndex(' + j + ')"><i class="fas fa-lock"></i> Enter with Passkey</button>' +
       '</div></div></div>';
