@@ -1,4 +1,4 @@
-// Admin Master Control: Logo Upload, Passwords, Tuition Ledger & Promo Banner Store
+// Admin Master Control: Cloud Logo Upload, Passwords, Tuition Ledger & Promo Banner Store
 
 function getAdminData(key, fallback) {
   try {
@@ -38,28 +38,58 @@ var tuitionLedger = getAdminData("ak_tuition_ledger", [
   }
 ]);
 
-// Set logo on DOM load
-window.addEventListener("DOMContentLoaded", function() {
+// Apply Logo Immediately to UI
+function applyLogoToUI(dataUrl) {
+  if (!dataUrl) return;
+  var el = document.getElementById("appLogo");
+  if (el) el.src = dataUrl;
+  var preview = document.getElementById("logoPreviewImg");
+  if (preview) preview.src = dataUrl;
+}
+
+// Fetch Permanent Cloud Config on App Start
+async function syncCloudAppConfig() {
   if (appConfig.logoData) {
-    var el = document.getElementById("appLogo");
-    if (el) el.src = appConfig.logoData;
+    applyLogoToUI(appConfig.logoData);
   }
-});
+
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var res = await API.get("getAppConfig");
+      if (res && res.status === "success" && res.data) {
+        var cloudCfg = res.data;
+        if (cloudCfg.logoData) {
+          appConfig.logoData = cloudCfg.logoData;
+          applyLogoToUI(cloudCfg.logoData);
+        }
+        if (cloudCfg.adminPass) appConfig.adminPass = cloudCfg.adminPass;
+        if (cloudCfg.teacherPass) appConfig.teacherPass = cloudCfg.teacherPass;
+        if (cloudCfg.tuitionPass) appConfig.tuitionPass = cloudCfg.tuitionPass;
+
+        setAdminData("ak_app_config", appConfig);
+      }
+    }
+  } catch (err) {
+    console.warn("Cloud config sync offline:", err);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", syncCloudAppConfig);
 
 function openAdminPortal() {
   if (typeof toggleDrawer === "function") toggleDrawer();
 
-  var enteredPass = prompt("Enter Master Admin Password (Default: *****):");
+  var enteredPass = prompt("Enter Master Admin Password (Default: password):");
   if (enteredPass === appConfig.adminPass || enteredPass === "password") {
     renderAdminDashboard();
   } else if (enteredPass !== null) {
-    alert("Incorrect Admin Password! (Default is: password)");
+    alert("Incorrect Admin Password!");
   }
 }
 
 function renderAdminDashboard() {
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:3000; display:flex; flex-direction:column;">' +
-    '<div style="height:55px; background:var(--primary-navy); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
+    '<div style="height:55px; background:var(--primary-navy, #0f172a); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     '<i class="fas fa-user-shield" style="color:#fbbf24;"></i>' +
     '<strong>Master Admin Panel</strong>' +
@@ -88,14 +118,15 @@ function showAdminSection(sec) {
   if (sec === 'branding') {
     var brandingHtml = '<div class="modal-card" style="max-width:100%;">' +
       '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-      '<h3 style="color:var(--primary-navy); margin:0;">App Logo & Passwords</h3>' +
+      '<h3 style="color:var(--primary-navy, #0f172a); margin:0;">App Logo & Passwords</h3>' +
       '<button class="nav-pill-btn nav-home-btn" onclick="goHome()"><i class="fas fa-home"></i> Home</button>' +
       '</div>' +
       '<div class="form-group">' +
       '<label>Upload App Logo (Direct File From Mobile / PC)</label>' +
       '<input type="file" id="adminLogoFileInput" accept="image/*" onchange="previewAndStoreLogo(this)">' +
-      '<div style="margin-top:8px;">' +
+      '<div style="margin-top:8px; display:flex; align-items:center; gap:12px;">' +
       '<img id="logoPreviewImg" src="' + (appConfig.logoData || 'https://via.placeholder.com/60') + '" style="width:60px; height:60px; border-radius:50%; border:2px solid #cbd5e1; object-fit:cover;">' +
+      '<small id="logoUploadStatus" style="color:#64748b;">Ready to upload</small>' +
       '</div>' +
       '</div>' +
       '<div class="form-group">' +
@@ -110,7 +141,7 @@ function showAdminSection(sec) {
       '<label>Tuition Section Passkey</label>' +
       '<input type="text" id="cfgTuitionPass" value="' + appConfig.tuitionPass + '">' +
       '</div>' +
-      '<button class="btn-primary" onclick="saveAdminSecurityConfig()">Save & Lock Changes</button>' +
+      '<button class="btn-primary" id="btnSaveConfig" onclick="saveAdminSecurityConfig()"><i class="fas fa-cloud-upload-alt"></i> Save & Sync to Cloud</button>' +
       '</div>';
 
     container.innerHTML = brandingHtml;
@@ -130,32 +161,91 @@ function showAdminSection(sec) {
     }
 
     container.innerHTML = '<div class="modal-card" style="max-width:100%;">' +
-      '<h3 style="color:var(--primary-navy); margin-bottom:12px;">Community Registered Leads</h3>' +
+      '<h3 style="color:var(--primary-navy, #0f172a); margin-bottom:12px;">Community Registered Leads</h3>' +
       (leadsHtml || '<p style="color:#64748b;">Abhi tak koi naya lead record nahi hai.</p>') +
       '</div>';
   }
 }
 
+// Logo Compression & Conversion to Web-Safe Base64
 function previewAndStoreLogo(input) {
   if (input.files && input.files[0]) {
+    var file = input.files[0];
+    var status = document.getElementById("logoUploadStatus");
+    if (status) status.innerText = "Optimizing image...";
+
     var reader = new FileReader();
     reader.onload = function(e) {
-      appConfig.logoData = e.target.result;
-      var preview = document.getElementById("logoPreviewImg");
-      if (preview) preview.src = e.target.result;
-      var mainLogo = document.getElementById("appLogo");
-      if (mainLogo) mainLogo.src = e.target.result;
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement("canvas");
+        var maxDim = 160; // Perfect crisp resolution for app icon
+        var width = img.width;
+        var height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        var compressedBase64 = canvas.toDataURL("image/png");
+        appConfig.logoData = compressedBase64;
+        applyLogoToUI(compressedBase64);
+
+        if (status) status.innerHTML = "<span style='color:#16a34a;'>✓ Logo ready. Click 'Save & Sync' to make permanent.</span>";
+      };
+      img.src = e.target.result;
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
   }
 }
 
-function saveAdminSecurityConfig() {
+async function saveAdminSecurityConfig() {
+  var saveBtn = document.getElementById("btnSaveConfig");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Saving to Cloud...";
+  }
+
   appConfig.adminPass = document.getElementById("cfgAdminPass").value.trim() || "password";
   appConfig.teacherPass = document.getElementById("cfgTeacherPass").value.trim() || "pass";
   appConfig.tuitionPass = document.getElementById("cfgTuitionPass").value.trim() || "pass";
+
+  // 1. Save Locally
   setAdminData("ak_app_config", appConfig);
-  alert("Settings & Passwords saved successfully!");
+
+  // 2. Save to Google Sheet Cloud
+  try {
+    if (typeof API !== "undefined" && API.post) {
+      await API.post("saveAppConfig", {
+        adminPass: appConfig.adminPass,
+        teacherPass: appConfig.teacherPass,
+        tuitionPass: appConfig.tuitionPass,
+        logoData: appConfig.logoData || ""
+      });
+    }
+    alert("Settings & Logo Cloud par permanently save ho gaye!");
+  } catch (err) {
+    console.warn("Cloud save warning:", err);
+    alert("Local settings save ho gayi hain (Cloud sync me thoda delay ho sakta hai).");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = "<i class='fas fa-cloud-upload-alt'></i> Save & Sync to Cloud";
+    }
+  }
 }
 
 // Tuition Ledger Financials Calculator
@@ -240,7 +330,7 @@ function renderTuitionLedgerSection(container) {
     '</div>' +
     '<div class="modal-card" style="max-width:100%;">' +
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-    '<h3 style="color:var(--primary-navy); margin:0;">Enrolled Tuition Students</h3>' +
+    '<h3 style="color:var(--primary-navy, #0f172a); margin:0;">Enrolled Tuition Students</h3>' +
     '<button class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; margin:0;" onclick="openAddEditStudentModal()">+ Add Student</button>' +
     '</div>' +
     '<div style="overflow-x:auto;">' +
@@ -363,7 +453,7 @@ function renderPromoBannersSection(container) {
 
   container.innerHTML = '<div class="modal-card" style="max-width:100%;">' +
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-    '<h3 style="color:var(--primary-navy); margin:0;">Promotional Slide Store</h3>' +
+    '<h3 style="color:var(--primary-navy, #0f172a); margin:0;">Promotional Slide Store</h3>' +
     '<label class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; margin:0; cursor:pointer;">' +
     '+ Upload Poster <input type="file" accept="image/*" style="display:none;" onchange="uploadPromoBanner(this)">' +
     '</label>' +
