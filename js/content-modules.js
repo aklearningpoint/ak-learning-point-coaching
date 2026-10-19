@@ -15,7 +15,7 @@ function setModuleData(key, data) {
   } catch (e) {}
 }
 
-// 1. Student Result Lookup (History & Detailed Scorecard - Realtime Cloud Sync)
+// 1. Student Result Lookup (History, Scorecard & Full Solution Analysis)
 function openResultLookupModal() {
   var html = '<div class="modal-overlay" style="display:flex;">' +
     '<div class="modal-card">' +
@@ -48,7 +48,7 @@ async function handleResultSearch(e) {
 
   var allRecords = [];
 
-  // 1. Live Fetch from Google Sheet (Future updates and all rows)
+  // 1. Live Fetch from Google Sheet
   try {
     if (typeof API !== "undefined" && API.get) {
       var cloudRes = await API.get("getAttempts");
@@ -57,21 +57,19 @@ async function handleResultSearch(e) {
       }
     }
   } catch (err) {
-    console.warn("Cloud fetch failed, checking local storage...", err);
+    console.warn("Cloud fetch fallback:", err);
   }
 
-  // 2. Fallback to Local Storage if offline or network fails
+  // 2. Fallback to Local Storage
   if (allRecords.length === 0) {
     var localAttempts = [];
     try {
       localAttempts = JSON.parse(localStorage.getItem("ak_student_attempts") || localStorage.getItem("ak_quiz_results") || "[]");
-    } catch (err) {
-      localAttempts = [];
-    }
+    } catch (err) { localAttempts = []; }
     allRecords = localAttempts;
   }
 
-  // 3. Filter by Mobile Number (Case-insensitive & handles both Sheet & Local storage keys)
+  // 3. Filter by Mobile Number
   var matched = [];
   for (var i = 0; i < allRecords.length; i++) {
     var item = allRecords[i];
@@ -83,9 +81,10 @@ async function handleResultSearch(e) {
         quizTitle: item.Quiz_Title || item.quizTitle || "Online Exam",
         studentName: item.Student_Name || item.studentName || item.name || "Student",
         mobile: itemMobile,
-        score: item.Score !== undefined ? item.Score : (item.score !== undefined ? item.score : 0),
-        totalMarks: item.Total_Marks !== undefined ? item.Total_Marks : (item.totalMarks !== undefined ? item.totalMarks : (item.total || 0)),
-        percentage: item.Percentage !== undefined ? item.Percentage : (item.percentage !== undefined ? item.percentage : 0),
+        score: item.Score !== undefined ? item.Score : (item.score || 0),
+        totalMarks: item.Total_Marks !== undefined ? item.Total_Marks : (item.totalMarks || item.total || 0),
+        percentage: item.Percentage !== undefined ? item.Percentage : (item.percentage || 0),
+        answers: item.Answers_JSON || item.answers || "{}",
         timestamp: item.Timestamp || item.timestamp || new Date().toISOString()
       });
     }
@@ -108,13 +107,16 @@ async function handleResultSearch(e) {
     var att = matched[idx];
     var attemptDate = att.timestamp ? new Date(att.timestamp).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' }) : "Recent";
 
-    itemsHtml += '<div class="section-card" style="margin-bottom:8px; padding:12px; cursor:pointer;" onclick="viewHistoricalScorecardByIndex(' + idx + ')">' +
+    itemsHtml += '<div class="section-card" style="margin-bottom:8px; padding:12px; display:flex; align-items:center; justify-content:space-between;">' +
       '<div style="flex:1;">' +
       '<h4 style="font-size:0.95rem; color:#0f172a; margin-bottom:3px;">' + att.quizTitle + '</h4>' +
       '<small style="color:#64748b;">Score: <strong style="color:#0f172a;">' + att.score + '/' + att.totalMarks + '</strong> (' + att.percentage + '%)</small>' +
       '<div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;"><i class="far fa-calendar-alt"></i> ' + attemptDate + '</div>' +
       '</div>' +
-      '<button class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; background:#d97706; margin:0;">View</button>' +
+      '<div style="display:flex; gap:6px;">' +
+      '<button class="btn-primary" style="width:auto; padding:6px 10px; font-size:0.8rem; background:#d97706; margin:0;" onclick="viewHistoricalScorecardByIndex(' + idx + ')">Scorecard</button>' +
+      '<button class="btn-primary" style="width:auto; padding:6px 10px; font-size:0.8rem; background:#2563eb; margin:0;" onclick="viewQuizAnalysisByIndex(' + idx + ')"><i class="fas fa-chart-bar"></i> Analysis</button>' +
+      '</div>' +
       '</div>';
   }
 
@@ -146,6 +148,7 @@ function viewHistoricalScorecardByIndex(idx) {
     '<p style="font-style:italic; font-size:0.85rem; margin-top:10px; color:#e2e8f0;">"' + appreciation + '"</p>' +
     '</div>' +
     '<div style="display:flex; flex-direction:column; gap:10px;">' +
+    '<button class="btn-primary" style="background:#2563eb;" onclick="viewQuizAnalysisByIndex(' + idx + ')"><i class="fas fa-chart-line"></i> View Detailed Quiz Analysis</button>' +
     '<button class="btn-primary" style="background:#25d366;" onclick="shareResultWhatsApp(\'' + att.score + '\', \'' + att.totalMarks + '\', \'' + att.percentage + '\')"><i class="fab fa-whatsapp"></i> Share on WhatsApp</button>' +
     '<button class="btn-primary" style="background:#64748b;" onclick="openResultLookupModal()"><i class="fas fa-arrow-left"></i> Back to Search</button>' +
     '<button class="btn-primary" style="background:#0f172a;" onclick="goHome()"><i class="fas fa-home"></i> Back to Home</button>' +
@@ -155,6 +158,104 @@ function viewHistoricalScorecardByIndex(idx) {
   document.getElementById("dynamicView").innerHTML = html;
 }
 
+// 1.1 Detailed Solution & Question Analysis Engine
+async function viewQuizAnalysisByIndex(idx) {
+  var att = window.activeSearchedAttempts[idx];
+  var listContainer = document.getElementById("dynamicView");
+  
+  // Parse student responses
+  var userAns = {};
+  try {
+    userAns = typeof att.answers === "string" ? JSON.parse(att.answers) : (att.answers || {});
+  } catch (e) { userAns = {}; }
+
+  // Load quiz questions
+  var targetQuiz = null;
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var qRes = await API.get("getQuizzes");
+      if (qRes && qRes.data) {
+        targetQuiz = qRes.data.find(function(q) { return String(q.id).trim() === String(att.quizId).trim(); });
+      }
+    }
+  } catch (err) {}
+
+  if (!targetQuiz) {
+    var localQuizzes = getModuleData("ak_teacher_quizzes", []);
+    targetQuiz = localQuizzes.find(function(q) { return String(q.id).trim() === String(att.quizId).trim(); });
+  }
+
+  var questions = (targetQuiz && targetQuiz.questions) ? targetQuiz.questions : [];
+  var analysisCardsHtml = "";
+
+  if (questions.length === 0) {
+    analysisCardsHtml = '<div style="text-align:center; padding:20px; color:#64748b;">Is quiz ke individual questions offline available nahi hain. Total Score: ' + att.score + '/' + att.totalMarks + '</div>';
+  } else {
+    for (var qIdx = 0; qIdx < questions.length; qIdx++) {
+      var q = questions[qIdx];
+      var chosen = userAns[qIdx] !== undefined ? parseInt(userAns[qIdx]) : -1;
+      var correct = parseInt(q.correctAnswer !== undefined ? q.correctAnswer : 0);
+
+      var isCorrect = (chosen === correct);
+      var isUnattempted = (chosen === -1);
+
+      var badge = isUnattempted ? '<span style="color:#64748b; font-weight:bold;">⚪ Unattempted</span>' :
+                  (isCorrect ? '<span style="color:#16a34a; font-weight:bold;">🟢 Correct (+1)</span>' : '<span style="color:#dc2626; font-weight:bold;">🔴 Incorrect</span>');
+
+      var optListHtml = "";
+      if (q.options && Array.isArray(q.options)) {
+        for (var oIdx = 0; oIdx < q.options.length; oIdx++) {
+          var bg = "#f8fafc";
+          var border = "1px solid #e2e8f0";
+          var icon = "";
+
+          if (oIdx === correct) {
+            bg = "#dcfce7";
+            border = "1.5px solid #16a34a";
+            icon = ' <i class="fas fa-check-circle" style="color:#16a34a;"></i> (Correct Answer)';
+          } else if (oIdx === chosen && !isCorrect) {
+            bg = "#fee2e2";
+            border = "1.5px solid #dc2626";
+            icon = ' <i class="fas fa-times-circle" style="color:#dc2626;"></i> (Your Choice)';
+          }
+
+          optListHtml += '<div style="background:' + bg + '; border:' + border + '; padding:8px 12px; border-radius:6px; margin-top:5px; font-size:0.85rem;">' +
+            String.fromCharCode(65 + oIdx) + '. ' + q.options[oIdx] + icon + '</div>';
+        }
+      }
+
+      analysisCardsHtml += '<div style="background:white; border:1px solid #cbd5e1; border-radius:8px; padding:12px; margin-bottom:12px; text-align:left;">' +
+        '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.85rem;">' +
+        '<strong>Q' + (qIdx + 1) + '.</strong>' + badge +
+        '</div>' +
+        '<p style="font-size:0.95rem; color:#0f172a; margin:0 0 8px 0; font-weight:600;">' + q.question + '</p>' +
+        optListHtml +
+        '</div>';
+    }
+  }
+
+  var html = '<div class="modal-overlay" style="display:flex;">' +
+    '<div class="modal-card" style="max-width:550px;">' +
+    '<div class="modal-header">' +
+    '<div style="display:flex; align-items:center; gap:8px;">' +
+    '<button class="nav-pill-btn nav-back-btn" onclick="openResultLookupModal()"><i class="fas fa-arrow-left"></i> Back</button>' +
+    '<h3>Quiz Solution Analysis</h3>' +
+    '</div>' +
+    '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+    '<div style="background:#f1f5f9; padding:10px 14px; border-radius:8px; margin-bottom:12px; font-size:0.85rem; color:#334155; display:flex; justify-content:space-between;">' +
+    '<span><strong>Candidate:</strong> ' + att.studentName + '</span>' +
+    '<span><strong>Score:</strong> ' + att.score + '/' + att.totalMarks + '</span>' +
+    '</div>' +
+    '<div style="max-height:60vh; overflow-y:auto; padding-right:4px;">' + analysisCardsHtml + '</div>' +
+    '<div style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:10px; display:flex; justify-content:space-between;">' +
+    '<button class="nav-pill-btn nav-back-btn" onclick="openResultLookupModal()"><i class="fas fa-arrow-left"></i> Back to Search</button>' +
+    '<button class="nav-pill-btn nav-home-btn" onclick="goHome()"><i class="fas fa-home"></i> Home</button>' +
+    '</div>' +
+    '</div></div>';
+
+  listContainer.innerHTML = html;
+}
 // 2. Rewarding Quiz Tab (With Live Cloud Sync)
 async function openRewardingQuizzes() {
   var rewardingList = [];
