@@ -1,0 +1,229 @@
+// Google Apps Script Backend: AK_Learning_Point_Coaching
+
+function getSpreadsheet() {
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+// RUN THIS FUNCTION ONCE TO CREATE ALL TABS AUTOMATICALLY
+function initialSheetSetup() {
+  var ss = getSpreadsheet();
+  
+  var sheets = {
+    "Quizzes": ["Quiz_ID", "Title", "Board", "Class", "Subject", "Timer_Type", "Timer_Value", "Negative_Mark", "Is_Rewarding", "Passkey", "Status", "Created_At"],
+    "Questions": ["Question_ID", "Quiz_ID", "Question_Text", "Opt_A", "Opt_B", "Opt_C", "Opt_D", "Correct_Option"],
+    "Attempts": ["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers_JSON", "Timestamp"],
+    "Students_Ledger": ["Student_ID", "Name", "Mobile", "Monthly_Fee", "Start_Date", "Paid_History_JSON"],
+    "School_Students": ["Class", "Roll_No", "Name", "Father_Name", "Mother_Name", "Mobile", "Address"],
+    "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"]
+  };
+
+  for (var sheetName in sheets) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(sheets[sheetName]);
+      sheet.getRange(1, 1, 1, sheets[sheetName].length).setFontWeight("bold").setBackground("#141e37").setFontColor("#ffffff");
+    }
+  }
+  return "All 6 Database Tabs Created Successfully!";
+}
+
+function doGet(e) {
+  var action = (e && e.parameter) ? e.parameter.action : "";
+  var tabName = (e && e.parameter) ? e.parameter.tabName : "";
+  var ss = getSpreadsheet();
+  var result = { status: "success", data: [] };
+
+  // 1. Quizzes fetch karne ke liye
+  if (action === "getQuizzes") {
+    var qSheet = ss.getSheetByName("Quizzes");
+    var quesSheet = ss.getSheetByName("Questions");
+    if (!qSheet) return returnJSON(result);
+
+    var qData = qSheet.getDataRange().getValues();
+    var questionsData = quesSheet ? quesSheet.getDataRange().getValues() : [];
+    var list = [];
+
+    for (var i = 1; i < qData.length; i++) {
+      var qId = qData[i][0];
+      var questions = [];
+      for (var j = 1; j < questionsData.length; j++) {
+        if (questionsData[j][1] === qId) {
+          questions.push({
+            question: questionsData[j][2],
+            options: [questionsData[j][3], questionsData[j][4], questionsData[j][5], questionsData[j][6]],
+            correctAnswer: parseInt(questionsData[j][7])
+          });
+        }
+      }
+
+      list.push({
+        id: qId,
+        title: qData[i][1],
+        board: qData[i][2],
+        className: qData[i][3],
+        subject: qData[i][4],
+        timerType: qData[i][5],
+        timerValue: qData[i][6],
+        negativeMarking: qData[i][7],
+        isRewarding: qData[i][8],
+        passkey: qData[i][9],
+        status: qData[i][10],
+        questions: questions
+      });
+    }
+    result.data = list;
+    return returnJSON(result);
+  }
+
+  // 2. Attempts / Leaderboard fetch karne ke liye (Naya joda gaya)
+  if (action === "getAttempts" || tabName === "Attempts") {
+    var attSheet = ss.getSheetByName("Attempts");
+    if (!attSheet) return returnJSON(result);
+
+    var attData = attSheet.getDataRange().getValues();
+    if (attData.length <= 1) return returnJSON(result);
+
+    var headers = attData[0];
+    var attemptsList = [];
+
+    for (var r = 1; r < attData.length; r++) {
+      var row = attData[r];
+      var rowObj = {};
+      for (var c = 0; c < headers.length; c++) {
+        rowObj[headers[c]] = row[c];
+      }
+      attemptsList.push(rowObj);
+    }
+
+    result.data = attemptsList;
+    return returnJSON(result);
+  }
+
+  return returnJSON(result);
+}
+
+function doPost(e) {
+  var ss = getSpreadsheet();
+  var result = { status: "success" };
+
+  try {
+    var rawContents = (e && e.postData && e.postData.contents) ? e.postData.contents : "{}";
+    var data = JSON.parse(rawContents);
+    var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : (data.action || "");
+
+    // 1. SAVE NEW QUIZ & QUESTIONS (Jo missing ho gaya tha)
+    if (action === "saveQuiz" || data.action === "saveQuiz" || data.questions) {
+      var qSheet = ss.getSheetByName("Quizzes");
+      var quesSheet = ss.getSheetByName("Questions");
+
+      if (!qSheet) {
+        qSheet = ss.insertSheet("Quizzes");
+        qSheet.appendRow(["Quiz_ID", "Title", "Board", "Class", "Subject", "Timer_Type", "Timer_Value", "Negative_Marking", "Is_Rewarding", "Passkey", "Status", "Created_At"]);
+      }
+      if (!quesSheet) {
+        quesSheet = ss.insertSheet("Questions");
+        quesSheet.appendRow(["Question_ID", "Quiz_ID", "Question_Text", "Option_A", "Option_B", "Option_C", "Option_D", "Correct_Answer_Index"]);
+      }
+
+      var qz = data.quiz || data;
+      var qId = qz.id || ("qz_" + Date.now());
+
+      // Insert Quiz Row
+      qSheet.appendRow([
+        qId,
+        qz.title || "Untitled Quiz",
+        qz.board || "CBSE",
+        qz.className || "",
+        qz.subject || "",
+        qz.timerType || "full",
+        qz.timerValue || 15,
+        qz.negativeMarking || 0,
+        qz.isRewarding ? true : false,
+        qz.passkey || "",
+        qz.status || "published",
+        new Date().toISOString()
+      ]);
+
+      // Insert Questions Rows
+      if (qz.questions && Array.isArray(qz.questions)) {
+        for (var i = 0; i < qz.questions.length; i++) {
+          var item = qz.questions[i];
+          var opts = item.options || [];
+          quesSheet.appendRow([
+            "ques_" + Date.now() + "_" + i,
+            qId,
+            item.question || "",
+            opts[0] || "",
+            opts[1] || "",
+            opts[2] || "",
+            opts[3] || "",
+            item.correctAnswer !== undefined ? item.correctAnswer : 0
+          ]);
+        }
+      }
+
+      result.message = "Quiz & Questions saved successfully";
+      result.id = qId;
+      return returnJSON(result);
+    }
+
+    // 2. SAVE STUDY MATERIAL
+    if (action === "saveMaterial" || data.action === "saveMaterial") {
+      var matSheet = ss.getSheetByName("Materials");
+      if (!matSheet) {
+        matSheet = ss.insertSheet("Materials");
+        matSheet.appendRow(["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"]);
+      }
+
+      var m = data.material || data;
+      matSheet.appendRow([
+        m.id || ("mat_" + Date.now()),
+        m.title || "",
+        m.className || "",
+        m.subject || "",
+        m.type || "",
+        m.url || "",
+        m.content || m.desc || "",
+        m.date || new Date().toLocaleDateString("en-GB"),
+        m.timestamp || new Date().toISOString()
+      ]);
+
+      result.message = "Material saved successfully";
+      return returnJSON(result);
+    }
+
+    // 3. SAVE STUDENT ATTEMPT
+    if (action === "saveAttempt" || data.action === "saveAttempt") {
+      var attSheet = ss.getSheetByName("Attempts");
+      if (!attSheet) {
+        attSheet = ss.insertSheet("Attempts");
+        attSheet.appendRow(["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers", "Timestamp"]);
+      }
+      var att = data.attempt || data;
+      attSheet.appendRow([
+        att.id || ("att_" + Date.now()),
+        att.quizId || "",
+        att.quizTitle || "",
+        att.studentName || "",
+        att.mobile || "",
+        att.score || 0,
+        att.totalMarks || 0,
+        att.percentage || 0,
+        typeof att.answers === "object" ? JSON.stringify(att.answers) : (att.answers || "{}"),
+        new Date().toISOString()
+      ]);
+      return returnJSON(result);
+    }
+
+  } catch (err) {
+    result.status = "error";
+    result.message = err.toString();
+  }
+
+  return returnJSON(result);
+}
+
+function returnJSON(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
