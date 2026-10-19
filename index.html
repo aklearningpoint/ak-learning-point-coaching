@@ -21,7 +21,7 @@
     </div>
   </header>
 
-  <!-- Right Drawer Menu -->
+  <!-- Right Drawer Menu (School Portal safely inside drawer) -->
   <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()">
     <div class="drawer-content" onclick="event.stopPropagation()">
       <div class="drawer-header">
@@ -29,6 +29,7 @@
         <button class="close-btn" onclick="toggleDrawer()" style="color:white; background:rgba(255,255,255,0.2);"><i class="fas fa-times"></i></button>
       </div>
       <ul class="drawer-menu">
+        <li class="drawer-item" onclick="openStudentAccountModal(); toggleDrawer();"><i class="fas fa-user-circle" style="color:#059669;"></i> My Account (Student Portal)</li>
         <li class="drawer-item" onclick="openAdminPortal()"><i class="fas fa-user-shield" style="color:#2563eb;"></i> Admin Control Panel</li>
         <li class="drawer-item" onclick="openTeacherPortal()"><i class="fas fa-chalkboard-teacher" style="color:#7c3aed;"></i> Teacher Portal</li>
         <li class="drawer-item" onclick="window.location.href='school/index.html'"><i class="fas fa-school" style="color:#d4af37;"></i> Assent Public School Portal</li>
@@ -41,19 +42,36 @@
   <!-- Main Scrollable Home View -->
   <main class="main-container" id="homeView">
 
-    <!-- 0. Assent Public School Portal Entry Card -->
-    <div class="section-card" onclick="window.location.href='school/index.html'" style="border-left: 6px solid #d4af37; background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%); cursor: pointer;">
+    <!-- 7. APP-BASED DYNAMIC QUIZ AD BANNER (Teachers ke post kiye tests ka live promotion card) -->
+    <div id="dynamicQuizAdBanner" style="display:none; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:white; border-radius:14px; padding:12px 14px; margin-bottom:14px; box-shadow:0 6px 16px rgba(49, 46, 129, 0.25); border:1px solid #4338ca; position:relative; overflow:hidden;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="background:#ef4444; color:white; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:12px; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px;">
+          <i class="fas fa-bolt"></i> TODAY'S FEATURED QUIZ
+        </span>
+        <span id="quizAdTickerIndicator" style="font-size:0.75rem; color:#c7d2fe;">1/1</span>
+      </div>
+      <div id="quizAdContent" style="min-height:54px; display:flex; flex-direction:column; justify-content:center;">
+        <h4 id="quizAdTitle" style="font-size:0.95rem; margin:0 0 4px 0; color:#fbbf24;">Loading Today's Quizzes...</h4>
+        <p id="quizAdMeta" style="font-size:0.8rem; color:#e0e7ff; margin:0;">Class & Subject info</p>
+      </div>
+      <button id="quizAdActionBtn" class="btn-primary" style="margin-top:8px; padding:6px 12px; font-size:0.82rem; background:#fbbf24; color:#1e1b4b; font-weight:700; border:none; border-radius:8px; width:100%;">
+        <i class="fas fa-play-circle"></i> Start Test Now
+      </button>
+    </div>
+
+    <!-- 1. MY ACCOUNT TAB (Student Profile, Tests & Subject Wise Breakdown) -->
+    <div class="section-card" onclick="openStudentAccountModal()" style="border-left: 6px solid #059669; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);">
       <div class="section-left">
-        <div class="section-icon" style="background:#fef3c7; color:#b45309;"><i class="fas fa-school"></i></div>
+        <div class="section-icon" style="background:#dcfce7; color:#059669;"><i class="fas fa-user-circle"></i></div>
         <div class="section-info">
-          <h3 style="color:#92400e;">Assent Public School</h3>
-          <p>Student Portal, Results, ID Card & Teacher Hub</p>
+          <h3 style="color:#065f46;">My Account</h3>
+          <p>My Profile, Subject-wise Quizzes & History</p>
         </div>
       </div>
-      <i class="fas fa-chevron-right" style="color:#d4af37;"></i>
+      <i class="fas fa-chevron-right" style="color:#059669;"></i>
     </div>
-    
-    <!-- 1. Quizzes Tab -->
+
+    <!-- 2. QUIZZES TAB -->
     <div class="section-card" onclick="openBoardSelectModal()" style="border-left: 6px solid #2563eb;">
       <div class="section-left">
         <div class="section-icon" style="background:#dbeafe; color:#2563eb;"><i class="fas fa-puzzle-piece"></i></div>
@@ -65,7 +83,7 @@
       <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
     </div>
 
-    <!-- 2. Result Tab -->
+    <!-- 3. STUDENT RESULTS TAB -->
     <div class="section-card" onclick="openResultLookupModal()" style="border-left: 6px solid #d97706;">
       <div class="section-left">
         <div class="section-icon" style="background:#fef3c7; color:#d97706;"><i class="fas fa-poll"></i></div>
@@ -77,7 +95,7 @@
       <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
     </div>
 
-    <!-- 3. Rewarding Quiz Tab -->
+    <!-- Rewarding Contests (Sub-feature of Quizzes) -->
     <div class="section-card" onclick="openRewardingQuizzes()" style="border-left: 6px solid #dc2626;">
       <div class="section-left">
         <div class="section-icon" style="background:#fee2e2; color:#dc2626;"><i class="fas fa-trophy"></i></div>
@@ -89,7 +107,19 @@
       <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
     </div>
 
-    <!-- 4. Online Coaching Tab -->
+    <!-- 4. STUDY MATERIAL TAB -->
+    <div class="section-card" onclick="window.location.href='learning-hub.html'" style="border-left: 6px solid #0891b2; cursor: pointer;">
+      <div class="section-left">
+        <div class="section-icon" style="background:#cffafe; color:#0891b2;"><i class="fas fa-book-open"></i></div>
+        <div class="section-info">
+          <h3>Study Notes & Books</h3>
+          <p>Interactive Smart Notes, Slides & Flip-Books</p>
+        </div>
+      </div>
+      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
+    </div>
+
+    <!-- 5. ONLINE COACHING TAB -->
     <div class="section-card" onclick="openOnlineCoachingModal()" style="border-left: 6px solid #7c3aed;">
       <div class="section-left">
         <div class="section-icon" style="background:#ede9fe; color:#7c3aed;"><i class="fas fa-video"></i></div>
@@ -101,20 +131,8 @@
       <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
     </div>
 
-<!-- 5. Study Material Tab -->
-    <div class="section-card" onclick="window.location.href='learning-hub.html'" style="border-left: 6px solid #059669; cursor: pointer;">
-      <div class="section-left">
-        <div class="section-icon" style="background:#d1fae5; color:#059669;"><i class="fas fa-book-open"></i></div>
-        <div class="section-info">
-          <h3>Study Notes & Books</h3>
-          <p>Interactive Smart Notes, Slides & Video Lectures</p>
-        </div>
-      </div>
-      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
-    </div>
-
-    <!-- Commercial Ads Banner -->
-    <div style="background:white; border-radius:16px; padding:16px; text-align:center; box-shadow:var(--card-shadow); border:1px solid #e2e8f0;">
+    <!-- 6. COMMERCIAL ADS BANNER -->
+    <div style="background:white; border-radius:16px; padding:16px; text-align:center; box-shadow:var(--card-shadow); border:1px solid #e2e8f0; margin-top:6px;">
       <small style="color:#64748b; font-weight:700;">SPONSORED PLATFORM SPACE</small>
       <h4 style="margin:6px 0; color:#1e293b;">Promote Your Brand With Us!</h4>
       <a href="https://api.whatsapp.com/send?phone=918826011682&text=I%20am%20interested%20in%20advertising%20on%20your%20platform" target="_blank" style="display:inline-flex; align-items:center; gap:8px; background:#25d366; color:white; padding:10px 18px; border-radius:10px; font-weight:700; text-decoration:none; margin-top:8px;">
@@ -122,8 +140,8 @@
       </a>
     </div>
 
-    <!-- Community Banner -->
-    <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:white; border-radius:16px; padding:18px; text-align:center; box-shadow:var(--card-shadow);">
+    <!-- Community WhatsApp Lead Banner -->
+    <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:white; border-radius:16px; padding:18px; text-align:center; box-shadow:var(--card-shadow); margin-top:12px;">
       <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:4px;">Join Official WhatsApp Community</h3>
       <p style="font-size:0.85rem; opacity:0.9; margin-bottom:12px;">"Gyan ki nayi shuruat, har vidyarthi ke vikas ke saath!"</p>
       <button onclick="openCommunityModal()" style="background:#fbbf24; color:#1e3a8a; border:none; padding:10px 16px; border-radius:10px; font-weight:800; cursor:pointer;">
@@ -157,13 +175,6 @@
           <label>Current Class</label>
           <select id="leadClass" required>
             <option value="">Select Class</option>
-            <option value="Play">Play</option>
-            <option value="Nur">Nursery</option>
-            <option value="LKG">LKG</option>
-            <option value="UKG">UKG</option>
-            <option value="Class 1">Class 1</option>
-            <option value="Class 2">Class 2</option>
-            <option value="Class 3">Class 3</option>
             <option value="Class 4">Class 4</option>
             <option value="Class 5">Class 5</option>
             <option value="Class 6">Class 6</option>
@@ -183,7 +194,6 @@
   <div id="dynamicView"></div>
 
   <!-- Standard Scripts Load Order -->
-<!-- Automatic Fresh Cache-Buster Loader with Deep-Link Trigger -->
   <script>
     (function() {
       var cacheVersion = new Date().getTime();
@@ -199,9 +209,11 @@
 
       function loadNextScript(index) {
         if (index >= scriptFiles.length) {
-          // Saari scripts load hone ke baad direct trigger
           if (typeof checkAndOpenDirectQuizFromUrl === "function") {
             checkAndOpenDirectQuizFromUrl();
+          }
+          if (typeof initDynamicQuizAdBanner === "function") {
+            initDynamicQuizAdBanner();
           }
           return;
         }
@@ -230,3 +242,5 @@
       window.scrollTo(0, 0);
     }
   </script>
+</body>
+</html>
