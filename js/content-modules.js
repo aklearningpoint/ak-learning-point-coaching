@@ -602,3 +602,318 @@ function handleLeadSubmit(e) {
   closeCommunityModal();
   window.open("https://chat.whatsapp.com/CXwYDb3tRIZ8gSsDuQey0I?s=cl&p=a&mlu=4&ilr=4", "_blank");
 }
+
+// ==========================================
+// 7. DYNAMIC LIVE QUIZ AD BANNER ENGINE
+// ==========================================
+var activeAdQuizzes = [];
+var currentAdIndex = 0;
+var adBannerTimer = null;
+
+async function initDynamicQuizAdBanner() {
+  var bannerContainer = document.getElementById("dynamicQuizAdBanner");
+  if (!bannerContainer) return;
+
+  var allQuizzes = [];
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var res = await API.get("getQuizzes");
+      if (res && res.data && Array.isArray(res.data)) {
+        allQuizzes = res.data;
+      }
+    }
+  } catch (e) {}
+
+  if (allQuizzes.length === 0) {
+    allQuizzes = getModuleData("ak_teacher_quizzes", []);
+  }
+
+  // Filter: Published Quizzes marked for Advertising
+  // Agar koi specifically advertised nahi hai toh latest published quizzes ko auto-show karega
+  var candidates = allQuizzes.filter(function(q) {
+    return q.status === "published" || !q.status;
+  });
+
+  var advertised = candidates.filter(function(q) {
+    return q.isAdvertised === true || q.isAdvertised === "true";
+  });
+
+  activeAdQuizzes = advertised.length > 0 ? advertised : candidates.slice(0, 5);
+
+  if (activeAdQuizzes.length === 0) {
+    bannerContainer.style.display = "none";
+    return;
+  }
+
+  bannerContainer.style.display = "block";
+  currentAdIndex = 0;
+  renderCurrentAdQuiz();
+
+  if (adBannerTimer) clearInterval(adBannerTimer);
+  if (activeAdQuizzes.length > 1) {
+    adBannerTimer = setInterval(function() {
+      currentAdIndex = (currentAdIndex + 1) % activeAdQuizzes.length;
+      renderCurrentAdQuiz();
+    }, 4500); // Har 4.5 seconds me slide hoga
+  }
+}
+
+function renderCurrentAdQuiz() {
+  var q = activeAdQuizzes[currentAdIndex];
+  if (!q) return;
+
+  var titleEl = document.getElementById("quizAdTitle");
+  var metaEl = document.getElementById("quizAdMeta");
+  var indEl = document.getElementById("quizAdTickerIndicator");
+  var btnEl = document.getElementById("quizAdActionBtn");
+
+  if (titleEl) titleEl.innerText = q.title;
+  if (metaEl) {
+    var qCount = q.questions ? q.questions.length : 10;
+    metaEl.innerText = (q.className || 'General') + " • " + (q.subject || 'All Subjects') + " • " + qCount + " Questions";
+  }
+  if (indEl) indEl.innerText = (currentAdIndex + 1) + "/" + activeAdQuizzes.length;
+
+  if (btnEl) {
+    btnEl.onclick = function() {
+      if (typeof openQuizEntryModalByObject === "function") {
+        openQuizEntryModalByObject(q);
+      } else if (typeof startTeacherTestPreview === "function") {
+        // Direct examination open fallback
+        var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
+        window.location.href = appBaseUrl + "index.html?quizId=" + encodeURIComponent(q.id || q.title);
+      }
+    };
+  }
+}
+
+
+// ==========================================
+// 8. STUDENT "MY ACCOUNT" PORTAL ENGINE
+// ==========================================
+var activeStudentSubjectFilter = "ALL";
+
+function openStudentAccountModal() {
+  var savedProfile = getModuleData("ak_student_profile", {
+    name: "",
+    mobile: "",
+    className: "Class 9"
+  });
+
+  if (!savedProfile.mobile) {
+    renderStudentProfileSetupModal();
+    return;
+  }
+
+  renderStudentAccountDashboard(savedProfile);
+}
+
+function renderStudentProfileSetupModal() {
+  var html = '<div class="modal-overlay" style="display:flex; z-index:3500;">' +
+    '<div class="modal-card" style="max-width:440px;">' +
+    '<div class="modal-header">' +
+    '<h3><i class="fas fa-user-circle" style="color:#059669;"></i> Student Login / Setup</h3>' +
+    '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+    '<form onsubmit="handleSaveStudentProfile(event)">' +
+    '<div class="form-group">' +
+    '<label>Full Name</label>' +
+    '<input type="text" id="stpName" required placeholder="Enter student name">' +
+    '</div>' +
+    '<div class="form-group">' +
+    '<label>10-Digit Mobile Number</label>' +
+    '<input type="tel" id="stpMobile" required pattern="[0-9]{10}" placeholder="Enter mobile number">' +
+    '</div>' +
+    '<div class="form-group">' +
+    '<label>Your Class</label>' +
+    '<select id="stpClass" required>' +
+    '<option value="Class 4">Class 4</option><option value="Class 5">Class 5</option>' +
+    '<option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>' +
+    '<option value="Class 8">Class 8</option><option value="Class 9" selected>Class 9</option>' +
+    '<option value="Class 10">Class 10</option><option value="Class 11">Class 11</option><option value="Class 12">Class 12</option>' +
+    '</select>' +
+    '</div>' +
+    '<button type="submit" class="btn-primary" style="background:#059669;">Access My Account</button>' +
+    '</form>' +
+    '</div></div>';
+
+  document.getElementById("dynamicView").innerHTML = html;
+}
+
+function handleSaveStudentProfile(e) {
+  e.preventDefault();
+  var prof = {
+    name: document.getElementById("stpName").value.trim(),
+    mobile: document.getElementById("stpMobile").value.trim(),
+    className: document.getElementById("stpClass").value
+  };
+  setModuleData("ak_student_profile", prof);
+  renderStudentAccountDashboard(prof);
+}
+
+async function renderStudentAccountDashboard(profile) {
+  var container = document.getElementById("dynamicView");
+  container.innerHTML = '<div class="modal-overlay" style="display:flex;"><div class="modal-card" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#059669;"></i><p style="margin-top:10px;">Loading your tests & records...</p></div></div>';
+
+  // 1. Fetch live quizzes
+  var allQuizzes = [];
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var qRes = await API.get("getQuizzes");
+      if (qRes && qRes.data) allQuizzes = qRes.data;
+    }
+  } catch (e) {}
+  if (allQuizzes.length === 0) allQuizzes = getModuleData("ak_teacher_quizzes", []);
+
+  // 2. Fetch student attempts
+  var allAttempts = [];
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var aRes = await API.get("getAttempts");
+      if (aRes && aRes.data) allAttempts = aRes.data;
+    }
+  } catch (e) {}
+  if (allAttempts.length === 0) allAttempts = getModuleData("ak_student_attempts", []);
+
+  // Filter attempts for this student mobile
+  var myAttempts = allAttempts.filter(function(a) {
+    return String(a.Mobile || a.mobile || "").trim() === profile.mobile;
+  });
+
+  // Calculate Stats
+  var testsGiven = myAttempts.length;
+  var totalPct = 0;
+  myAttempts.forEach(function(a) {
+    totalPct += parseFloat(a.Percentage || a.percentage || 0);
+  });
+  var avgPct = testsGiven > 0 ? Math.round(totalPct / testsGiven) : 0;
+
+  // Filter Class Matching Quizzes
+  var myClassQuizzes = allQuizzes.filter(function(q) {
+    var qClass = String(q.className || "").toLowerCase().trim();
+    var pClass = String(profile.className || "").toLowerCase().trim();
+    return qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all";
+  });
+
+  window.currentAccountQuizzes = myClassQuizzes;
+  window.currentAccountAttempts = myAttempts;
+  window.currentStudentProfile = profile;
+
+  renderAccountMainView(profile, testsGiven, avgPct);
+}
+
+function renderAccountMainView(profile, testsGiven, avgPct) {
+  var subjects = ["ALL", "Science", "Math", "Hindi", "English", "S.St"];
+  var subjectPillsHtml = "";
+
+  subjects.forEach(function(sub) {
+    var activeStyle = (activeStudentSubjectFilter === sub)
+      ? 'background:#059669; color:white;'
+      : 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
+
+    subjectPillsHtml += '<button onclick="filterStudentAccountSubject(\'' + sub + '\')" style="padding:5px 12px; border-radius:20px; border:none; font-size:0.8rem; font-weight:700; cursor:pointer; ' + activeStyle + '">' +
+      sub + '</button>';
+  });
+
+  // Filter tests by subject
+  var filteredQuizzes = window.currentAccountQuizzes.filter(function(q) {
+    if (activeStudentSubjectFilter === "ALL") return true;
+    return String(q.subject || "").toLowerCase() === activeStudentSubjectFilter.toLowerCase();
+  });
+
+  var quizCardsHtml = "";
+  if (filteredQuizzes.length === 0) {
+    quizCardsHtml = '<p style="text-align:center; color:#64748b; padding:20px;">Is subject ke liye filhaal koi naya test schedule nahi hai.</p>';
+  } else {
+    filteredQuizzes.forEach(function(q) {
+      // Check if already attempted
+      var attempted = window.currentAccountAttempts.find(function(a) {
+        var aId = String(a.Quiz_ID || a.quizId || "").trim();
+        var qId = String(q.id || "").trim();
+        return aId && qId && (aId === qId);
+      });
+
+      var actionBtn = attempted
+        ? '<span style="color:#16a34a; font-weight:700; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Completed (' + (attempted.Score || attempted.score) + '/' + (attempted.Total_Marks || attempted.totalMarks) + ')</span>'
+        : '<button class="btn-primary" style="margin:0; padding:5px 12px; font-size:0.8rem; width:auto; background:#059669;" onclick="startQuizDirectlyFromAccount(\'' + (q.id || '') + '\')">Start Test</button>';
+
+      quizCardsHtml += '<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<div>' +
+        '<h4 style="margin:0 0 4px 0; font-size:0.92rem; color:#0f172a;">' + q.title + '</h4>' +
+        '<small style="color:#64748b;">' + (q.subject || 'Subject') + ' • ' + (q.questions ? q.questions.length : 10) + ' Questions</small>' +
+        '</div>' +
+        '<div>' + actionBtn + '</div>' +
+        '</div>';
+    });
+  }
+
+  var html = '<div class="modal-overlay" style="display:flex;">' +
+    '<div class="modal-card" style="max-width:560px; max-height:90vh; overflow-y:auto; padding:16px;">' +
+    '<div class="modal-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-bottom:12px;">' +
+    '<div style="display:flex; align-items:center; gap:8px;">' +
+    '<i class="fas fa-id-badge fa-lg" style="color:#059669;"></i>' +
+    '<h3 style="margin:0; color:#0f172a;">My Student Account</h3>' +
+    '</div>' +
+    '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+
+    // Profile Card
+    '<div style="background:linear-gradient(135deg, #065f46 0%, #059669 100%); color:white; border-radius:12px; padding:14px; margin-bottom:14px;">' +
+    '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+    '<div>' +
+    '<h3 style="margin:0 0 3px 0; font-size:1.1rem;">' + profile.name + '</h3>' +
+    '<p style="margin:0; font-size:0.85rem; opacity:0.9;">' + profile.className + ' • Mob: ' + profile.mobile + '</p>' +
+    '</div>' +
+    '<button onclick="switchStudentAccount()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;">Switch</button>' +
+    '</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px;">' +
+    '<div><small style="opacity:0.8;">Tests Attempted</small><div style="font-size:1.2rem; font-weight:800;">' + testsGiven + '</div></div>' +
+    '<div><small style="opacity:0.8;">Avg Accuracy</small><div style="font-size:1.2rem; font-weight:800;">' + avgPct + '%</div></div>' +
+    '</div>' +
+    '</div>' +
+
+    // Subject Pills Navigation
+    '<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">' +
+    subjectPillsHtml +
+    '</div>' +
+
+    // Quizzes List
+    '<div style="margin-bottom:14px;">' +
+    '<h4 style="font-size:0.9rem; color:#1e293b; margin-bottom:8px;">' + profile.className + ' Live Quizzes:</h4>' +
+    quizCardsHtml +
+    '</div>' +
+
+    '<div style="border-top:1px solid #e2e8f0; padding-top:10px; display:flex; justify-content:space-between;">' +
+    '<button class="nav-pill-btn nav-back-btn" onclick="closeDynamicView()"><i class="fas fa-arrow-left"></i> Back</button>' +
+    '<button class="nav-pill-btn nav-home-btn" onclick="goHome()"><i class="fas fa-home"></i> Home</button>' +
+    '</div>' +
+    '</div></div>';
+
+  document.getElementById("dynamicView").innerHTML = html;
+}
+
+function filterStudentAccountSubject(sub) {
+  activeStudentSubjectFilter = sub;
+  if (window.currentStudentProfile) {
+    var tests = window.currentAccountAttempts.length;
+    var totalPct = 0;
+    window.currentAccountAttempts.forEach(function(a) { totalPct += parseFloat(a.Percentage || a.percentage || 0); });
+    var avgPct = tests > 0 ? Math.round(totalPct / tests) : 0;
+    renderAccountMainView(window.currentStudentProfile, tests, avgPct);
+  }
+}
+
+function switchStudentAccount() {
+  localStorage.removeItem("ak_student_profile");
+  renderStudentProfileSetupModal();
+}
+
+function startQuizDirectlyFromAccount(quizId) {
+  var target = (window.currentAccountQuizzes || []).find(function(q) {
+    return String(q.id) === String(quizId);
+  });
+  if (target) {
+    var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
+    window.location.href = appBaseUrl + "index.html?quizId=" + encodeURIComponent(target.id || target.title);
+  }
+}
