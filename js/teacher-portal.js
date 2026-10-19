@@ -307,6 +307,14 @@ function showTeacherSection(sec) {
       '<input type="text" id="tqPasskey" placeholder="Enter Quiz Passkey" style="margin-top:4px;">' +
       '</div>' +
       '</div>' +
+      // FEATURED AD BANNER CHECKBOX
+      '<div style="background:#eef2ff; padding:12px; border-radius:8px; border:1px solid #c7d2fe; margin-bottom:12px;">' +
+      '<label style="display:flex; align-items:center; gap:8px; cursor:pointer;">' +
+      '<input type="checkbox" id="tqIsAdvertised" checked>' +
+      '<strong style="color:#3730a3;"><i class="fas fa-bullhorn"></i> Feature in Today\'s Home Ad Banner (Auto Promotion)</strong>' +
+      '</label>' +
+      '<small style="color:#6366f1; display:block; margin-top:4px; margin-left:24px;">Tick rakhne par ye quiz direct app dashboard ke Top Ad Banner par live slide karega.</small>' +
+      '</div>' +
       '<div class="form-group">' +
       '<label>Paste Questions Text (Any Book / AI Format)</label>' +
       '<textarea id="tqRawText" rows="7" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:monospace;" placeholder="Q1. Example Question?\na) Option 1\nb) Option 2\nc) Option 3\nd) Option 4\nAns: b"></textarea>' +
@@ -629,6 +637,7 @@ function renderParsedPreview() {
 }
 
 function saveParsedQuiz(status) {
+  var isAdvertised = document.getElementById("tqIsAdvertised") ? document.getElementById("tqIsAdvertised").checked : true;
   var isRewarding = document.getElementById("tqIsRewarding").checked;
   var passkey = document.getElementById("tqPasskey").value.trim();
 
@@ -648,6 +657,7 @@ function saveParsedQuiz(status) {
     negativeMarking: parseFloat(document.getElementById("tqNegativeMarking").value || 0),
     isRewarding: isRewarding,
     passkey: passkey,
+    isAdvertised: isAdvertised,
     status: status,
     questions: parsedQuestionsBuffer,
     createdAt: new Date().toISOString()
