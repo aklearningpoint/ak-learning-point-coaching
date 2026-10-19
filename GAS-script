@@ -14,7 +14,8 @@ function initialSheetSetup() {
     "Attempts": ["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers_JSON", "Timestamp"],
     "Students_Ledger": ["Student_ID", "Name", "Mobile", "Monthly_Fee", "Start_Date", "Paid_History_JSON"],
     "School_Students": ["Class", "Roll_No", "Name", "Father_Name", "Mother_Name", "Mobile", "Address"],
-    "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"]
+    "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"],
+    "Materials": ["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"]
   };
 
   for (var sheetName in sheets) {
@@ -25,7 +26,7 @@ function initialSheetSetup() {
       sheet.getRange(1, 1, 1, sheets[sheetName].length).setFontWeight("bold").setBackground("#141e37").setFontColor("#ffffff");
     }
   }
-  return "All 6 Database Tabs Created Successfully!";
+  return "All Database Tabs Created Successfully!";
 }
 
 function doGet(e) {
@@ -35,7 +36,7 @@ function doGet(e) {
   var result = { status: "success", data: [] };
 
   // 1. Quizzes fetch karne ke liye
-  if (action === "getQuizzes") {
+  if (action === "getQuizzes" || action === "getAllQuizzes" || action === "getLiveQuizzes") {
     var qSheet = ss.getSheetByName("Quizzes");
     var quesSheet = ss.getSheetByName("Questions");
     if (!qSheet) return returnJSON(result);
@@ -76,8 +77,8 @@ function doGet(e) {
     return returnJSON(result);
   }
 
-  // 2. Attempts / Leaderboard fetch karne ke liye (Naya joda gaya)
-  if (action === "getAttempts" || tabName === "Attempts") {
+  // 2. Attempts / Leaderboard / Student Results fetch
+  if (action === "getAttempts" || action === "getLeaderboard" || action === "getStudentResults" || tabName === "Attempts") {
     var attSheet = ss.getSheetByName("Attempts");
     if (!attSheet) return returnJSON(result);
 
@@ -112,7 +113,7 @@ function doPost(e) {
     var data = JSON.parse(rawContents);
     var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : (data.action || "");
 
-    // 1. SAVE NEW QUIZ & QUESTIONS (Jo missing ho gaya tha)
+    // 1. SAVE NEW QUIZ & QUESTIONS
     if (action === "saveQuiz" || data.action === "saveQuiz" || data.questions) {
       var qSheet = ss.getSheetByName("Quizzes");
       var quesSheet = ss.getSheetByName("Questions");
@@ -129,7 +130,6 @@ function doPost(e) {
       var qz = data.quiz || data;
       var qId = qz.id || ("qz_" + Date.now());
 
-      // Insert Quiz Row
       qSheet.appendRow([
         qId,
         qz.title || "Untitled Quiz",
@@ -145,7 +145,6 @@ function doPost(e) {
         new Date().toISOString()
       ]);
 
-      // Insert Questions Rows
       if (qz.questions && Array.isArray(qz.questions)) {
         for (var i = 0; i < qz.questions.length; i++) {
           var item = qz.questions[i];
@@ -193,26 +192,62 @@ function doPost(e) {
       return returnJSON(result);
     }
 
-    // 3. SAVE STUDENT ATTEMPT
-    if (action === "saveAttempt" || data.action === "saveAttempt") {
+    // 3. SAVE STUDENT ATTEMPT (Handles both submitQuizAttempt and saveAttempt)
+    if (action === "submitQuizAttempt" || action === "saveAttempt" || data.action === "submitQuizAttempt" || data.action === "saveAttempt") {
       var attSheet = ss.getSheetByName("Attempts");
       if (!attSheet) {
         attSheet = ss.insertSheet("Attempts");
-        attSheet.appendRow(["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers", "Timestamp"]);
+        attSheet.appendRow(["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers_JSON", "Timestamp"]);
       }
+
       var att = data.attempt || data;
-      attSheet.appendRow([
-        att.id || ("att_" + Date.now()),
-        att.quizId || "",
-        att.quizTitle || "",
-        att.studentName || "",
-        att.mobile || "",
-        att.score || 0,
-        att.totalMarks || 0,
-        att.percentage || 0,
-        typeof att.answers === "object" ? JSON.stringify(att.answers) : (att.answers || "{}"),
-        new Date().toISOString()
-      ]);
+      var attemptId = att.attemptId || att.id || ("att_" + Date.now());
+      var quizId = att.quizId || "";
+      var quizTitle = att.quizTitle || "";
+      var studentName = att.studentName || att.name || "Student";
+      var mobile = att.mobile || "";
+      var score = att.score !== undefined ? att.score : 0;
+      var totalMarks = att.totalMarks || att.total || 0;
+      var percentage = att.percentage !== undefined ? att.percentage : (totalMarks > 0 ? ((score / totalMarks) * 100).toFixed(1) : 0);
+      var answersJson = typeof att.answers === "object" ? JSON.stringify(att.answers) : (att.answers || "{}");
+
+      // Double Entry Lock: Prevent duplicate if submitted within 15 seconds
+      var lastRow = attSheet.getLastRow();
+      var isDuplicate = false;
+      if (lastRow > 1) {
+        var startRow = Math.max(2, lastRow - 5);
+        var numRows = (lastRow - startRow) + 1;
+        var lastValues = attSheet.getRange(startRow, 1, numRows, 10).getValues();
+        for (var k = 0; k < lastValues.length; k++) {
+          var prevRow = lastValues[k];
+          if (String(prevRow[1]) === String(quizId) && String(prevRow[3]).trim().toLowerCase() === String(studentName).trim().toLowerCase()) {
+            var prevTime = new Date(prevRow[9]).getTime();
+            if (Date.now() - prevTime < 15000) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!isDuplicate) {
+        attSheet.appendRow([
+          attemptId,
+          quizId,
+          quizTitle,
+          studentName,
+          mobile,
+          score,
+          totalMarks,
+          percentage,
+          answersJson,
+          new Date().toISOString()
+        ]);
+        result.message = "Attempt saved successfully";
+      } else {
+        result.message = "Duplicate attempt ignored";
+      }
+
       return returnJSON(result);
     }
 
