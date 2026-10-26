@@ -1,4 +1,4 @@
-// Production-Grade Malpractice Shield (With AI Overlay & Home Gesture Trap)
+// Production-Grade Malpractice Shield (Optimized for Mobile Gestures & Button Taps)
 
 const SecurityShield = {
   isActive: false,
@@ -6,12 +6,14 @@ const SecurityShield = {
   warningCount: 0,
   maxWarnings: 1,
   violationCallback: null,
+  lastActionTime: 0,
 
   activate(onViolationCallback) {
     this.isActive = true;
     this.isReady = false;
     this.warningCount = 0;
     this.violationCallback = onViolationCallback;
+    this.lastActionTime = Date.now();
 
     // 1. Enter Fullscreen Mode
     const elem = document.documentElement;
@@ -22,10 +24,10 @@ const SecurityShield = {
         elem.webkitRequestFullscreen();
       }
     } catch (e) {
-      console.warn("Fullscreen request bypassed:", e);
+      console.warn("Fullscreen bypassed:", e);
     }
 
-    // 2. Strict CSS Lockout (No text selection, no copy, no drag)
+    // 2. Strict CSS Lockout (No text selection, no copy)
     document.documentElement.style.userSelect = "none";
     document.documentElement.style.webkitUserSelect = "none";
     document.body.style.userSelect = "none";
@@ -39,27 +41,35 @@ const SecurityShield = {
     document.addEventListener("selectstart", this.blockAction, true);
     window.addEventListener("keydown", this.handleKeyBlock, true);
 
-    // 4. Quick 1-Second Warmup (Pehle 4s tha jo bypass ho jata tha)
+    // 4. Grace Period: 2.5 seconds warmup (Taaki Chrome ka "Swipe down to exit" bubble nikal jaye)
     setTimeout(() => {
       if (this.isActive) {
         this.isReady = true;
       }
-    }, 1200);
+    }, 2500);
 
-    // 5. TRAP 1: Tab Switch & App Minimize (visibilitychange)
+    // 5. TRAP 1: Tab Switch, Minimize & AI Assistant (document.hidden check)
     this.visibilityHandler = () => {
       if (document.hidden && this.isActive && this.isReady) {
-        this.handleThreat("Tab switch ya app minimize detect hua hai!");
+        this.handleThreat("Screen minimize ya doosri app open karne ki koshish ki gayi!");
       }
     };
     document.addEventListener("visibilitychange", this.visibilityHandler, true);
 
-    // 6. TRAP 2: Fullscreen Exit Trap (Back gesture ya screen exit detect karega)
+    // 6. TRAP 2: App Switch & Background Departure
+    this.pageHideHandler = () => {
+      if (this.isActive && this.isReady) {
+        this.handleThreat("Screen change ya browser background me bheja gaya!");
+      }
+    };
+    window.addEventListener("pagehide", this.pageHideHandler, true);
+
+    // 7. TRAP 3: Fullscreen Exit Trap (Student swipe karke bahar nikle toh)
     this.fullscreenHandler = () => {
       var isFS = document.fullscreenElement || document.webkitFullscreenElement;
       if (!isFS && this.isActive && this.isReady) {
-        this.handleThreat("Fullscreen mode band kiya gaya! Test secure window me hi dena aniwarya hai.");
-        // Try re-entering fullscreen immediately
+        // Sirf tab trigger karein agar test chalu ho
+        this.handleThreat("Fullscreen mode exit hua! Test secure window me hi dena aniwarya hai.");
         try {
           if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen().catch(() => {});
@@ -69,26 +79,6 @@ const SecurityShield = {
     };
     document.addEventListener("fullscreenchange", this.fullscreenHandler, true);
     document.addEventListener("webkitfullscreenchange", this.fullscreenHandler, true);
-
-    // 7. TRAP 3: AI Assistant / Overlay / Home Gesture Trap (Smart Blur)
-    this.blurHandler = (e) => {
-      // Agar focus document ke kisi valid button ya radio par gaya hai toh ignore karein
-      if (document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "BUTTON")) {
-        return;
-      }
-      if (this.isActive && this.isReady) {
-        this.handleThreat("Screen focus lose hua! (AI Assistant, Split-Screen ya Floating Window detect hui)");
-      }
-    };
-    window.addEventListener("blur", this.blurHandler, true);
-
-    // 8. TRAP 4: Mobile Pagehide / App Switch
-    this.pageHideHandler = () => {
-      if (this.isActive && this.isReady) {
-        this.handleThreat("Screen change ya browser background me bheja gaya!");
-      }
-    };
-    window.addEventListener("pagehide", this.pageHideHandler, true);
   },
 
   blockAction(e) {
@@ -113,12 +103,17 @@ const SecurityShield = {
   handleThreat(reason) {
     if (!this.isActive || !this.isReady) return;
 
+    // Double-fire debounce (1.5 second ke andar do baar fire na ho)
+    var now = Date.now();
+    if (now - this.lastActionTime < 1500) return;
+    this.lastActionTime = now;
+
     this.warningCount++;
     if (this.warningCount <= this.maxWarnings) {
-      alert("⚠️ MALPRACTICE WARNING (1/1):\n" + reason + "\n\nAb agar aapne dubara Home button dabaya, AI on kiya ya screen switch ki, toh test TURANT AUTO-SUBMIT ho jayega!");
+      alert("⚠️ MALPRACTICE WARNING (1/1):\n" + reason + "\n\nAb agar aapne dubara screen change ki ya app minimize kiya, toh test TURANT AUTO-SUBMIT ho jayega!");
     } else {
       this.isActive = false;
-      alert("🚨 TEST TERMINATED!\nCheating/Malpractice rules violate karne ke karan aapka test yahin freeze karke submit kiya ja raha hai.");
+      alert("🚨 TEST TERMINATED!\nExam rules violate karne ke karan aapka test auto-submit kiya ja raha hai.");
       if (this.violationCallback) {
         this.violationCallback();
       }
@@ -145,15 +140,12 @@ const SecurityShield = {
     if (this.visibilityHandler) {
       document.removeEventListener("visibilitychange", this.visibilityHandler, true);
     }
+    if (this.pageHideHandler) {
+      window.removeEventListener("pagehide", this.pageHideHandler, true);
+    }
     if (this.fullscreenHandler) {
       document.removeEventListener("fullscreenchange", this.fullscreenHandler, true);
       document.removeEventListener("webkitfullscreenchange", this.fullscreenHandler, true);
-    }
-    if (this.blurHandler) {
-      window.removeEventListener("blur", this.blurHandler, true);
-    }
-    if (this.pageHideHandler) {
-      window.removeEventListener("pagehide", this.pageHideHandler, true);
     }
 
     if (document.fullscreenElement && document.exitFullscreen) {
