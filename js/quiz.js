@@ -247,10 +247,17 @@ function renderQuizCardsView(quizzes) {
     '</div></div>';
 }
 
-// WhatsApp Share with Live App Link
+// WhatsApp Share with Live App Link & APK Download
 function shareQuizWhatsAppByIndex(idx) {
   var q = window.activeLoadedQuizzes[idx];
-  var quizLink = window.location.origin + window.location.pathname + "?quizId=" + encodeURIComponent(q.id);
+  
+  // Safe base URL calculation
+  var origin = window.location.origin;
+  var path = window.location.pathname;
+  var basePath = path.substring(0, path.lastIndexOf("/") + 1);
+  var appDownloadUrl = origin + basePath + "assets/app.apk";
+  var quizLink = origin + path + "?quizId=" + encodeURIComponent(q.id);
+
   var text = encodeURIComponent(
     "🎯 *AK Learning Point Coaching - Test Alert!*\n\n" +
     "📝 *Topic:* " + q.title + "\n" +
@@ -258,6 +265,7 @@ function shareQuizWhatsAppByIndex(idx) {
     "📚 *Subject:* " + q.subject + "\n" +
     "⏱️ *Duration:* " + (q.timerType === "full" ? q.timerValue + " Minutes" : "Standard") + "\n\n" +
     "👉 *Test Shuru Karne Ke Liye Yahan Click Karein:*\n" + quizLink + "\n\n" +
+    "📲 *Fast & Fullscreen Test Ke Liye App Download Karein:*\n" + appDownloadUrl + "\n\n" +
     "⚠️ *Note:* Ek student sirf ek hi baar test de sakta hai!"
   );
   window.open("https://api.whatsapp.com/send?text=" + text, "_blank");
@@ -652,13 +660,19 @@ function renderScorecardView(netScore, totalMarks, pct, correct, wrong, deductio
 }
 
 function shareResultWhatsApp(score, total, pct) {
-  var liveUrl = window.location.origin + window.location.pathname;
+  var origin = window.location.origin;
+  var path = window.location.pathname;
+  var basePath = path.substring(0, path.lastIndexOf("/") + 1);
+  var appDownloadUrl = origin + basePath + "assets/app.apk";
+  var liveUrl = origin + path;
+
   var text = encodeURIComponent(
     "🏆 *AK Learning Point Coaching - Scorecard*\n" +
     "👤 Student: " + ((currentQuiz && currentQuiz.participantName) || "Student") + "\n" +
     "📝 Test: " + ((currentQuiz && currentQuiz.title) || "Practice Test") + "\n" +
     "🎯 Score: " + score + "/" + total + " (" + pct + "% Accuracy)\n\n" +
-    "👉 Practice Link: " + liveUrl
+    "👉 Practice Link: " + liveUrl + "\n\n" +
+    "📲 *Download Official Android App:*\n" + appDownloadUrl
   );
   window.open("https://api.whatsapp.com/send?text=" + text, "_blank");
 }
