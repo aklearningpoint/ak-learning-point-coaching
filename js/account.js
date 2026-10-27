@@ -1,5 +1,5 @@
 // ==========================================
-// AK Learning Point - Student & Visitor Dashboard Engine
+// AK Learning Point - Student Persistent Dashboard & Account Engine
 // ==========================================
 
 // 1. Check if user already exists
@@ -26,23 +26,23 @@ function saveStudentProfile(name, mobile, sClass, board) {
   return profile;
 }
 
-// 3. Open My Account Dashboard
-function openMyAccount() {
+// 3. Open Complete Professional Account Dashboard (Matches your index.html onclick)
+function openStudentAccountModal() {
   var profile = getStudentProfile();
   var dynamicView = document.getElementById("dynamicView");
   if (!dynamicView) return;
 
-  // Agar user new visitor hai (Login nahi hai)
+  // Case A: Agar User First-Time Visitor Hai (Login Nahi Hai)
   if (!profile) {
     dynamicView.innerHTML = `
       <div class="modal-overlay" style="display:flex;">
         <div class="modal-card" style="max-width:420px; border-radius:20px; text-align:center; padding:24px;">
           <div style="font-size:2.8rem; margin-bottom:8px;">🎓</div>
-          <h3 style="color:#0f172a; margin-bottom:6px;">Student / Visitor Portal</h3>
-          <p style="color:#64748b; font-size:0.85rem; margin-bottom:20px;">Apna naam aur number set karein taaki aapka test record saved rahe.</p>
+          <h3 style="color:#0f172a; margin-bottom:6px;">Student Portal</h3>
+          <p style="color:#64748b; font-size:0.85rem; margin-bottom:20px;">Apna profile banayein taaki aapke tests aur scorecard hamesha saved rahein.</p>
           <form onsubmit="handleAccountLoginSubmit(event)" style="display:flex; flex-direction:column; gap:12px; text-align:left;">
             <div>
-              <label style="font-size:0.8rem; font-weight:700; color:#475569;">Full Name</label>
+              <label style="font-size:0.8rem; font-weight:700; color:#475569;">Student Full Name</label>
               <input type="text" id="accInputName" required placeholder="Aapka pura naam" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; box-sizing:border-box;">
             </div>
             <div>
@@ -64,7 +64,7 @@ function openMyAccount() {
                 </select>
               </div>
             </div>
-            <button type="submit" class="btn-primary" style="margin-top:10px; background:#1e40af; padding:12px; font-weight:700; cursor:pointer;">Save Profile</button>
+            <button type="submit" class="btn-primary" style="margin-top:10px; background:#1e40af; padding:12px; font-weight:700; cursor:pointer;">Save Profile & Open</button>
           </form>
           <div style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:10px;">
             <button class="nav-pill-btn nav-home-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i> Close</button>
@@ -75,7 +75,7 @@ function openMyAccount() {
     return;
   }
 
-  // Agar user already setup hai (Returning Visitor)
+  // Case B: Logged-in User (Dashboard & Test History)
   var attempts = [];
   try {
     var rawAtt = localStorage.getItem("ak_student_attempts");
@@ -97,7 +97,7 @@ function openMyAccount() {
   if (totalTests === 0) {
     historyHtml = '<p style="color:#94a3b8; font-size:0.85rem; text-align:center; padding:15px 0;">Abhi tak koi test attempt nahi kiya hai.</p>';
   } else {
-    for (var k = 0; k < Math.min(attempts.length, 4); k++) {
+    for (var k = 0; k < Math.min(attempts.length, 5); k++) {
       var att = attempts[k];
       historyHtml += `
         <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px 14px; border-radius:10px; margin-bottom:8px; border-left:4px solid #2563eb;">
@@ -162,18 +162,18 @@ function handleAccountLoginSubmit(e) {
   var board = document.getElementById("accInputBoard").value;
 
   if (!name || mobile.length < 10) {
-    alert("Kripya pura naam aur 10-digit mobile number bharein!");
+    alert("Please Enter your full name and 10-digit mobile number!");
     return;
   }
 
   saveStudentProfile(name, mobile, sClass, board);
-  openMyAccount();
+  openStudentAccountModal();
 }
 
 function handleStudentLogout() {
-  if (confirm("Kya aap account switch ya logout karna chahte hain?")) {
+  if (confirm("Do you want to switch account or logout?")) {
     localStorage.removeItem("ak_student_profile");
     localStorage.removeItem("ak_user_logged_in");
-    openMyAccount();
+    openStudentAccountModal();
   }
 }
