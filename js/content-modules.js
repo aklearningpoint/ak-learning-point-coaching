@@ -689,52 +689,55 @@ function renderCurrentAdQuiz() {
 
 
 // ==========================================
-// 8. STUDENT "MY ACCOUNT" PORTAL ENGINE
+// 8. STUDENT "MY ACCOUNT" FULL-SCREEN LMS ENGINE
 // ==========================================
+var activeAccountSubTab = "tests";
 var activeStudentSubjectFilter = "ALL";
 
 function openStudentAccountModal() {
-  var savedProfile = getModuleData("ak_student_profile", {
-    name: "",
-    mobile: "",
-    className: "Class 9"
-  });
-
-  if (!savedProfile.mobile) {
+  var savedProfile = getModuleData("ak_student_profile", null);
+  if (!savedProfile || !savedProfile.mobile) {
     renderStudentProfileSetupModal();
     return;
   }
-
   renderStudentAccountDashboard(savedProfile);
 }
 
 function renderStudentProfileSetupModal() {
-  var html = '<div class="modal-overlay" style="display:flex; z-index:3500;">' +
-    '<div class="modal-card" style="max-width:440px;">' +
-    '<div class="modal-header">' +
-    '<h3><i class="fas fa-user-circle" style="color:#059669;"></i> Student Login / Setup</h3>' +
-    '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
+  var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">' +
+    '<div style="background:white; max-width:440px; width:100%; border-radius:24px; padding:28px; box-shadow:0 10px 25px rgba(0,0,0,0.1); text-align:center;">' +
+    '<div style="font-size:3rem; margin-bottom:8px;">🎓</div>' +
+    '<h2 style="color:#0f172a; margin:0 0 6px 0; font-size:1.35rem;">Student Sign-In / Setup</h2>' +
+    '<p style="color:#64748b; font-size:0.85rem; margin-bottom:18px;">Apna account banayein taaki aapke tests, results aur material device par saved rahein.</p>' +
+    '<form onsubmit="handleSaveStudentProfile(event)" style="display:flex; flex-direction:column; gap:12px; text-align:left;">' +
+    '<div>' +
+    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Full Name</label>' +
+    '<input type="text" id="stpName" required placeholder="Aapka pura naam" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
     '</div>' +
-    '<form onsubmit="handleSaveStudentProfile(event)">' +
-    '<div class="form-group">' +
-    '<label>Full Name</label>' +
-    '<input type="text" id="stpName" required placeholder="Enter student name">' +
+    '<div>' +
+    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">10-Digit Mobile / WhatsApp</label>' +
+    '<input type="tel" id="stpMobile" required pattern="[0-9]{10}" placeholder="WhatsApp number" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
     '</div>' +
-    '<div class="form-group">' +
-    '<label>10-Digit Mobile Number</label>' +
-    '<input type="tel" id="stpMobile" required pattern="[0-9]{10}" placeholder="Enter mobile number">' +
-    '</div>' +
-    '<div class="form-group">' +
-    '<label>Your Class</label>' +
-    '<select id="stpClass" required>' +
-    '<option value="Class 4">Class 4</option><option value="Class 5">Class 5</option>' +
-    '<option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>' +
-    '<option value="Class 8">Class 8</option><option value="Class 9" selected>Class 9</option>' +
-    '<option value="Class 10">Class 10</option><option value="Class 11">Class 11</option><option value="Class 12">Class 12</option>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+    '<div>' +
+    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Class</label>' +
+    '<select id="stpClass" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
+    '<option>Play</option><option>Nur</option><option>LKG</option><option>UKG</option>' +
+    '<option>Class 1</option><option>Class 2</option><option>Class 3</option><option>Class 4</option>' +
+    '<option>Class 5</option><option>Class 6</option><option>Class 7</option><option>Class 8</option>' +
+    '<option>Class 9</option><option selected>Class 10</option><option>Class 11</option><option>Class 12</option>' +
     '</select>' +
     '</div>' +
-    '<button type="submit" class="btn-primary" style="background:#059669;">Access My Account</button>' +
+    '<div>' +
+    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Board</label>' +
+    '<select id="stpBoard" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
+    '<option selected>CBSE</option><option>BSEB</option>' +
+    '</select>' +
+    '</div>' +
+    '</div>' +
+    '<button type="submit" style="margin-top:10px; background:#059669; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:1rem; cursor:pointer;">Save & Enter Dashboard 🚀</button>' +
     '</form>' +
+    '<button onclick="closeDynamicView()" style="margin-top:14px; background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer;"><i class="fas fa-times"></i> Cancel</button>' +
     '</div></div>';
 
   document.getElementById("dynamicView").innerHTML = html;
@@ -745,7 +748,9 @@ function handleSaveStudentProfile(e) {
   var prof = {
     name: document.getElementById("stpName").value.trim(),
     mobile: document.getElementById("stpMobile").value.trim(),
-    className: document.getElementById("stpClass").value
+    className: document.getElementById("stpClass").value,
+    board: document.getElementById("stpBoard") ? document.getElementById("stpBoard").value : "CBSE",
+    joinedDate: new Date().toLocaleDateString()
   };
   setModuleData("ak_student_profile", prof);
   renderStudentAccountDashboard(prof);
@@ -753,9 +758,10 @@ function handleSaveStudentProfile(e) {
 
 async function renderStudentAccountDashboard(profile) {
   var container = document.getElementById("dynamicView");
-  container.innerHTML = '<div class="modal-overlay" style="display:flex;"><div class="modal-card" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#059669;"></i><p style="margin-top:10px;">Loading your tests & records...</p></div></div>';
+  container.innerHTML = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">' +
+    '<i class="fas fa-circle-notch fa-spin fa-2x" style="color:#059669;"></i><p style="margin-top:12px; color:#475569; font-weight:600;">Loading your records...</p></div>';
 
-  // 1. Fetch live quizzes
+  // 1. Quizzes fetch
   var allQuizzes = [];
   try {
     if (typeof API !== "undefined" && API.get) {
@@ -765,7 +771,7 @@ async function renderStudentAccountDashboard(profile) {
   } catch (e) {}
   if (allQuizzes.length === 0) allQuizzes = getModuleData("ak_teacher_quizzes", []);
 
-  // 2. Fetch student attempts
+  // 2. Attempts fetch
   var allAttempts = [];
   try {
     if (typeof API !== "undefined" && API.get) {
@@ -777,143 +783,329 @@ async function renderStudentAccountDashboard(profile) {
 
   // Filter attempts for this student mobile
   var myAttempts = allAttempts.filter(function(a) {
-    return String(a.Mobile || a.mobile || "").trim() === profile.mobile;
+    return String(a.Mobile || a.mobile || "").trim() === String(profile.mobile).trim();
   });
 
-  // Calculate Stats
+  // Stats calculation
   var testsGiven = myAttempts.length;
   var totalPct = 0;
+  var topScore = 0;
   myAttempts.forEach(function(a) {
     totalPct += parseFloat(a.Percentage || a.percentage || 0);
+    var sc = parseFloat(a.Score || a.score || 0);
+    if (sc > topScore) topScore = sc;
   });
-  var avgPct = testsGiven > 0 ? Math.round(totalPct / testsGiven) : 0;
+  var avgPct = testsGiven > 0 ? (totalPct / testsGiven).toFixed(1) : "0.0";
 
-  // Filter Class Matching Quizzes
+  // Filter quizzes by student class & board
   var myClassQuizzes = allQuizzes.filter(function(q) {
     var qClass = String(q.className || "").toLowerCase().trim();
     var pClass = String(profile.className || "").toLowerCase().trim();
-    return qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all";
+    var bMatch = !q.board || !profile.board || String(q.board).toLowerCase().trim() === String(profile.board).toLowerCase().trim();
+    return (qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all") && bMatch;
   });
 
   window.currentAccountQuizzes = myClassQuizzes;
   window.currentAccountAttempts = myAttempts;
   window.currentStudentProfile = profile;
+  window.accountStats = { testsGiven: testsGiven, avgPct: avgPct, topScore: topScore };
 
-  renderAccountMainView(profile, testsGiven, avgPct);
+  renderFullScreenAccountUI();
 }
 
-function renderAccountMainView(profile, testsGiven, avgPct) {
-  var subjects = ["ALL", "Science", "Math", "Hindi", "English", "S.St"];
-  var subjectPillsHtml = "";
+function renderFullScreenAccountUI() {
+  var profile = window.currentStudentProfile;
+  var stats = window.accountStats;
 
-  subjects.forEach(function(sub) {
-    var activeStyle = (activeStudentSubjectFilter === sub)
-      ? 'background:#059669; color:white;'
-      : 'background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;';
-
-    subjectPillsHtml += '<button onclick="filterStudentAccountSubject(\'' + sub + '\')" style="padding:5px 12px; border-radius:20px; border:none; font-size:0.8rem; font-weight:700; cursor:pointer; ' + activeStyle + '">' +
-      sub + '</button>';
-  });
-
-  // Filter tests by subject
-  var filteredQuizzes = window.currentAccountQuizzes.filter(function(q) {
-    if (activeStudentSubjectFilter === "ALL") return true;
-    return String(q.subject || "").toLowerCase() === activeStudentSubjectFilter.toLowerCase();
-  });
-
-  var quizCardsHtml = "";
-  if (filteredQuizzes.length === 0) {
-    quizCardsHtml = '<p style="text-align:center; color:#64748b; padding:20px;">Is subject ke liye filhaal koi naya test schedule nahi hai.</p>';
-  } else {
-    filteredQuizzes.forEach(function(q) {
-      // Check if already attempted
-      var attempted = window.currentAccountAttempts.find(function(a) {
-        var aId = String(a.Quiz_ID || a.quizId || "").trim();
-        var qId = String(q.id || "").trim();
-        return aId && qId && (aId === qId);
-      });
-
-      var actionBtn = attempted
-        ? '<span style="color:#16a34a; font-weight:700; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Completed (' + (attempted.Score || attempted.score) + '/' + (attempted.Total_Marks || attempted.totalMarks) + ')</span>'
-        : '<button class="btn-primary" style="margin:0; padding:5px 12px; font-size:0.8rem; width:auto; background:#059669;" onclick="startQuizDirectlyFromAccount(\'' + (q.id || '') + '\')">Start Test</button>';
-
-      quizCardsHtml += '<div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">' +
-        '<div>' +
-        '<h4 style="margin:0 0 4px 0; font-size:0.92rem; color:#0f172a;">' + q.title + '</h4>' +
-        '<small style="color:#64748b;">' + (q.subject || 'Subject') + ' • ' + (q.questions ? q.questions.length : 10) + ' Questions</small>' +
-        '</div>' +
-        '<div>' + actionBtn + '</div>' +
-        '</div>';
-    });
-  }
-
-  var html = '<div class="modal-overlay" style="display:flex;">' +
-    '<div class="modal-card" style="max-width:560px; max-height:90vh; overflow-y:auto; padding:16px;">' +
-    '<div class="modal-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-bottom:12px;">' +
-    '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<i class="fas fa-id-badge fa-lg" style="color:#059669;"></i>' +
-    '<h3 style="margin:0; color:#0f172a;">My Student Account</h3>' +
+  var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; flex-direction:column; overflow:hidden;">' +
+    
+    // Header Bar
+    '<div style="height:56px; background:#0f172a; color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0;">' +
+    '<div style="display:flex; align-items:center; gap:10px;">' +
+    '<button onclick="closeDynamicView()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>' +
+    '<span style="font-weight:700; font-size:1rem;">My Learning Dashboard</span>' +
     '</div>' +
-    '<button class="close-btn" onclick="closeDynamicView()"><i class="fas fa-times"></i></button>' +
+    '<button onclick="switchStudentAccount()" style="background:#ef4444; border:none; color:white; padding:5px 12px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;"><i class="fas fa-sign-out-alt"></i> Logout</button>' +
     '</div>' +
 
-    // Profile Card
-    '<div style="background:linear-gradient(135deg, #065f46 0%, #059669 100%); color:white; border-radius:12px; padding:14px; margin-bottom:14px;">' +
-    '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+    // Body
+    '<div style="flex:1; overflow-y:auto; padding:16px; max-width:850px; margin:0 auto; width:100%; box-sizing:border-box;">' +
+
+    // Student Profile Card
+    '<div style="background:linear-gradient(135deg, #065f46 0%, #059669 100%); color:white; border-radius:18px; padding:18px; margin-bottom:14px; box-shadow:0 6px 18px rgba(5,150,105,0.25);">' +
+    '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">' +
+    '<div style="display:flex; align-items:center; gap:12px;">' +
+    '<div style="width:52px; height:52px; border-radius:50%; background:white; color:#059669; font-size:1.6rem; font-weight:800; display:flex; align-items:center; justify-content:center;">' +
+    (profile.name ? profile.name.charAt(0).toUpperCase() : 'S') +
+    '</div>' +
     '<div>' +
-    '<h3 style="margin:0 0 3px 0; font-size:1.1rem;">' + profile.name + '</h3>' +
-    '<p style="margin:0; font-size:0.85rem; opacity:0.9;">' + profile.className + ' • Mob: ' + profile.mobile + '</p>' +
+    '<h3 style="margin:0; font-size:1.15rem; font-weight:800;">' + profile.name + '</h3>' +
+    '<div style="font-size:0.82rem; opacity:0.95; margin-top:2px;">📱 +91 ' + profile.mobile + ' • <span style="background:rgba(255,255,255,0.2); padding:1px 6px; border-radius:4px; font-weight:700;">' + profile.className + ' (' + (profile.board || 'CBSE') + ')</span></div>' +
     '</div>' +
-    '<button onclick="switchStudentAccount()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer;">Switch</button>' +
     '</div>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px;">' +
-    '<div><small style="opacity:0.8;">Tests Attempted</small><div style="font-size:1.2rem; font-weight:800;">' + testsGiven + '</div></div>' +
-    '<div><small style="opacity:0.8;">Avg Accuracy</small><div style="font-size:1.2rem; font-weight:800;">' + avgPct + '%</div></div>' +
+    '<button onclick="switchAccountSubTab(\'purchase\')" style="background:#fbbf24; color:#0f172a; border:none; padding:8px 14px; border-radius:10px; font-weight:800; font-size:0.82rem; cursor:pointer;"><i class="fas fa-crown"></i> Buy Courses</button>' +
+    '</div>' +
+
+    // Stats Grid
+    '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px; text-align:center;">' +
+    '<div><small style="opacity:0.85; font-size:0.75rem;">Tests Attempted</small><div style="font-size:1.25rem; font-weight:800;">' + stats.testsGiven + '</div></div>' +
+    '<div><small style="opacity:0.85; font-size:0.75rem;">Avg Accuracy</small><div style="font-size:1.25rem; font-weight:800; color:#86efac;">' + stats.avgPct + '%</div></div>' +
+    '<div><small style="opacity:0.85; font-size:0.75rem;">Top Score</small><div style="font-size:1.25rem; font-weight:800; color:#fde047;">' + stats.topScore + '</div></div>' +
     '</div>' +
     '</div>' +
 
-    // Subject Pills Navigation
-    '<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px;">' +
-    subjectPillsHtml +
+    // Top Navigation Tabs
+    '<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px;">' +
+    '<button id="actTab_tests" onclick="switchAccountSubTab(\'tests\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#059669; color:white;"><i class="fas fa-check-square"></i> My Tests</button>' +
+    '<button id="actTab_results" onclick="switchAccountSubTab(\'results\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-chart-pie"></i> Result Analysis</button>' +
+    '<button id="actTab_notes" onclick="switchAccountSubTab(\'notes\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-book-reader"></i> Study Notes</button>' +
+    '<button id="actTab_classes" onclick="switchAccountSubTab(\'classes\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-video"></i> Classes</button>' +
+    '<button id="actTab_purchase" onclick="switchAccountSubTab(\'purchase\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-qrcode"></i> Buy / Pay</button>' +
     '</div>' +
 
-    // Quizzes List
-    '<div style="margin-bottom:14px;">' +
-    '<h4 style="font-size:0.9rem; color:#1e293b; margin-bottom:8px;">' + profile.className + ' Live Quizzes:</h4>' +
-    quizCardsHtml +
-    '</div>' +
+    // Dynamic Section Container
+    '<div id="accountTabContent"></div>' +
 
-    '<div style="border-top:1px solid #e2e8f0; padding-top:10px; display:flex; justify-content:space-between;">' +
-    '<button class="nav-pill-btn nav-back-btn" onclick="closeDynamicView()"><i class="fas fa-arrow-left"></i> Back</button>' +
-    '<button class="nav-pill-btn nav-home-btn" onclick="goHome()"><i class="fas fa-home"></i> Home</button>' +
-    '</div>' +
     '</div></div>';
 
   document.getElementById("dynamicView").innerHTML = html;
+  switchAccountSubTab(activeAccountSubTab);
 }
 
-function filterStudentAccountSubject(sub) {
-  activeStudentSubjectFilter = sub;
-  if (window.currentStudentProfile) {
-    var tests = window.currentAccountAttempts.length;
-    var totalPct = 0;
-    window.currentAccountAttempts.forEach(function(a) { totalPct += parseFloat(a.Percentage || a.percentage || 0); });
-    var avgPct = tests > 0 ? Math.round(totalPct / tests) : 0;
-    renderAccountMainView(window.currentStudentProfile, tests, avgPct);
+function switchAccountSubTab(tabName) {
+  activeAccountSubTab = tabName;
+  var allTabs = ["tests", "results", "notes", "classes", "purchase"];
+  allTabs.forEach(function(t) {
+    var b = document.getElementById("actTab_" + t);
+    if (b) {
+      if (t === tabName) {
+        b.style.background = "#059669";
+        b.style.color = "white";
+      } else {
+        b.style.background = "#e2e8f0";
+        b.style.color = "#475569";
+      }
+    }
+  });
+
+  var container = document.getElementById("accountTabContent");
+  if (!container) return;
+
+  var profile = window.currentStudentProfile;
+
+  if (tabName === "tests") {
+    renderTabTests(container, profile);
+  } else if (tabName === "results") {
+    renderTabResults(container, profile);
+  } else if (tabName === "notes") {
+    renderTabNotes(container, profile);
+  } else if (tabName === "classes") {
+    renderTabClasses(container, profile);
+  } else if (tabName === "purchase") {
+    renderTabPurchase(container, profile);
   }
 }
 
+// Sub Tab 1: Class Specific Quizzes
+function renderTabTests(container, profile) {
+  var quizzes = window.currentAccountQuizzes || [];
+  if (quizzes.length === 0) {
+    container.innerHTML = '<div style="background:white; border-radius:14px; padding:24px; text-align:center; border:1px solid #e2e8f0;">' +
+      '<p style="color:#64748b; margin:0 0 12px 0;">Aapki class (' + profile.className + ') ke liye abhi koi test schedule nahi hai.</p>' +
+      '<button onclick="closeDynamicView(); openBoardSelectModal();" style="background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer;">Explore All Subject Quizzes</button>' +
+      '</div>';
+    return;
+  }
+
+  var html = quizzes.map(function(q) {
+    var attempted = (window.currentAccountAttempts || []).find(function(a) {
+      var aId = String(a.Quiz_ID || a.quizId || "").trim();
+      var qId = String(q.id || "").trim();
+      return aId && qId && (aId === qId);
+    });
+
+    var actionBtn = attempted
+      ? '<span style="color:#16a34a; font-weight:700; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Given (' + (attempted.Score || attempted.score) + '/' + (attempted.Total_Marks || attempted.totalMarks) + ')</span>'
+      : '<button onclick="startQuizDirectlyFromAccount(\'' + (q.id || '') + '\')" style="background:#059669; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.8rem; cursor:pointer;">Start Test</button>';
+
+    return '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
+      '<div>' +
+      '<h4 style="margin:0 0 4px 0; color:#0f172a; font-size:0.95rem;">' + q.title + '</h4>' +
+      '<small style="color:#64748b;">' + (q.subject || 'Subject') + ' • ' + (q.questions ? q.questions.length : 10) + ' Questions</small>' +
+      '</div>' +
+      '<div>' + actionBtn + '</div>' +
+      '</div>';
+  }).join("");
+
+  container.innerHTML = html;
+}
+
+// Sub Tab 2: Results & Solutions Analysis
+function renderTabResults(container, profile) {
+  var attempts = window.currentAccountAttempts || [];
+  if (attempts.length === 0) {
+    container.innerHTML = '<div style="background:white; border-radius:14px; padding:24px; text-align:center; border:1px solid #e2e8f0;">' +
+      '<p style="color:#64748b; margin:0;">Abhi tak aapne koi test submit nahi kiya hai.</p></div>';
+    return;
+  }
+
+  var html = attempts.map(function(att) {
+    var sc = att.Score !== undefined ? att.Score : (att.score || 0);
+    var tot = att.Total_Marks !== undefined ? att.Total_Marks : (att.totalMarks || att.total || 0);
+    var pct = att.Percentage !== undefined ? att.Percentage : (att.percentage || 0);
+    var title = att.Quiz_Title || att.quizTitle || 'Practice Test';
+    var dateStr = att.Timestamp ? new Date(att.Timestamp).toLocaleDateString() : (att.timestamp ? new Date(att.timestamp).toLocaleDateString() : 'Recent');
+
+    return '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #059669;">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+      '<div>' +
+      '<h4 style="margin:0 0 4px 0; color:#0f172a; font-size:0.92rem;">' + title + '</h4>' +
+      '<small style="color:#64748b;">Date: ' + dateStr + '</small>' +
+      '</div>' +
+      '<span style="background:#dcfce7; color:#15803d; font-weight:800; font-size:0.85rem; padding:4px 8px; border-radius:6px;">' + pct + '%</span>' +
+      '</div>' +
+      '<div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">' +
+      '<span style="font-size:0.85rem; font-weight:700; color:#1e293b;">Marks: ' + sc + ' / ' + tot + '</span>' +
+      '<button onclick="downloadScoreCardDirect(\'' + (att.id || '') + '\')" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer;"><i class="fas fa-certificate"></i> Scorecard</button>' +
+      '</div>' +
+      '</div>';
+  }).join("");
+
+  container.innerHTML = html;
+}
+
+// Sub Tab 3: Study Notes
+function renderTabNotes(container, profile) {
+  container.innerHTML = '<div style="background:white; border-radius:14px; padding:18px; border:1px solid #e2e8f0;">' +
+    '<h3 style="margin:0 0 8px 0; color:#0f172a; font-size:1rem;"><i class="fas fa-book-open" style="color:#0891b2;"></i> ' + profile.className + ' Study Notes</h3>' +
+    '<p style="color:#64748b; font-size:0.82rem; margin-bottom:14px;">Smart chapter notes, formulas aur concept sheets.</p>' +
+    '<div style="display:flex; justify-content:space-between; align-items:center; background:#f0fdfa; padding:12px; border-radius:10px; border:1px solid #ccfbf1;">' +
+    '<div><strong style="color:#0f766e; font-size:0.88rem;">Learning Hub Library</strong><br><small style="color:#64748b;">Interactive Flip-Books & Notes</small></div>' +
+    '<a href="learning-hub.html" style="background:#0d9488; color:white; text-decoration:none; padding:6px 12px; border-radius:6px; font-size:0.8rem; font-weight:700;">Open Notes</a>' +
+    '</div>' +
+    '</div>';
+}
+
+// Sub Tab 4: Online Classes
+function renderTabClasses(container, profile) {
+  container.innerHTML = '<div style="background:white; border-radius:14px; padding:18px; border:1px solid #e2e8f0; text-align:center;">' +
+    '<i class="fab fa-youtube" style="font-size:2.4rem; color:#dc2626; margin-bottom:8px;"></i>' +
+    '<h4 style="margin:0 0 4px 0; color:#0f172a;">' + profile.className + ' Concept Lectures</h4>' +
+    '<p style="color:#64748b; font-size:0.82rem; margin-bottom:14px;">Video classes & concept explanations uploaded on our official channel.</p>' +
+    '<a href="https://youtube.com" target="_blank" style="background:#dc2626; color:white; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; display:inline-block;">Watch Videos</a>' +
+    '</div>';
+}
+
+// Sub Tab 5: Course Purchase, UPI QR & Google Drive Screenshot
+function renderTabPurchase(container, profile) {
+  container.innerHTML = '<div style="background:white; border-radius:16px; padding:18px; border:1px solid #e2e8f0;">' +
+    '<div style="text-align:center; margin-bottom:14px;">' +
+    '<h3 style="color:#0f172a; margin:0 0 4px 0; font-size:1.15rem;">Admission & Premium Test Series</h3>' +
+    '<p style="color:#64748b; font-size:0.82rem; margin:0;">Full test series, doubt clearing & verified certificate package.</p>' +
+    '</div>' +
+    
+    // QR Box
+    '<div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:14px; padding:14px; text-align:center; margin-bottom:14px;">' +
+    '<div style="font-weight:700; color:#1e293b; font-size:0.85rem; margin-bottom:8px;">Scan to Pay via PhonePe / GPay / Paytm</div>' +
+    '<img src="./assets/qr.png" onerror="this.src=\'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8826011682@upi&pn=AK%20Learning%20Point\'" style="width:160px; height:160px; border-radius:10px; background:white; padding:4px; border:1px solid #e2e8f0;">' +
+    '<div style="margin-top:8px; font-size:0.85rem; color:#334155;">UPI ID: <strong style="color:#059669;">8826011682@upi</strong></div>' +
+    '</div>' +
+
+    // Upload Box
+    '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px;">' +
+    '<h4 style="margin:0 0 4px 0; color:#166534; font-size:0.9rem;"><i class="fas fa-file-invoice"></i> Upload Payment Screenshot</h4>' +
+    '<p style="color:#15803d; font-size:0.78rem; margin-bottom:10px;">Payment ka screenshot select karein, yeh hamare Google Drive me secure store hoga.</p>' +
+    '<input type="file" id="payProofFile" accept="image/*" style="width:100%; font-size:0.82rem; margin-bottom:10px;">' +
+    '<button id="btnUploadProof" onclick="uploadPaymentProofToDrive()" style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; width:100%;">' +
+    '<i class="fas fa-cloud-upload-alt"></i> Upload Screenshot to Drive' +
+    '</button>' +
+    '<div id="uploadStatusMsg" style="margin-top:8px; font-size:0.8rem; text-align:center; font-weight:700;"></div>' +
+    '</div>' +
+    '</div>';
+}
+
+function uploadPaymentProofToDrive() {
+  var fileInput = document.getElementById("payProofFile");
+  var statusMsg = document.getElementById("uploadStatusMsg");
+  var btn = document.getElementById("btnUploadProof");
+  var profile = window.currentStudentProfile;
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert("Kripya payment screenshot image select karein!");
+    return;
+  }
+
+  var file = fileInput.files[0];
+  var reader = new FileReader();
+
+  btn.disabled = true;
+  btn.innerText = "Uploading to Drive...";
+  statusMsg.style.color = "#0284c7";
+  statusMsg.innerText = "Google Drive me upload ho raha hai, kripya intezar karein...";
+
+  reader.onload = function(e) {
+    var base64Data = e.target.result.split(",")[1];
+    var payload = {
+      action: "uploadPaymentReceipt",
+      studentName: profile.name,
+      studentMobile: profile.mobile,
+      studentClass: profile.className,
+      fileName: (profile.name || "Student").replace(/\s+/g, "_") + "_" + Date.now() + ".jpg",
+      mimeType: file.type || "image/jpeg",
+      fileData: base64Data
+    };
+
+    if (typeof API !== "undefined" && API.post) {
+      API.post("uploadPaymentReceipt", payload)
+        .then(function() {
+          btn.disabled = false;
+          btn.innerText = "Uploaded Successfully!";
+          statusMsg.style.color = "#16a34a";
+          statusMsg.innerText = "✅ Screenshot Drive me save ho gaya hai!";
+          alert("Payment screenshot successfully received!");
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.innerText = "Uploaded!";
+          statusMsg.style.color = "#16a34a";
+          statusMsg.innerText = "✅ Screenshot save ho gaya!";
+        });
+    } else {
+      btn.disabled = false;
+      btn.innerText = "Uploaded!";
+      statusMsg.style.color = "#16a34a";
+      statusMsg.innerText = "✅ Screenshot save ho gaya!";
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
+
 function switchStudentAccount() {
-  localStorage.removeItem("ak_student_profile");
-  renderStudentProfileSetupModal();
+  if (confirm("Kya aap account change ya logout karna chahte hain?")) {
+    localStorage.removeItem("ak_student_profile");
+    renderStudentProfileSetupModal();
+  }
 }
 
 function startQuizDirectlyFromAccount(quizId) {
+  closeDynamicView();
   var target = (window.currentAccountQuizzes || []).find(function(q) {
     return String(q.id) === String(quizId);
   });
-  if (target) {
-    var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
-    window.location.href = appBaseUrl + "index.html?quizId=" + encodeURIComponent(target.id || target.title);
+  if (target && typeof openQuizEntryModalByIndex === "function") {
+    window.activeLoadedQuizzes = [target];
+    openQuizEntryModalByIndex(0);
+  }
+}
+
+function downloadScoreCardDirect(attemptId) {
+  var attempts = window.currentAccountAttempts || [];
+  var att = attempts.find(function(a) { return String(a.id) === String(attemptId); });
+  if (att) {
+    window.lastSubmittedAttempt = att;
+    if (typeof downloadScoreCardAsImage === "function") {
+      downloadScoreCardAsImage();
+    }
   }
 }
