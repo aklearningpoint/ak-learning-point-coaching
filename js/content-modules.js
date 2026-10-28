@@ -693,11 +693,25 @@ function renderCurrentAdQuiz() {
 // ==========================================
 var activeAccountSubTab = "tests";
 
-// Safe local storage helpers (Zero Crash)
+// Smart Multi-Storage (LocalStorage + Permanent Cookie for Android App)
 function getSafeAccountData(key) {
   try {
+    // 1. Pehle localStorage se check karein
     var d = localStorage.getItem(key);
-    return d ? JSON.parse(d) : null;
+    if (d) return JSON.parse(d);
+
+    // 2. Agar WebViewer ne localStorage uda diya, toh Cookie se restore karein
+    var nameEQ = key + "=";
+    var ca = document.cookie.split(';');
+    for (var i = 0; i < ca.length; i++) {
+      var c = ca[i].trim();
+      if (c.indexOf(nameEQ) === 0) {
+        var cookieVal = decodeURIComponent(c.substring(nameEQ.length));
+        localStorage.setItem(key, cookieVal); // Wapas sync karein
+        return JSON.parse(cookieVal);
+      }
+    }
+    return null;
   } catch(e) {
     return null;
   }
@@ -705,7 +719,15 @@ function getSafeAccountData(key) {
 
 function setSafeAccountData(key, val) {
   try {
-    localStorage.setItem(key, JSON.stringify(val));
+    var str = JSON.stringify(val);
+    // LocalStorage me set karein
+    localStorage.setItem(key, str);
+
+    // 1 Saal ki permanent Cookie me lock karein (WebViewer safe)
+    var date = new Date();
+    date.setTime(date.getTime() + (365 * 24 * 60 * 60 * 1000));
+    var expires = "; expires=" + date.toUTCString();
+    document.cookie = key + "=" + encodeURIComponent(str) + expires + "; path=/; SameSite=Lax";
   } catch(e) {}
 }
 
