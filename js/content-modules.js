@@ -692,18 +692,41 @@ function renderCurrentAdQuiz() {
 // 8. STUDENT "MY ACCOUNT" FULL-SCREEN LMS ENGINE
 // ==========================================
 var activeAccountSubTab = "tests";
-var activeStudentSubjectFilter = "ALL";
+
+// Safe local storage helpers (Zero Crash)
+function getSafeAccountData(key) {
+  try {
+    var d = localStorage.getItem(key);
+    return d ? JSON.parse(d) : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function setSafeAccountData(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch(e) {}
+}
 
 function openStudentAccountModal() {
-  var savedProfile = getModuleData("ak_student_profile", null);
-  if (!savedProfile || !savedProfile.mobile) {
+  try {
+    var savedProfile = getSafeAccountData("ak_student_profile");
+    if (!savedProfile || !savedProfile.mobile) {
+      renderStudentProfileSetupModal();
+      return;
+    }
+    renderStudentAccountDashboard(savedProfile);
+  } catch(err) {
+    console.error("Account Open Error:", err);
     renderStudentProfileSetupModal();
-    return;
   }
-  renderStudentAccountDashboard(savedProfile);
 }
 
 function renderStudentProfileSetupModal() {
+  var dv = document.getElementById("dynamicView");
+  if (!dv) return;
+
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">' +
     '<div style="background:white; max-width:440px; width:100%; border-radius:24px; padding:28px; box-shadow:0 10px 25px rgba(0,0,0,0.1); text-align:center;">' +
     '<div style="font-size:3rem; margin-bottom:8px;">🎓</div>' +
@@ -740,61 +763,52 @@ function renderStudentProfileSetupModal() {
     '<button onclick="closeDynamicView()" style="margin-top:14px; background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer;"><i class="fas fa-times"></i> Cancel</button>' +
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  dv.innerHTML = html;
 }
 
 function handleSaveStudentProfile(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
+  var nameEl = document.getElementById("stpName");
+  var mobEl = document.getElementById("stpMobile");
+  var clsEl = document.getElementById("stpClass");
+  var brdEl = document.getElementById("stpBoard");
+
   var prof = {
-    name: document.getElementById("stpName").value.trim(),
-    mobile: document.getElementById("stpMobile").value.trim(),
-    className: document.getElementById("stpClass").value,
-    board: document.getElementById("stpBoard") ? document.getElementById("stpBoard").value : "CBSE",
+    name: nameEl ? nameEl.value.trim() : "Student",
+    mobile: mobEl ? mobEl.value.trim() : "",
+    className: clsEl ? clsEl.value : "Class 10",
+    board: brdEl ? brdEl.value : "CBSE",
     joinedDate: new Date().toLocaleDateString()
   };
-  setModuleData("ak_student_profile", prof);
+  setSafeAccountData("ak_student_profile", prof);
   renderStudentAccountDashboard(prof);
 }
 
-async function renderStudentAccountDashboard(profile) {
-  var container = document.getElementById("dynamicView");
-  container.innerHTML = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">' +
-    '<i class="fas fa-circle-notch fa-spin fa-2x" style="color:#059669;"></i><p style="margin-top:12px; color:#475569; font-weight:600;">Loading your records...</p></div>';
+function renderStudentAccountDashboard(profile) {
+  var dv = document.getElementById("dynamicView");
+  if (!dv) return;
 
-  // 1. Quizzes fetch
-  var allQuizzes = [];
-  try {
-    if (typeof API !== "undefined" && API.get) {
-      var qRes = await API.get("getQuizzes");
-      if (qRes && qRes.data) allQuizzes = qRes.data;
-    }
-  } catch (e) {}
-  if (allQuizzes.length === 0) allQuizzes = getModuleData("ak_teacher_quizzes", []);
+  // 1. Quizzes fetch (from cache or localStorage)
+  var allQuizzes = getSafeAccountData("ak_teacher_quizzes") || [];
 
   // 2. Attempts fetch
-  var allAttempts = [];
-  try {
-    if (typeof API !== "undefined" && API.get) {
-      var aRes = await API.get("getAttempts");
-      if (aRes && aRes.data) allAttempts = aRes.data;
-    }
-  } catch (e) {}
-  if (allAttempts.length === 0) allAttempts = getModuleData("ak_student_attempts", []);
+  var allAttempts = getSafeAccountData("ak_student_attempts") || [];
 
   // Filter attempts for this student mobile
   var myAttempts = allAttempts.filter(function(a) {
-    return String(a.Mobile || a.mobile || "").trim() === String(profile.mobile).trim();
+    return String(a.mobile || a.Mobile || "").trim() === String(profile.mobile).trim();
   });
 
   // Stats calculation
   var testsGiven = myAttempts.length;
   var totalPct = 0;
   var topScore = 0;
-  myAttempts.forEach(function(a) {
-    totalPct += parseFloat(a.Percentage || a.percentage || 0);
-    var sc = parseFloat(a.Score || a.score || 0);
+  for (var i = 0; i < myAttempts.length; i++) {
+    var a = myAttempts[i];
+    totalPct += parseFloat(a.percentage || a.Percentage || 0);
+    var sc = parseFloat(a.score || a.Score || 0);
     if (sc > topScore) topScore = sc;
-  });
+  }
   var avgPct = testsGiven > 0 ? (totalPct / testsGiven).toFixed(1) : "0.0";
 
   // Filter quizzes by student class & board
@@ -814,8 +828,10 @@ async function renderStudentAccountDashboard(profile) {
 }
 
 function renderFullScreenAccountUI() {
-  var profile = window.currentStudentProfile;
-  var stats = window.accountStats;
+  var profile = window.currentStudentProfile || { name: "Student", mobile: "", className: "Class 10", board: "CBSE" };
+  var stats = window.accountStats || { testsGiven: 0, avgPct: "0.0", topScore: 0 };
+  var dv = document.getElementById("dynamicView");
+  if (!dv) return;
 
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; flex-direction:column; overflow:hidden;">' +
     
@@ -868,14 +884,15 @@ function renderFullScreenAccountUI() {
 
     '</div></div>';
 
-  document.getElementById("dynamicView").innerHTML = html;
+  dv.innerHTML = html;
   switchAccountSubTab(activeAccountSubTab);
 }
 
 function switchAccountSubTab(tabName) {
   activeAccountSubTab = tabName;
   var allTabs = ["tests", "results", "notes", "classes", "purchase"];
-  allTabs.forEach(function(t) {
+  for (var i = 0; i < allTabs.length; i++) {
+    var t = allTabs[i];
     var b = document.getElementById("actTab_" + t);
     if (b) {
       if (t === tabName) {
@@ -886,7 +903,7 @@ function switchAccountSubTab(tabName) {
         b.style.color = "#475569";
       }
     }
-  });
+  }
 
   var container = document.getElementById("accountTabContent");
   if (!container) return;
@@ -917,25 +934,33 @@ function renderTabTests(container, profile) {
     return;
   }
 
-  var html = quizzes.map(function(q) {
-    var attempted = (window.currentAccountAttempts || []).find(function(a) {
-      var aId = String(a.Quiz_ID || a.quizId || "").trim();
+  var html = "";
+  for (var i = 0; i < quizzes.length; i++) {
+    var q = quizzes[i];
+    var attempted = null;
+    var attempts = window.currentAccountAttempts || [];
+    for (var j = 0; j < attempts.length; j++) {
+      var a = attempts[j];
+      var aId = String(a.quizId || a.Quiz_ID || "").trim();
       var qId = String(q.id || "").trim();
-      return aId && qId && (aId === qId);
-    });
+      if (aId && qId && (aId === qId)) {
+        attempted = a;
+        break;
+      }
+    }
 
     var actionBtn = attempted
-      ? '<span style="color:#16a34a; font-weight:700; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Given (' + (attempted.Score || attempted.score) + '/' + (attempted.Total_Marks || attempted.totalMarks) + ')</span>'
+      ? '<span style="color:#16a34a; font-weight:700; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Given (' + (attempted.score || attempted.Score) + '/' + (attempted.totalMarks || attempted.Total_Marks) + ')</span>'
       : '<button onclick="startQuizDirectlyFromAccount(\'' + (q.id || '') + '\')" style="background:#059669; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.8rem; cursor:pointer;">Start Test</button>';
 
-    return '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
+    html += '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
       '<div>' +
       '<h4 style="margin:0 0 4px 0; color:#0f172a; font-size:0.95rem;">' + q.title + '</h4>' +
       '<small style="color:#64748b;">' + (q.subject || 'Subject') + ' • ' + (q.questions ? q.questions.length : 10) + ' Questions</small>' +
       '</div>' +
       '<div>' + actionBtn + '</div>' +
       '</div>';
-  }).join("");
+  }
 
   container.innerHTML = html;
 }
@@ -949,14 +974,16 @@ function renderTabResults(container, profile) {
     return;
   }
 
-  var html = attempts.map(function(att) {
-    var sc = att.Score !== undefined ? att.Score : (att.score || 0);
-    var tot = att.Total_Marks !== undefined ? att.Total_Marks : (att.totalMarks || att.total || 0);
-    var pct = att.Percentage !== undefined ? att.Percentage : (att.percentage || 0);
-    var title = att.Quiz_Title || att.quizTitle || 'Practice Test';
-    var dateStr = att.Timestamp ? new Date(att.Timestamp).toLocaleDateString() : (att.timestamp ? new Date(att.timestamp).toLocaleDateString() : 'Recent');
+  var html = "";
+  for (var i = 0; i < attempts.length; i++) {
+    var att = attempts[i];
+    var sc = att.score !== undefined ? att.score : (att.Score || 0);
+    var tot = att.totalMarks !== undefined ? att.totalMarks : (att.Total_Marks || att.total || 0);
+    var pct = att.percentage !== undefined ? att.percentage : (att.Percentage || 0);
+    var title = att.quizTitle || att.Quiz_Title || 'Practice Test';
+    var dateStr = att.timestamp ? new Date(att.timestamp).toLocaleDateString() : (att.Timestamp ? new Date(att.Timestamp).toLocaleDateString() : 'Recent');
 
-    return '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #059669;">' +
+    html += '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #059669;">' +
       '<div style="display:flex; justify-content:space-between; align-items:center;">' +
       '<div>' +
       '<h4 style="margin:0 0 4px 0; color:#0f172a; font-size:0.92rem;">' + title + '</h4>' +
@@ -969,7 +996,7 @@ function renderTabResults(container, profile) {
       '<button onclick="downloadScoreCardDirect(\'' + (att.id || '') + '\')" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer;"><i class="fas fa-certificate"></i> Scorecard</button>' +
       '</div>' +
       '</div>';
-  }).join("");
+  }
 
   container.innerHTML = html;
 }
@@ -1030,7 +1057,7 @@ function uploadPaymentProofToDrive() {
   var btn = document.getElementById("btnUploadProof");
   var profile = window.currentStudentProfile;
 
-  if (!fileInput.files || fileInput.files.length === 0) {
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
     alert("Kripya payment screenshot image select karein!");
     return;
   }
@@ -1041,16 +1068,16 @@ function uploadPaymentProofToDrive() {
   btn.disabled = true;
   btn.innerText = "Uploading to Drive...";
   statusMsg.style.color = "#0284c7";
-  statusMsg.innerText = "Google Drive me upload ho raha hai, kripya intezar karein...";
+  statusMsg.innerText = "Google Drive me upload ho raha hai...";
 
   reader.onload = function(e) {
     var base64Data = e.target.result.split(",")[1];
     var payload = {
       action: "uploadPaymentReceipt",
-      studentName: profile.name,
-      studentMobile: profile.mobile,
-      studentClass: profile.className,
-      fileName: (profile.name || "Student").replace(/\s+/g, "_") + "_" + Date.now() + ".jpg",
+      studentName: profile ? profile.name : "Student",
+      studentMobile: profile ? profile.mobile : "N/A",
+      studentClass: profile ? profile.className : "General",
+      fileName: ((profile && profile.name) ? profile.name : "Student").replace(/\s+/g, "_") + "_" + Date.now() + ".jpg",
       mimeType: file.type || "image/jpeg",
       fileData: base64Data
     };
@@ -1090,9 +1117,14 @@ function switchStudentAccount() {
 
 function startQuizDirectlyFromAccount(quizId) {
   closeDynamicView();
-  var target = (window.currentAccountQuizzes || []).find(function(q) {
-    return String(q.id) === String(quizId);
-  });
+  var quizzes = window.currentAccountQuizzes || [];
+  var target = null;
+  for (var i = 0; i < quizzes.length; i++) {
+    if (String(quizzes[i].id) === String(quizId)) {
+      target = quizzes[i];
+      break;
+    }
+  }
   if (target && typeof openQuizEntryModalByIndex === "function") {
     window.activeLoadedQuizzes = [target];
     openQuizEntryModalByIndex(0);
@@ -1101,7 +1133,13 @@ function startQuizDirectlyFromAccount(quizId) {
 
 function downloadScoreCardDirect(attemptId) {
   var attempts = window.currentAccountAttempts || [];
-  var att = attempts.find(function(a) { return String(a.id) === String(attemptId); });
+  var att = null;
+  for (var i = 0; i < attempts.length; i++) {
+    if (String(attempts[i].id) === String(attemptId)) {
+      att = attempts[i];
+      break;
+    }
+  }
   if (att) {
     window.lastSubmittedAttempt = att;
     if (typeof downloadScoreCardAsImage === "function") {
