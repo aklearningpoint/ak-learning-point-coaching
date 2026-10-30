@@ -45,19 +45,22 @@ function saveRegisteredAccountsList(accounts) {
 // 1. Entry Point: Auto-refreshes data from live sheet on each launch
 async function openStudentAccountModal() {
   var activeProfile = getSafeAccountData("ak_student_profile");
-  
+
   if (activeProfile && activeProfile.mobile) {
     try {
       if (typeof API !== "undefined" && API.get) {
         var ledgerRes = await API.get("getLedger&_t=" + Date.now());
         if (ledgerRes && ledgerRes.status === "success" && Array.isArray(ledgerRes.data)) {
+          var cleanActiveMob = String(activeProfile.mobile).replace(/\D/g, "");
           var matched = ledgerRes.data.find(function(s) {
-            return String(s.Mobile || s.mobile || "").trim() === String(activeProfile.mobile).trim();
+            var sheetMob = String(s.Mobile || s.mobile || "").replace(/\D/g, "");
+            return sheetMob.endsWith(cleanActiveMob) || cleanActiveMob.endsWith(sheetMob);
           });
+
           if (matched) {
             activeProfile.name = matched.Name || matched.name || activeProfile.name;
             activeProfile.className = matched.Class || matched.className || activeProfile.className;
-            activeProfile.monthlyFee = Number(matched.Monthly_Fee || matched.monthlyFee || activeProfile.monthlyFee);
+            activeProfile.monthlyFee = Number(matched.Monthly_Fee || matched.monthlyFee || 0);
             activeProfile.dues = Number(matched.calculatedDues !== undefined ? matched.calculatedDues : (matched.Dues || matched.dues || 0));
             activeProfile.billingDate = matched.nextBillingDate || matched.currentCycleText || matched.Start_Date || activeProfile.billingDate;
             activeProfile.category = matched.Category || matched.category || "Tuition Student";
@@ -120,6 +123,7 @@ async function handleMobileCheckSubmit(e) {
   }
 
   var matchedAccounts = [];
+  var cleanInputMob = mob.replace(/\D/g, "");
 
   // PRIORITY 1: LIVE GOOGLE SHEET "Students_Ledger" (Master Record)
   try {
@@ -129,19 +133,20 @@ async function handleMobileCheckSubmit(e) {
         localStorage.setItem("ak_tuition_ledger", JSON.stringify(ledgerRes.data));
 
         var tuitionStudents = ledgerRes.data.filter(function(s) {
-          return String(s.Mobile || s.mobile || "").trim() === mob;
+          var sheetMob = String(s.Mobile || s.mobile || "").replace(/\D/g, "");
+          return sheetMob.endsWith(cleanInputMob) || cleanInputMob.endsWith(sheetMob);
         });
 
         tuitionStudents.forEach(function(ts) {
           matchedAccounts.push({
             name: ts.Name || ts.name || "Student",
             mobile: mob,
-            className: ts.Class || ts.className || "Class 10",
+            className: ts.Class || ts.className || "Class 9",
             board: ts.Board || ts.board || "CBSE",
             category: ts.Category || ts.category || "Tuition Student",
             monthlyFee: Number(ts.Monthly_Fee || ts.monthlyFee || 0),
             dues: Number(ts.calculatedDues !== undefined ? ts.calculatedDues : (ts.Dues || ts.dues || 0)),
-            billingDate: ts.nextBillingDate || ts.currentCycleText || ts.Start_Date || ts.startDate || "N/A",
+            billingDate: ts.nextBillingDate || ts.currentCycleText || ts.Start_Date || ts.startDate || "Active",
             currentCycle: ts.currentCycleText || "",
             paidHistory: ts.parsedPaidHistory || [],
             joinedDate: ts.Start_Date || ts.startDate || new Date().toLocaleDateString()
@@ -170,7 +175,8 @@ async function handleMobileCheckSubmit(e) {
     } catch(err) {}
 
     var userAttempts = allAttempts.filter(function(att) {
-      return String(att.Mobile || att.mobile || "").trim() === mob;
+      var attMob = String(att.Mobile || att.mobile || "").replace(/\D/g, "");
+      return attMob.endsWith(cleanInputMob) || cleanInputMob.endsWith(attMob);
     });
 
     if (userAttempts.length > 0) {
@@ -198,7 +204,10 @@ async function handleMobileCheckSubmit(e) {
   // PRIORITY 3: LOCAL STORAGE FALLBACK
   if (matchedAccounts.length === 0) {
     var saved = getRegisteredAccountsList();
-    matchedAccounts = saved.filter(function(a) { return String(a.mobile).trim() === mob; });
+    matchedAccounts = saved.filter(function(a) { 
+      var aMob = String(a.mobile).replace(/\D/g, "");
+      return aMob.endsWith(cleanInputMob) || cleanInputMob.endsWith(aMob);
+    });
   }
 
   // LAUNCH & SAVE MULTI-PROFILES
@@ -206,7 +215,7 @@ async function handleMobileCheckSubmit(e) {
     var existingSaved = getRegisteredAccountsList();
     matchedAccounts.forEach(function(mAcc) {
       var idx = existingSaved.findIndex(function(s) { 
-        return s.mobile === mAcc.mobile && s.name === mAcc.name && s.className === mAcc.className; 
+        return String(s.mobile) === String(mAcc.mobile) && s.name === mAcc.name && s.className === mAcc.className; 
       });
       if (idx > -1) {
         existingSaved[idx] = mAcc;
@@ -271,7 +280,12 @@ function renderExistingProfilesPickerModal(mob, profileList) {
 
 function selectProfileAndLaunch(idx, mob) {
   var accounts = getRegisteredAccountsList();
-  var matched = accounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+  var cleanMob = String(mob).replace(/\D/g, "");
+  var matched = accounts.filter(function(a) { 
+    var aMob = String(a.mobile).replace(/\D/g, "");
+    return aMob.endsWith(cleanMob) || cleanMob.endsWith(aMob); 
+  });
+
   if (matched[idx]) {
     var p = matched[idx];
     setSafeAccountData("ak_student_profile", p);
@@ -326,7 +340,7 @@ function renderRegisterProfileModal(mob) {
   dv.innerHTML = html;
 }
 
-// 6. Registration Limits Validator (Max 2 same class / Max 5 overall)
+// 6. Profile Saver & Limits Validator
 function handleNewProfileRegisterSubmit(e, mob) {
   if (e && e.preventDefault) e.preventDefault();
 
@@ -335,7 +349,11 @@ function handleNewProfileRegisterSubmit(e, mob) {
   var board = document.getElementById("regBoard").value;
 
   var allAccounts = getRegisteredAccountsList();
-  var myAccounts = allAccounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+  var cleanMob = String(mob).replace(/\D/g, "");
+  var myAccounts = allAccounts.filter(function(a) { 
+    var aMob = String(a.mobile).replace(/\D/g, "");
+    return aMob.endsWith(cleanMob) || cleanMob.endsWith(aMob); 
+  });
 
   if (myAccounts.length >= 5) {
     alert("LIMIT EXCEEDED!\nIs mobile number se maximum 5 profiles already registered hain.");
@@ -362,11 +380,14 @@ function handleNewProfileRegisterSubmit(e, mob) {
 
   try {
     var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
-    var foundLedger = ledger.find(function(s) { return String(s.mobile).trim() === mob; });
+    var foundLedger = ledger.find(function(s) { 
+      var sMob = String(s.mobile || s.Mobile || "").replace(/\D/g, "");
+      return sMob.endsWith(cleanMob) || cleanMob.endsWith(sMob);
+    });
     if (foundLedger) {
-      newProf.category = foundLedger.category || newProf.category;
+      newProf.category = foundLedger.category || foundLedger.Category || newProf.category;
       newProf.monthlyFee = Number(foundLedger.monthlyFee || foundLedger.Monthly_Fee || 0);
-      newProf.billingDate = foundLedger.nextBillingDate || foundLedger.startDate || newProf.billingDate;
+      newProf.billingDate = foundLedger.nextBillingDate || foundLedger.currentCycleText || newProf.billingDate;
     }
   } catch(err) {}
 
@@ -376,19 +397,21 @@ function handleNewProfileRegisterSubmit(e, mob) {
 
   var dv = document.getElementById("dynamicView");
   if (dv) dv.innerHTML = "";
-  
+
   renderStudentAccountDashboard(newProf);
 }
 
-// 7. Full-Screen LMS Dashboard Render
+// 7. Full LMS Dashboard Engine
 function renderStudentAccountDashboard(profile) {
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
 
   try {
     var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
+    var cleanProfMob = String(profile.mobile).replace(/\D/g, "");
     var found = ledger.find(function(s) { 
-      return String(s.Mobile || s.mobile || "").trim() === String(profile.mobile).trim(); 
+      var sheetMob = String(s.Mobile || s.mobile || "").replace(/\D/g, "");
+      return sheetMob.endsWith(cleanProfMob) || cleanProfMob.endsWith(sheetMob);
     });
     if (found) {
       profile.category = found.Category || found.category || profile.category;
@@ -401,19 +424,21 @@ function renderStudentAccountDashboard(profile) {
   var allQuizzes = getSafeAccountData("ak_teacher_quizzes") || [];
   var allAttempts = getSafeAccountData("ak_student_attempts") || [];
 
+  var cleanMob = String(profile.mobile).replace(/\D/g, "");
   var myAttempts = allAttempts.filter(function(a) {
-    return String(a.mobile || a.Mobile || "").trim() === String(profile.mobile).trim();
+    var aMob = String(a.mobile || a.Mobile || "").replace(/\D/g, "");
+    return aMob.endsWith(cleanMob) || cleanMob.endsWith(aMob);
   });
 
   var myClassQuizzes = allQuizzes.filter(function(q) {
     var qClass = String(q.className || "").toLowerCase().trim();
     var pClass = String(profile.className || "").toLowerCase().trim();
     var classMatch = (qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all");
-    
+
     var qBoard = String(q.board || "").toLowerCase().trim();
     var pBoard = String(profile.board || "CBSE").toLowerCase().trim();
     var boardMatch = (!q.board || qBoard === "all" || qBoard === pBoard);
-    
+
     return classMatch && boardMatch;
   });
 
@@ -436,7 +461,7 @@ function renderStudentAccountDashboard(profile) {
   renderEnhancedStudentUI();
 }
 
-// 8. Dynamic Dashboard UI (All Fallbacks Replaced with Real Data)
+// 8. Dynamic Dashboard UI (Zero Static Fallbacks)
 function renderEnhancedStudentUI() {
   var profile = window.currentStudentProfile || { name: "Student", mobile: "", className: "Class 10", board: "CBSE", category: "Tuition Student", dues: 0, monthlyFee: 0, billingDate: "Active" };
   var notices = window.currentClassNotices || [];
@@ -586,7 +611,11 @@ function toggleStudentBoard() {
 
   try {
     var accounts = JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
-    var idx = accounts.findIndex(function(a) { return a.mobile === prof.mobile && a.name === prof.name; });
+    var cleanMob = String(prof.mobile).replace(/\D/g, "");
+    var idx = accounts.findIndex(function(a) { 
+      var aMob = String(a.mobile).replace(/\D/g, "");
+      return (aMob.endsWith(cleanMob) || cleanMob.endsWith(aMob)) && a.name === prof.name; 
+    });
     if (idx > -1) {
       accounts[idx].board = newBoard;
       localStorage.setItem("ak_saved_student_accounts", JSON.stringify(accounts));
@@ -600,9 +629,13 @@ function toggleStudentBoard() {
 function openSwitchStudentModal() {
   var activeProf = window.currentStudentProfile || {};
   var mob = activeProf.mobile || "";
+  var cleanMob = String(mob).replace(/\D/g, "");
 
   var allAccounts = getRegisteredAccountsList();
-  var myAccounts = allAccounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+  var myAccounts = allAccounts.filter(function(a) { 
+    var aMob = String(a.mobile).replace(/\D/g, "");
+    return aMob.endsWith(cleanMob) || cleanMob.endsWith(aMob); 
+  });
 
   var listHtml = "";
   myAccounts.forEach(function(acc) {
@@ -644,8 +677,10 @@ function openSwitchStudentModal() {
 function switchToSpecificStudent(name, className) {
   var activeProf = window.currentStudentProfile || {};
   var accounts = getRegisteredAccountsList();
+  var cleanMob = String(activeProf.mobile).replace(/\D/g, "");
   var target = accounts.find(function(a) { 
-    return String(a.mobile).trim() === String(activeProf.mobile).trim() && a.name === name && a.className === className; 
+    var aMob = String(a.mobile).replace(/\D/g, "");
+    return (aMob.endsWith(cleanMob) || cleanMob.endsWith(aMob)) && a.name === name && a.className === className; 
   });
 
   if (target) {
@@ -656,16 +691,28 @@ function switchToSpecificStudent(name, className) {
   }
 }
 
+// 11. Persistent Logout Engine
 function logoutCurrentStudent() {
-  if (confirm("Kya aap logout karna chahte hain?")) {
+  if (confirm("Kya aap is profile se Logout karna chahte hain?")) {
     localStorage.removeItem("ak_student_profile");
-    var modal = document.getElementById("switchStudentModal");
-    if (modal) modal.remove();
+
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+      window.AppInventor.setWebViewString("");
+    }
+
+    window.currentStudentProfile = null;
+
+    var switchModal = document.getElementById("switchStudentModal");
+    if (switchModal) switchModal.remove();
+
+    var dv = document.getElementById("dynamicView");
+    if (dv) dv.innerHTML = "";
+
     renderMobileCheckModal();
   }
 }
 
-// 11. Announcements Modal
+// 12. Announcements Modal
 function openStudentNoticeModal() {
   var notices = window.currentClassNotices || [];
   var listHtml = "";
@@ -700,7 +747,7 @@ function openStudentNoticeModal() {
   document.body.appendChild(div.firstElementChild);
 }
 
-// 12. Subject Hub Modal
+// 13. Subject Hub Modal
 function openSubjectHubModal(subjectName) {
   var profile = window.currentStudentProfile || { className: "Class 10" };
   var allQuizzes = window.currentAccountQuizzes || [];
@@ -741,7 +788,7 @@ function openSubjectHubModal(subjectName) {
   document.body.appendChild(div.firstElementChild);
 }
 
-// 13. Tuition Fee Payment Screen (PhonePe QR + UPI App Button)
+// 14. Fee Payment Modal
 function switchAccountSubTab(tabName) {
   if (tabName === "purchase") {
     var profile = window.currentStudentProfile || { name: "Student", dues: 0, monthlyFee: 0 };
