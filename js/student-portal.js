@@ -42,17 +42,39 @@ function saveRegisteredAccountsList(accounts) {
   } catch(e) {}
 }
 
-// 1. Entry Point
-function openStudentAccountModal() {
+// 1. Entry Point: Auto-refreshes data from live sheet on each launch
+async function openStudentAccountModal() {
   var activeProfile = getSafeAccountData("ak_student_profile");
+  
   if (activeProfile && activeProfile.mobile) {
+    try {
+      if (typeof API !== "undefined" && API.get) {
+        var ledgerRes = await API.get("getLedger&_t=" + Date.now());
+        if (ledgerRes && ledgerRes.status === "success" && Array.isArray(ledgerRes.data)) {
+          var matched = ledgerRes.data.find(function(s) {
+            return String(s.Mobile || s.mobile || "").trim() === String(activeProfile.mobile).trim();
+          });
+          if (matched) {
+            activeProfile.name = matched.Name || matched.name || activeProfile.name;
+            activeProfile.className = matched.Class || matched.className || activeProfile.className;
+            activeProfile.monthlyFee = Number(matched.Monthly_Fee || matched.monthlyFee || activeProfile.monthlyFee);
+            activeProfile.dues = Number(matched.calculatedDues !== undefined ? matched.calculatedDues : (matched.Dues || matched.dues || 0));
+            activeProfile.billingDate = matched.nextBillingDate || matched.currentCycleText || matched.Start_Date || activeProfile.billingDate;
+            activeProfile.category = matched.Category || matched.category || "Tuition Student";
+            setSafeAccountData("ak_student_profile", activeProfile);
+          }
+        }
+      }
+    } catch(e) {}
+
     renderStudentAccountDashboard(activeProfile);
     return;
   }
+
   renderMobileCheckModal();
 }
 
-// 2. Mobile Number Verification Screen
+// 2. Mobile Verification Screen
 function renderMobileCheckModal() {
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
@@ -79,7 +101,7 @@ function renderMobileCheckModal() {
   dv.innerHTML = html;
 }
 
-// 3. Multi-source Search (Local Accounts + Attempts History + Sheet Attempts + Ledger)
+// 3. Multi-source Search: Highest Priority -> Live Tuition Ledger
 async function handleMobileCheckSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
   var mobInput = document.getElementById("loginMobileInput");
@@ -91,16 +113,47 @@ async function handleMobileCheckSubmit(e) {
   }
 
   var dv = document.getElementById("dynamicView");
-  var submitBtn = e.target.querySelector("button[type='submit']");
+  var submitBtn = e.target ? e.target.querySelector("button[type='submit']") : null;
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking Records...';
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking Database...';
   }
 
-  var accounts = getRegisteredAccountsList();
-  var matchedAccounts = accounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+  var matchedAccounts = [];
 
-  // 1. Agar accounts me nahi mila, Attempts record me check karein
+  // PRIORITY 1: LIVE GOOGLE SHEET "Students_Ledger" (Master Record)
+  try {
+    if (typeof API !== "undefined" && API.get) {
+      var ledgerRes = await API.get("getLedger&_t=" + Date.now());
+      if (ledgerRes && ledgerRes.status === "success" && Array.isArray(ledgerRes.data)) {
+        localStorage.setItem("ak_tuition_ledger", JSON.stringify(ledgerRes.data));
+
+        var tuitionStudents = ledgerRes.data.filter(function(s) {
+          return String(s.Mobile || s.mobile || "").trim() === mob;
+        });
+
+        tuitionStudents.forEach(function(ts) {
+          matchedAccounts.push({
+            name: ts.Name || ts.name || "Student",
+            mobile: mob,
+            className: ts.Class || ts.className || "Class 10",
+            board: ts.Board || ts.board || "CBSE",
+            category: ts.Category || ts.category || "Tuition Student",
+            monthlyFee: Number(ts.Monthly_Fee || ts.monthlyFee || 0),
+            dues: Number(ts.calculatedDues !== undefined ? ts.calculatedDues : (ts.Dues || ts.dues || 0)),
+            billingDate: ts.nextBillingDate || ts.currentCycleText || ts.Start_Date || ts.startDate || "N/A",
+            currentCycle: ts.currentCycleText || "",
+            paidHistory: ts.parsedPaidHistory || [],
+            joinedDate: ts.Start_Date || ts.startDate || new Date().toLocaleDateString()
+          });
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Ledger cloud fetch fallback:", err);
+  }
+
+  // PRIORITY 2: TEST ATTEMPTS (If not in Tuition Ledger)
   if (matchedAccounts.length === 0) {
     var allAttempts = [];
     try {
@@ -132,42 +185,37 @@ async function handleMobileCheckSubmit(e) {
         className: latest.Class || latest.className || latest.class || "Class 10",
         board: latest.Board || latest.board || "CBSE",
         category: "Online Student",
-        monthlyFee: 800,
+        monthlyFee: 0,
         dues: 0,
-        billingDate: "15 Oct 2026",
-        joinedDate: new Date().toLocaleDateString()
+        billingDate: "Free Account",
+        currentCycle: "Active Practice Account",
+        paidHistory: [],
+        joinedDate: latest.Timestamp || new Date().toLocaleDateString()
       });
-
-      accounts.push(matchedAccounts[0]);
-      saveRegisteredAccountsList(accounts);
     }
   }
 
-  // 2. Tuition Ledger check
+  // PRIORITY 3: LOCAL STORAGE FALLBACK
   if (matchedAccounts.length === 0) {
-    try {
-      var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
-      var foundLedger = ledger.filter(function(s) { return String(s.mobile).trim() === mob; });
-      foundLedger.forEach(function(s) {
-        matchedAccounts.push({
-          name: s.name || "Student",
-          mobile: mob,
-          className: s.className || "Class 10",
-          board: s.board || "CBSE",
-          category: s.category || "Tuition Student",
-          monthlyFee: s.monthlyFee || 800,
-          dues: 0,
-          billingDate: s.startDate || "15 Oct 2026"
-        });
-      });
-      if (matchedAccounts.length > 0) {
-        saveRegisteredAccountsList(accounts.concat(matchedAccounts));
-      }
-    } catch(err) {}
+    var saved = getRegisteredAccountsList();
+    matchedAccounts = saved.filter(function(a) { return String(a.mobile).trim() === mob; });
   }
 
-  // Action based on search result
+  // LAUNCH & SAVE MULTI-PROFILES
   if (matchedAccounts.length > 0) {
+    var existingSaved = getRegisteredAccountsList();
+    matchedAccounts.forEach(function(mAcc) {
+      var idx = existingSaved.findIndex(function(s) { 
+        return s.mobile === mAcc.mobile && s.name === mAcc.name && s.className === mAcc.className; 
+      });
+      if (idx > -1) {
+        existingSaved[idx] = mAcc;
+      } else {
+        existingSaved.push(mAcc);
+      }
+    });
+    saveRegisteredAccountsList(existingSaved);
+
     if (matchedAccounts.length === 1) {
       var singleProf = matchedAccounts[0];
       setSafeAccountData("ak_student_profile", singleProf);
@@ -181,7 +229,7 @@ async function handleMobileCheckSubmit(e) {
   }
 }
 
-// 4. Multiple Profiles Found on Same Mobile
+// 4. Multiple Profiles Picker Modal
 function renderExistingProfilesPickerModal(mob, profileList) {
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
@@ -255,7 +303,7 @@ function renderRegisterProfileModal(mob) {
     '<option>Play</option><option>Nur</option><option>LKG</option><option>UKG</option>' +
     '<option>Class 1</option><option>Class 2</option><option>Class 3</option><option>Class 4</option>' +
     '<option>Class 5</option><option>Class 6</option><option>Class 7</option><option>Class 8</option>' +
-    '<option>Class 9</option><option selected>Class 10</option><option>Class 11</option><option>Class 12</option>' +
+    '<option selected>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option>' +
     '</select>' +
     '</div>' +
     '<div>' +
@@ -306,9 +354,9 @@ function handleNewProfileRegisterSubmit(e, mob) {
     className: className,
     board: board,
     category: "Tuition Student",
-    monthlyFee: 800,
+    monthlyFee: 0,
     dues: 0,
-    billingDate: "15 Oct 2026",
+    billingDate: "Active",
     joinedDate: new Date().toLocaleDateString()
   };
 
@@ -317,8 +365,8 @@ function handleNewProfileRegisterSubmit(e, mob) {
     var foundLedger = ledger.find(function(s) { return String(s.mobile).trim() === mob; });
     if (foundLedger) {
       newProf.category = foundLedger.category || newProf.category;
-      newProf.monthlyFee = foundLedger.monthlyFee || newProf.monthlyFee;
-      newProf.billingDate = foundLedger.startDate || newProf.billingDate;
+      newProf.monthlyFee = Number(foundLedger.monthlyFee || foundLedger.Monthly_Fee || 0);
+      newProf.billingDate = foundLedger.nextBillingDate || foundLedger.startDate || newProf.billingDate;
     }
   } catch(err) {}
 
@@ -339,15 +387,14 @@ function renderStudentAccountDashboard(profile) {
 
   try {
     var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
-    var found = ledger.find(function(s) { return String(s.mobile).trim() === String(profile.mobile).trim(); });
+    var found = ledger.find(function(s) { 
+      return String(s.Mobile || s.mobile || "").trim() === String(profile.mobile).trim(); 
+    });
     if (found) {
-      profile.category = found.category || profile.category || "Tuition Student";
-      profile.monthlyFee = found.monthlyFee || profile.monthlyFee || 800;
-      profile.billingDate = found.startDate || profile.billingDate || "15 Oct 2026";
-      if (typeof calculateStudentFinancials === "function") {
-        var fin = calculateStudentFinancials(found);
-        profile.dues = fin.pendingBalance;
-      }
+      profile.category = found.Category || found.category || profile.category;
+      profile.monthlyFee = Number(found.Monthly_Fee || found.monthlyFee || profile.monthlyFee || 0);
+      profile.dues = Number(found.calculatedDues !== undefined ? found.calculatedDues : (found.Dues || found.dues || 0));
+      profile.billingDate = found.nextBillingDate || found.currentCycleText || found.Start_Date || profile.billingDate;
     }
   } catch (e) {}
 
@@ -389,8 +436,9 @@ function renderStudentAccountDashboard(profile) {
   renderEnhancedStudentUI();
 }
 
+// 8. Dynamic Dashboard UI (All Fallbacks Replaced with Real Data)
 function renderEnhancedStudentUI() {
-  var profile = window.currentStudentProfile || { name: "Student", mobile: "9876543210", className: "Class 10", board: "CBSE", category: "Tuition Student", dues: 0, monthlyFee: 800, billingDate: "15 Oct 2026" };
+  var profile = window.currentStudentProfile || { name: "Student", mobile: "", className: "Class 10", board: "CBSE", category: "Tuition Student", dues: 0, monthlyFee: 0, billingDate: "Active" };
   var notices = window.currentClassNotices || [];
   var quizzes = window.currentAccountQuizzes || [];
   var featuredQuiz = quizzes.length > 0 ? quizzes[0] : null;
@@ -440,7 +488,7 @@ function renderEnhancedStudentUI() {
     // Body Container
     '<div style="flex:1; overflow-y:auto; padding:14px; max-width:850px; margin:0 auto; width:100%; box-sizing:border-box;">' +
 
-    // Student Identity Card with Board Toggle
+    // Student Identity Card
     '<div style="background:white; border-radius:16px; padding:16px; border:1px solid #e2e8f0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.04);">' +
     '<div style="display:flex; align-items:center; gap:12px;">' +
     '<div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:white; font-size:1.5rem; font-weight:800; display:flex; align-items:center; justify-content:center;">' +
@@ -459,7 +507,7 @@ function renderEnhancedStudentUI() {
     '</div>' +
     '</div>' +
 
-    // Tuition Fee & Dues Status Card
+    // Tuition Fee & Dues Status Card (100% Dynamic from Google Sheet)
     '<div style="background:linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color:white; border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 4px 14px rgba(30,58,138,0.2);">' +
     '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
     '<div>' +
@@ -471,8 +519,8 @@ function renderEnhancedStudentUI() {
     '<button onclick="switchAccountSubTab(\'purchase\')" style="background:#fbbf24; color:#0f172a; border:none; padding:7px 14px; border-radius:8px; font-weight:800; font-size:0.8rem; cursor:pointer;"><i class="fas fa-wallet"></i> Pay Fee</button>' +
     '</div>' +
     '<div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.15); font-size:0.78rem; opacity:0.9;">' +
-    '<span>Monthly Fee: <strong>₹' + (profile.monthlyFee || 800) + '</strong></span>' +
-    '<span>Next Cycle: <strong>' + (profile.billingDate || '15 Oct 2026') + '</strong></span>' +
+    '<span>Monthly Fee: <strong>₹' + (profile.monthlyFee || 0) + '</strong></span>' +
+    '<span>Next Cycle: <strong>' + (profile.billingDate || 'Active') + '</strong></span>' +
     '</div>' +
     '</div>' +
 
@@ -525,7 +573,7 @@ function renderEnhancedStudentUI() {
   dv.innerHTML = html;
 }
 
-// 8. Board Switcher (CBSE <-> BSEB)
+// 9. Board Switcher (CBSE <-> BSEB)
 function toggleStudentBoard() {
   var prof = window.currentStudentProfile;
   if (!prof) return;
@@ -548,7 +596,7 @@ function toggleStudentBoard() {
   renderStudentAccountDashboard(prof);
 }
 
-// 9. Profile Switcher Modal
+// 10. Profile Switcher Modal
 function openSwitchStudentModal() {
   var activeProf = window.currentStudentProfile || {};
   var mob = activeProf.mobile || "";
@@ -617,7 +665,7 @@ function logoutCurrentStudent() {
   }
 }
 
-// 10. Announcements Modal
+// 11. Announcements Modal
 function openStudentNoticeModal() {
   var notices = window.currentClassNotices || [];
   var listHtml = "";
@@ -652,7 +700,7 @@ function openStudentNoticeModal() {
   document.body.appendChild(div.firstElementChild);
 }
 
-// 11. Subject Hub Modal
+// 12. Subject Hub Modal
 function openSubjectHubModal(subjectName) {
   var profile = window.currentStudentProfile || { className: "Class 10" };
   var allQuizzes = window.currentAccountQuizzes || [];
@@ -693,11 +741,11 @@ function openSubjectHubModal(subjectName) {
   document.body.appendChild(div.firstElementChild);
 }
 
-// 12. Tuition Fee Payment Screen
+// 13. Tuition Fee Payment Screen (PhonePe QR + UPI App Button)
 function switchAccountSubTab(tabName) {
   if (tabName === "purchase") {
-    var profile = window.currentStudentProfile || { name: "Student", dues: 800, monthlyFee: 800 };
-    var payableAmount = Number(profile.dues) > 0 ? profile.dues : (profile.monthlyFee || 800);
+    var profile = window.currentStudentProfile || { name: "Student", dues: 0, monthlyFee: 0 };
+    var payableAmount = Number(profile.dues) > 0 ? profile.dues : (profile.monthlyFee || 1300);
     var upiDeepLink = "upi://pay?pa=8826011682@ybl&pn=Ankur%20Kumar&am=" + payableAmount + "&cu=INR&tn=Tuition%20Fee";
 
     var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="feePayModal">' +
