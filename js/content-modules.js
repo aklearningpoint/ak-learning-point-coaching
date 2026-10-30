@@ -1218,95 +1218,61 @@ function openSubjectHubModal(subjectName) {
   document.body.appendChild(div.firstElementChild);
 }
 
-// Payment Sub-Tab Loader (UPI QR & Proof Upload)
+// Payment Sub-Tab Loader (Official PhonePe QR + One-Click UPI + Screenshot Upload)
 function switchAccountSubTab(tabName) {
   if (tabName === "purchase") {
-    var profile = window.currentStudentProfile;
+    var profile = window.currentStudentProfile || { name: "Student", dues: 800, monthlyFee: 800 };
+    var payableAmount = Number(profile.dues) > 0 ? profile.dues : (profile.monthlyFee || 800);
+
+    // Deep-link for direct UPI payment apps
+    var upiDeepLink = "upi://pay?pa=8826011682@ybl&pn=Ankur%20Kumar&am=" + payableAmount + "&cu=INR&tn=Tuition%20Fee";
+
     var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="feePayModal">' +
-      '<div class="modal-card" style="max-width:480px; width:92%; max-height:90vh; overflow-y:auto;">' +
-      '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
-      '<h3 style="margin:0; color:#0f172a; font-size:1.1rem;"><i class="fas fa-qrcode" style="color:#16a34a;"></i> Tuition Fee Payment</h3>' +
-      '<button class="close-btn" onclick="document.getElementById(\'feePayModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
+      '<div class="modal-card" style="max-width:440px; width:92%; max-height:90vh; overflow-y:auto; padding:18px;">' +
+      
+      // Header
+      '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:12px;">' +
+      '<h3 style="margin:0; color:#0f172a; font-size:1.15rem;"><i class="fas fa-wallet" style="color:#16a34a;"></i> Fee Payment</h3>' +
+      '<button class="close-btn" onclick="document.getElementById(\'feePayModal\').remove()" style="background:none; border:none; font-size:1.25rem; cursor:pointer; color:#64748b;"><i class="fas fa-times"></i></button>' +
       '</div>' +
-      '<div style="text-align:center; padding:12px 0;">' +
-      '<div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:14px; padding:14px; margin-bottom:12px;">' +
-      '<div style="font-weight:700; color:#1e293b; font-size:0.85rem; margin-bottom:8px;">Scan via PhonePe / GPay / Paytm</div>' +
-      '<img src="./assets/qr.png" onerror="this.src=\'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8826011682@upi&pn=AK%20Learning%20Point\'" style="width:160px; height:160px; border-radius:10px; background:white; padding:4px; border:1px solid #e2e8f0;">' +
-      '<div style="margin-top:8px; font-size:0.85rem; color:#334155;">UPI ID: <strong style="color:#059669;">8826011682@upi</strong></div>' +
+
+      // Amount Badge
+      '<div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:10px; text-align:center; margin-bottom:14px;">' +
+      '<div style="font-size:0.78rem; color:#1e40af; font-weight:700;">PAYABLE AMOUNT</div>' +
+      '<div style="font-size:1.6rem; font-weight:900; color:#1e3a8a;">₹' + payableAmount + '</div>' +
       '</div>' +
-      '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px; text-align:left;">' +
-      '<h4 style="margin:0 0 4px 0; color:#166534; font-size:0.88rem;"><i class="fas fa-file-invoice"></i> Upload Payment Screenshot</h4>' +
-      '<p style="color:#15803d; font-size:0.75rem; margin-bottom:8px;">Screenshot upload hone par payment verify ho jayegi.</p>' +
+
+      // ONE-CLICK DIRECT UPI APP BUTTON
+      '<a href="' + upiDeepLink + '" style="display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #5f259f, #7c3aed); color:white; text-decoration:none; padding:12px; border-radius:12px; font-weight:800; font-size:0.95rem; margin-bottom:14px; box-shadow:0 4px 12px rgba(124, 58, 237, 0.3);">' +
+      '<i class="fas fa-mobile-alt"></i> Pay via PhonePe / GPay App' +
+      '</a>' +
+
+      // OFFICIAL QR BOX (PhonePe Accepted Here)
+      '<div style="background:#0f172a; border-radius:16px; padding:16px; text-align:center; color:white; margin-bottom:14px; box-shadow:0 6px 16px rgba(0,0,0,0.15);">' +
+      '<div style="font-size:0.85rem; font-weight:800; letter-spacing:0.5px; color:#a855f7; margin-bottom:4px;">पे PhonePe</div>' +
+      '<div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:10px;">ACCEPTED HERE • SCAN & PAY</div>' +
+      '<img src="./assets/qr.png.jpeg" alt="PhonePe QR Ankur Kumar" onerror="this.onerror=null; this.src=\'./assets/qr.png\';" style="width:190px; height:auto; border-radius:10px; background:white; padding:6px; display:block; margin:0 auto;">' +
+      '<div style="margin-top:10px; font-size:0.95rem; font-weight:800; letter-spacing:0.5px; color:#ffffff;">ANKUR KUMAR</div>' +
+      '<div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">UPI: 8826011682@ybl</div>' +
+      '</div>' +
+
+      // SCREENSHOT / UTR UPLOAD BOX
+      '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:12px 14px; text-align:left;">' +
+      '<h4 style="margin:0 0 4px 0; color:#166534; font-size:0.88rem;"><i class="fas fa-receipt"></i> Upload Payment Screenshot / Receipt</h4>' +
+      '<p style="color:#15803d; font-size:0.75rem; margin-bottom:10px;">Payment ke baad screenshot chunein, yeh record verify karne ke liye safe save hoga.</p>' +
       '<input type="file" id="payProofFile" accept="image/*" style="width:100%; font-size:0.8rem; margin-bottom:8px;">' +
-      '<button id="btnUploadProof" onclick="uploadPaymentProofToDrive()" style="background:#16a34a; color:white; border:none; padding:9px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; width:100%;">' +
-      '<i class="fas fa-cloud-upload-alt"></i> Confirm & Upload' +
+      '<button id="btnUploadProof" onclick="uploadPaymentProofToDrive()" style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; width:100%;">' +
+      '<i class="fas fa-cloud-upload-alt"></i> Submit Payment Receipt' +
       '</button>' +
       '<div id="uploadStatusMsg" style="margin-top:6px; font-size:0.78rem; text-align:center; font-weight:700;"></div>' +
       '</div>' +
-      '</div>' +
+
       '</div></div>';
 
     var div = document.createElement("div");
     div.innerHTML = html;
     document.body.appendChild(div.firstElementChild);
   }
-}
-
-function uploadPaymentProofToDrive() {
-  var fileInput = document.getElementById("payProofFile");
-  var statusMsg = document.getElementById("uploadStatusMsg");
-  var btn = document.getElementById("btnUploadProof");
-  var profile = window.currentStudentProfile;
-
-  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-    alert("Kripya payment screenshot image select karein!");
-    return;
-  }
-
-  var file = fileInput.files[0];
-  var reader = new FileReader();
-
-  btn.disabled = true;
-  btn.innerText = "Uploading to Drive...";
-  statusMsg.style.color = "#0284c7";
-  statusMsg.innerText = "Google Drive me upload ho raha hai...";
-
-  reader.onload = function(e) {
-    var base64Data = e.target.result.split(",")[1];
-    var payload = {
-      action: "uploadPaymentReceipt",
-      studentName: profile ? profile.name : "Student",
-      studentMobile: profile ? profile.mobile : "N/A",
-      studentClass: profile ? profile.className : "General",
-      fileName: ((profile && profile.name) ? profile.name : "Student").replace(/\s+/g, "_") + "_" + Date.now() + ".jpg",
-      mimeType: file.type || "image/jpeg",
-      fileData: base64Data
-    };
-
-    if (typeof API !== "undefined" && API.post) {
-      API.post("uploadPaymentReceipt", payload)
-        .then(function() {
-          btn.disabled = false;
-          btn.innerText = "Uploaded Successfully!";
-          statusMsg.style.color = "#16a34a";
-          statusMsg.innerText = "✅ Screenshot Drive me save ho gaya hai!";
-          alert("Payment screenshot successfully received!");
-        })
-        .catch(function() {
-          btn.disabled = false;
-          btn.innerText = "Uploaded!";
-          statusMsg.style.color = "#16a34a";
-          statusMsg.innerText = "✅ Screenshot save ho gaya!";
-        });
-    } else {
-      btn.disabled = false;
-      btn.innerText = "Uploaded!";
-      statusMsg.style.color = "#16a34a";
-      statusMsg.innerText = "✅ Screenshot save ho gaya!";
-    }
-  };
-
-  reader.readAsDataURL(file);
 }
 
 function switchStudentAccount() {
