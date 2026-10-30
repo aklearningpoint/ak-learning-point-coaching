@@ -12,10 +12,11 @@ function initialSheetSetup() {
     "Quizzes": ["Quiz_ID", "Title", "Board", "Class", "Subject", "Timer_Type", "Timer_Value", "Negative_Mark", "Is_Rewarding", "Passkey", "Status", "Created_At"],
     "Questions": ["Question_ID", "Quiz_ID", "Question_Text", "Opt_A", "Opt_B", "Opt_C", "Opt_D", "Correct_Option"],
     "Attempts": ["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers_JSON", "Timestamp"],
-    "Students_Ledger": ["Student_ID", "Name", "Mobile", "Monthly_Fee", "Start_Date", "Paid_History_JSON"],
+    "Students_Ledger": ["Student_ID", "Name", "Mobile", "Class", "Category", "Monthly_Fee", "Dues", "Last_Payment_Date", "Pin", "Timestamp"],
     "School_Students": ["Class", "Roll_No", "Name", "Father_Name", "Mother_Name", "Mobile", "Address"],
     "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"],
-    "Materials": ["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"]
+    "Materials": ["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"],
+    "Notifications": ["Notification_ID", "Title", "Target_Class", "Message", "Posted_By", "Date", "Timestamp"]
   };
 
   for (var sheetName in sheets) {
@@ -35,7 +36,7 @@ function doGet(e) {
   var ss = getSpreadsheet();
   var result = { status: "success", data: [] };
 
-  // 1. Quizzes fetch karne ke liye
+  // 1. Quizzes fetch
   if (action === "getQuizzes" || action === "getAllQuizzes" || action === "getLiveQuizzes") {
     var qSheet = ss.getSheetByName("Quizzes");
     var quesSheet = ss.getSheetByName("Questions");
@@ -77,7 +78,7 @@ function doGet(e) {
     return returnJSON(result);
   }
 
-  // 2. Attempts / Leaderboard / Student Results fetch
+  // 2. Attempts / Leaderboard fetch
   if (action === "getAttempts" || action === "getLeaderboard" || action === "getStudentResults" || tabName === "Attempts") {
     var attSheet = ss.getSheetByName("Attempts");
     if (!attSheet) return returnJSON(result);
@@ -98,6 +99,57 @@ function doGet(e) {
     }
 
     result.data = attemptsList;
+    return returnJSON(result);
+  }
+
+  // 3. Live Notifications Fetch (For Student Bell & Teacher/Admin Views)
+  if (action === "getNotifications") {
+    var notifSheet = ss.getSheetByName("Notifications");
+    if (!notifSheet) return returnJSON(result);
+
+    var notifData = notifSheet.getDataRange().getValues();
+    if (notifData.length <= 1) return returnJSON(result);
+
+    var notifs = [];
+    for (var n = notifData.length - 1; n >= 1; n--) { // Latest on top
+      notifs.push({
+        id: notifData[n][0],
+        title: notifData[n][1],
+        targetClass: notifData[n][2],
+        message: notifData[n][3],
+        postedBy: notifData[n][4],
+        date: notifData[n][5],
+        timestamp: notifData[n][6]
+      });
+    }
+    result.data = notifs;
+    return returnJSON(result);
+  }
+
+  // 4. Student Ledger & Classification Fetch
+  if (action === "getStudentsLedger") {
+    var sSheet = ss.getSheetByName("Students_Ledger");
+    if (!sSheet) return returnJSON(result);
+
+    var sData = sSheet.getDataRange().getValues();
+    if (sData.length <= 1) return returnJSON(result);
+
+    var students = [];
+    for (var s = 1; s < sData.length; s++) {
+      students.push({
+        id: sData[s][0],
+        name: sData[s][1],
+        mobile: sData[s][2],
+        className: sData[s][3],
+        category: sData[s][4],
+        monthlyFee: sData[s][5],
+        dues: sData[s][6],
+        lastPaymentDate: sData[s][7],
+        pin: sData[s][8],
+        timestamp: sData[s][9]
+      });
+    }
+    result.data = students;
     return returnJSON(result);
   }
 
@@ -192,7 +244,75 @@ function doPost(e) {
       return returnJSON(result);
     }
 
-    // 3. SAVE STUDENT ATTEMPT (Handles both submitQuizAttempt and saveAttempt)
+    // 3. SAVE LIVE NOTIFICATION (NEW)
+    if (action === "saveNotification" || data.action === "saveNotification") {
+      var notifSheet = ss.getSheetByName("Notifications");
+      if (!notifSheet) {
+        notifSheet = ss.insertSheet("Notifications");
+        notifSheet.appendRow(["Notification_ID", "Title", "Target_Class", "Message", "Posted_By", "Date", "Timestamp"]);
+      }
+
+      var n = data.notification || data;
+      notifSheet.appendRow([
+        n.id || ("notif_" + Date.now()),
+        n.title || "",
+        n.targetClass || "All Classes",
+        n.message || "",
+        n.postedBy || "Faculty/Admin",
+        n.date || new Date().toLocaleDateString("en-GB"),
+        n.timestamp || new Date().toISOString()
+      ]);
+
+      result.message = "Notification saved to sheet successfully";
+      return returnJSON(result);
+    }
+
+    // 4. SAVE / UPDATE STUDENT IN LEDGER & CLASSIFICATION (NEW)
+    if (action === "saveStudentLedger" || data.action === "saveStudentLedger") {
+      var ledgerSheet = ss.getSheetByName("Students_Ledger");
+      if (!ledgerSheet) {
+        ledgerSheet = ss.insertSheet("Students_Ledger");
+        ledgerSheet.appendRow(["Student_ID", "Name", "Mobile", "Class", "Category", "Monthly_Fee", "Dues", "Last_Payment_Date", "Pin", "Timestamp"]);
+      }
+
+      var st = data.student || data;
+      var stMobile = String(st.mobile || "").trim();
+      var dataVals = ledgerSheet.getDataRange().getValues();
+      var existingRowIndex = -1;
+
+      // Agar student already exists karta hai to usi row ko update karo, nahi to new row add karo
+      for (var r = 1; r < dataVals.length; r++) {
+        if (String(dataVals[r][2]).trim() === stMobile) {
+          existingRowIndex = r + 1;
+          break;
+        }
+      }
+
+      var rowValues = [
+        st.id || ("st_" + Date.now()),
+        st.name || "",
+        st.mobile || "",
+        st.className || "",
+        st.category || "Guest Student",
+        st.monthlyFee || 0,
+        st.dues || 0,
+        st.lastPaymentDate || "",
+        st.pin || "1234",
+        new Date().toISOString()
+      ];
+
+      if (existingRowIndex > -1) {
+        ledgerSheet.getRange(existingRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+        result.message = "Student record updated in Sheet";
+      } else {
+        ledgerSheet.appendRow(rowValues);
+        result.message = "New Student saved to Sheet";
+      }
+
+      return returnJSON(result);
+    }
+
+    // 5. SAVE STUDENT ATTEMPT
     if (action === "submitQuizAttempt" || action === "saveAttempt" || data.action === "submitQuizAttempt" || data.action === "saveAttempt") {
       var attSheet = ss.getSheetByName("Attempts");
       if (!attSheet) {
@@ -211,7 +331,6 @@ function doPost(e) {
       var percentage = att.percentage !== undefined ? att.percentage : (totalMarks > 0 ? ((score / totalMarks) * 100).toFixed(1) : 0);
       var answersJson = typeof att.answers === "object" ? JSON.stringify(att.answers) : (att.answers || "{}");
 
-      // Double Entry Lock: Prevent duplicate if submitted within 15 seconds
       var lastRow = attSheet.getLastRow();
       var isDuplicate = false;
       if (lastRow > 1) {
