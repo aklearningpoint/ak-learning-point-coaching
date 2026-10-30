@@ -6,7 +6,7 @@ function getSpreadsheet() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-// 1. RUN THIS ONCE TO CREATE / FIX ALL TABS & HEADERS
+// 1. RUN THIS ONCE TO CREATE / FIX COACHING TABS & HEADERS
 function initialSheetSetup() {
   var ss = getSpreadsheet();
   
@@ -31,9 +31,7 @@ function initialSheetSetup() {
     
     "Materials": ["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"],
     "Notifications": ["Notification_ID", "Title", "Target_Class", "Message", "Posted_By", "Date", "Timestamp"],
-    "Student_Profiles": ["Timestamp", "Mobile", "Student_Name", "Class", "Board", "Category", "Registered_Date"],
-    "School_Students": ["Class", "Roll_No", "Name", "Father_Name", "Mother_Name", "Mobile", "Address"],
-    "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"]
+    "Student_Profiles": ["Timestamp", "Mobile", "Student_Name", "Class", "Board", "Category", "Registered_Date"]
   };
 
   for (var sheetName in sheets) {
@@ -400,7 +398,6 @@ function processStudentBillingCycles(student) {
     totalPaid += Number(item.amount || 0);
   });
 
-  // Month cycle poora hone par hi fee calculate hoti hai
   var totalBilled = totalCyclesCount * fee;
   var currentDues = Math.max(0, totalBilled - totalPaid);
 
