@@ -21,22 +21,6 @@
     </div>
   </header>
 
-  <!-- Download App Top Banner -->
-  <div style="background: linear-gradient(135deg, #1e40af, #0284c7); color: white; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.15); border-bottom: 2px solid #38bdf8;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <img src="./assets/logo.png" style="width: 38px; height: 38px; border-radius: 8px; background: white; padding: 2px; object-fit: contain;">
-      <div>
-        <div style="font-size: 0.95rem; font-weight: bold; color: #fde047;">AK Learning Point App 🚀</div>
-        <div style="font-size: 0.75rem; color: #e0f2fe;">Faster Test & Fullscreen Experience</div>
-      </div>
-    </div>
-    <div>
-      <a href="./assets/app.apk" download style="background: #22c55e; color: white; text-decoration: none; font-size: 0.85rem; font-weight: bold; padding: 8px 14px; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: inline-block;">
-        📲 Download APK
-      </a>
-    </div>
-  </div>
-
   <!-- Right Drawer Menu (School Portal safely inside drawer) -->
   <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()">
     <div class="drawer-content" onclick="event.stopPropagation()">
@@ -121,6 +105,22 @@
         <i class="fab fa-whatsapp"></i>
       </div>
     </div>
+
+    <!-- Floating Action Buttons (Left: Download APK | Right: Share App) -->
+<div style="position: fixed; bottom: 18px; left: 16px; z-index: 2000;">
+  <a href="./assets/app.apk" download style="background: #1e40af; color: white; text-decoration: none; padding: 8px 14px; border-radius: 20px; font-weight: 700; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.35);">
+    <i class="fas fa-download"></i> Get App
+  </a>
+</div>
+
+<div style="position: fixed; bottom: 18px; right: 16px; display: flex; align-items: center; gap: 8px; z-index: 2000;">
+  <button onclick="triggerSmartShare()" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; color: #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer;">
+    Share App
+  </button>
+  <div onclick="triggerSmartShare()" style="width: 46px; height: 46px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); cursor: pointer;">
+    <i class="fab fa-whatsapp"></i>
+  </div>
+</div>
 
   </main>
 
