@@ -718,42 +718,190 @@ function setSafeAccountData(key, val) {
   } catch(e) {}
 }
 
-function openStudentAccountModal() {
+// =========================================================================
+// SMART STUDENT AUTH & MULTI-PROFILE ENGINE (LIMITS: 2 SAME CLASS / 5 TOTAL)
+// =========================================================================
+
+function getRegisteredAccountsList() {
   try {
-    var savedProfile = getSafeAccountData("ak_student_profile");
-    if (!savedProfile || !savedProfile.mobile) {
-      renderStudentProfileSetupModal();
-      return;
-    }
-    renderStudentAccountDashboard(savedProfile);
-  } catch(err) {
-    console.error("Account Open Error:", err);
-    renderStudentProfileSetupModal();
+    return JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
+  } catch(e) {
+    return [];
   }
 }
 
-function renderStudentProfileSetupModal() {
+function saveRegisteredAccountsList(accounts) {
+  try {
+    localStorage.setItem("ak_saved_student_accounts", JSON.stringify(accounts));
+  } catch(e) {}
+}
+
+// 1. Entry Point: Student Portal Click hote hi open hoga
+function openStudentAccountModal() {
+  var activeProfile = getSafeAccountData("ak_student_profile");
+  
+  // Agar active session pehle se chal raha hai to direct dashboard
+  if (activeProfile && activeProfile.mobile) {
+    renderStudentAccountDashboard(activeProfile);
+    return;
+  }
+  
+  // Warna familiar Mobile Number check screen
+  renderMobileCheckModal();
+}
+
+// 2. Step 1: Mobile Number Prompt Screen
+function renderMobileCheckModal() {
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
 
-  var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">' +
-    '<div style="background:white; max-width:440px; width:100%; border-radius:24px; padding:28px; box-shadow:0 10px 25px rgba(0,0,0,0.1); text-align:center;">' +
-    '<div style="font-size:3rem; margin-bottom:8px;">🎓</div>' +
-    '<h2 style="color:#0f172a; margin:0 0 6px 0; font-size:1.35rem;">Student Sign-In / Setup</h2>' +
-    '<p style="color:#64748b; font-size:0.85rem; margin-bottom:18px;">Apna account banayein ya switch karein taaki aapka board, test aur data save rahe.</p>' +
-    '<form onsubmit="handleSaveStudentProfile(event)" style="display:flex; flex-direction:column; gap:12px; text-align:left;">' +
-    '<div>' +
-    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Full Name</label>' +
-    '<input type="text" id="stpName" required placeholder="Aapka pura naam" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
+  var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 23, 42, 0.75); backdrop-filter:blur(4px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">' +
+    '<div style="background:white; max-width:420px; width:100%; border-radius:24px; padding:24px; box-shadow:0 15px 35px rgba(0,0,0,0.2); text-align:center;">' +
+    '<div style="width:60px; height:60px; border-radius:50%; background:#e0f2fe; color:#0284c7; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; font-size:1.8rem;">' +
+    '<i class="fas fa-user-graduate"></i>' +
     '</div>' +
+    '<h3 style="color:#0f172a; margin:0 0 6px 0; font-size:1.3rem; font-weight:800;">Student Portal Login</h3>' +
+    '<p style="color:#64748b; font-size:0.84rem; margin:0 0 18px 0;">Apna 10-digit mobile number enter karke dashboard me login karein.</p>' +
+    
+    '<form onsubmit="handleMobileCheckSubmit(event)" style="display:flex; flex-direction:column; gap:12px; text-align:left;">' +
     '<div>' +
-    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">10-Digit Mobile / WhatsApp</label>' +
-    '<input type="tel" id="stpMobile" required pattern="[0-9]{10}" placeholder="WhatsApp number" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
+    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">WhatsApp / Mobile Number</label>' +
+    '<input type="tel" id="loginMobileInput" required pattern="[0-9]{10}" placeholder="Enter 10-digit number" style="width:100%; padding:12px; border-radius:12px; border:1.5px solid #cbd5e1; font-size:1rem; box-sizing:border-box; margin-top:4px; outline:none;">' +
     '</div>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+    '<button type="submit" style="background:#059669; color:white; border:none; padding:12px; border-radius:12px; font-weight:800; font-size:1rem; cursor:pointer; box-shadow:0 4px 12px rgba(5,150,105,0.3);">' +
+    'Continue <i class="fas fa-arrow-right"></i>' +
+    '</button>' +
+    '</form>' +
+    '<button onclick="closeDynamicView()" style="margin-top:14px; background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer;"><i class="fas fa-times"></i> Cancel</button>' +
+    '</div></div>';
+
+  dv.innerHTML = html;
+}
+
+// 3. Check Mobile in Database (Saved Profiles + Tuition Ledger)
+function handleMobileCheckSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  var mobInput = document.getElementById("loginMobileInput");
+  var mob = mobInput ? mobInput.value.trim() : "";
+
+  if (!mob || mob.length !== 10) {
+    alert("Kripya sahi 10-digit mobile number dalein!");
+    return;
+  }
+
+  var accounts = getRegisteredAccountsList();
+  var matchedAccounts = accounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+
+  // Agar localStorage me nahi hai, to Tuition Ledger se bhi check karein
+  if (matchedAccounts.length === 0) {
+    try {
+      var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
+      var foundLedger = ledger.filter(function(s) { return String(s.mobile).trim() === mob; });
+      foundLedger.forEach(function(s) {
+        matchedAccounts.push({
+          name: s.name || "Student",
+          mobile: mob,
+          className: s.className || "Class 10",
+          board: s.board || "CBSE",
+          category: s.category || "Tuition Student",
+          monthlyFee: s.monthlyFee || 800,
+          dues: 0,
+          billingDate: s.startDate || "15 Oct 2026"
+        });
+      });
+      // Sync into saved accounts
+      if (matchedAccounts.length > 0) {
+        saveRegisteredAccountsList(accounts.concat(matchedAccounts));
+      }
+    } catch(err) {}
+  }
+
+  // Agar record mil gaya to profiles list dikhayein
+  if (matchedAccounts.length > 0) {
+    renderExistingProfilesPickerModal(mob, matchedAccounts);
+  } else {
+    // Bilkul naya number hai to Registration Form split karein
+    renderRegisterProfileModal(mob);
+  }
+}
+
+// 4. Step 2A: Number mila to user ke samne profiles select karne ka modal
+function renderExistingProfilesPickerModal(mob, profileList) {
+  var dv = document.getElementById("dynamicView");
+  if (!dv) return;
+
+  var cardsHtml = "";
+  for (var i = 0; i < profileList.length; i++) {
+    var p = profileList[i];
+    cardsHtml += '<div onclick="selectProfileAndLaunch(' + i + ', \'' + mob + '\')" style="background:#f8fafc; border:1.5px solid #94a3b8; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; text-align:left;">' +
+      '<div style="display:flex; align-items:center; gap:10px;">' +
+      '<div style="width:40px; height:40px; border-radius:50%; background:#2563eb; color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem;">' +
+      (p.name ? p.name.charAt(0).toUpperCase() : 'S') +
+      '</div>' +
+      '<div>' +
+      '<div style="font-weight:800; color:#0f172a; font-size:0.95rem;">' + p.name + '</div>' +
+      '<div style="font-size:0.75rem; color:#64748b;">' + p.className + ' • ' + (p.board || 'CBSE') + '</div>' +
+      '</div>' +
+      '</div>' +
+      '<span style="background:#dcfce7; color:#15803d; font-weight:800; font-size:0.75rem; padding:4px 8px; border-radius:6px;">Open <i class="fas fa-chevron-right"></i></span>' +
+      '</div>';
+  }
+
+  var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 23, 42, 0.75); backdrop-filter:blur(4px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">' +
+    '<div style="background:white; max-width:440px; width:100%; border-radius:24px; padding:22px; box-shadow:0 15px 35px rgba(0,0,0,0.2); text-align:center; max-height:90vh; overflow-y:auto;">' +
+    '<h3 style="color:#0f172a; margin:0 0 4px 0; font-size:1.25rem; font-weight:800;">Welcome Back!</h3>' +
+    '<p style="color:#64748b; font-size:0.82rem; margin:0 0 14px 0;">Number: <strong>+91 ' + mob + '</strong> par linked profile chunein:</p>' +
+    
+    '<div style="margin-bottom:12px;">' + cardsHtml + '</div>' +
+
+    '<div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid #e2e8f0; padding-top:12px;">' +
+    '<button onclick="renderRegisterProfileModal(\'' + mob + '\')" style="background:#eff6ff; color:#2563eb; border:1px dashed #2563eb; padding:10px; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer;">' +
+    '<i class="fas fa-user-plus"></i> + Add Another Student Profile' +
+    '</button>' +
+    '<button onclick="renderMobileCheckModal()" style="background:transparent; border:none; color:#64748b; font-size:0.82rem; cursor:pointer;">' +
+    '<i class="fas fa-exchange-alt"></i> Login with different number' +
+    '</button>' +
+    '</div>' +
+    '</div></div>';
+
+  dv.innerHTML = html;
+}
+
+function selectProfileAndLaunch(idx, mob) {
+  var accounts = getRegisteredAccountsList();
+  var matched = accounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+  if (matched[idx]) {
+    var p = matched[idx];
+    setSafeAccountData("ak_student_profile", p);
+    
+    // Clear overlay
+    var dv = document.getElementById("dynamicView");
+    if (dv) dv.innerHTML = "";
+    
+    renderStudentAccountDashboard(p);
+  }
+}
+
+// 5. Step 2B: Registration Split Form (With Guardrail Rules)
+function renderRegisterProfileModal(mob) {
+  var dv = document.getElementById("dynamicView");
+  if (!dv) return;
+
+  var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 23, 42, 0.75); backdrop-filter:blur(4px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">' +
+    '<div style="background:white; max-width:440px; width:100%; border-radius:24px; padding:24px; box-shadow:0 15px 35px rgba(0,0,0,0.2); text-align:center; max-height:92vh; overflow-y:auto;">' +
+    '<div style="font-size:2.4rem; margin-bottom:6px;">📝</div>' +
+    '<h3 style="color:#0f172a; margin:0 0 4px 0; font-size:1.25rem; font-weight:800;">Register Student Profile</h3>' +
+    '<p style="color:#64748b; font-size:0.82rem; margin:0 0 14px 0;">Mobile: <strong>+91 ' + mob + '</strong></p>' +
+
+    '<form onsubmit="handleNewProfileRegisterSubmit(event, \'' + mob + '\')" style="display:flex; flex-direction:column; gap:10px; text-align:left;">' +
+    '<div>' +
+    '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Student Full Name</label>' +
+    '<input type="text" id="regName" required placeholder="Enter student name" style="width:100%; padding:10px; border-radius:10px; border:1.5px solid #cbd5e1; box-sizing:border-box; margin-top:3px;">' +
+    '</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
     '<div>' +
     '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Class</label>' +
-    '<select id="stpClass" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
+    '<select id="regClass" required style="width:100%; padding:10px; border-radius:10px; border:1.5px solid #cbd5e1; box-sizing:border-box; margin-top:3px;">' +
     '<option>Play</option><option>Nur</option><option>LKG</option><option>UKG</option>' +
     '<option>Class 1</option><option>Class 2</option><option>Class 3</option><option>Class 4</option>' +
     '<option>Class 5</option><option>Class 6</option><option>Class 7</option><option>Class 8</option>' +
@@ -762,38 +910,55 @@ function renderStudentProfileSetupModal() {
     '</div>' +
     '<div>' +
     '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Board</label>' +
-    '<select id="stpBoard" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
-    '<option value="CBSE" selected>CBSE Board</option>' +
-    '<option value="BSEB">BSEB (Bihar Board)</option>' +
+    '<select id="regBoard" required style="width:100%; padding:10px; border-radius:10px; border:1.5px solid #cbd5e1; box-sizing:border-box; margin-top:3px;">' +
+    '<option value="CBSE" selected>CBSE</option><option value="BSEB">BSEB (Bihar)</option>' +
     '</select>' +
     '</div>' +
     '</div>' +
-    '<button type="submit" style="margin-top:10px; background:#059669; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:1rem; cursor:pointer;">Save & Enter Dashboard 🚀</button>' +
+
+    '<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px; font-size:0.73rem; color:#64748b; margin-top:4px;">' +
+    '<i class="fas fa-info-circle" style="color:#2563eb;"></i> <strong>Note:</strong> Ek number se same class me max 2 aur total max 5 profile register ho sakti hain.' +
+    '</div>' +
+
+    '<button type="submit" style="margin-top:8px; background:#059669; color:white; border:none; padding:12px; border-radius:12px; font-weight:800; font-size:0.95rem; cursor:pointer;">' +
+    'Create Profile & Enter 🚀' +
+    '</button>' +
     '</form>' +
-    '<button onclick="closeDynamicView()" style="margin-top:14px; background:transparent; border:none; color:#64748b; font-size:0.85rem; cursor:pointer;"><i class="fas fa-times"></i> Cancel</button>' +
+    '<button onclick="renderMobileCheckModal()" style="margin-top:12px; background:transparent; border:none; color:#64748b; font-size:0.82rem; cursor:pointer;"><i class="fas fa-arrow-left"></i> Back</button>' +
     '</div></div>';
 
   dv.innerHTML = html;
 }
 
-function handleSaveStudentProfile(e) {
+// 6. Registration Limits Validator & Profile Saver
+function handleNewProfileRegisterSubmit(e, mob) {
   if (e && e.preventDefault) e.preventDefault();
-  var nameEl = document.getElementById("stpName");
-  var mobEl = document.getElementById("stpMobile");
-  var clsEl = document.getElementById("stpClass");
-  var brdEl = document.getElementById("stpBoard");
 
-  var mob = mobEl ? mobEl.value.trim() : "";
-  if (!mob) {
-    alert("Mobile number dalna zaroori hai!");
+  var name = document.getElementById("regName").value.trim();
+  var className = document.getElementById("regClass").value;
+  var board = document.getElementById("regBoard").value;
+
+  var allAccounts = getRegisteredAccountsList();
+  var myAccounts = allAccounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+
+  // RULE 1: Total Maximum 5 Profiles per Mobile Number
+  if (myAccounts.length >= 5) {
+    alert("LIMIT EXCEEDED!\nIs mobile number se maximum 5 profiles already registered hain.");
     return;
   }
 
-  var prof = {
-    name: nameEl ? nameEl.value.trim() : "Student",
+  // RULE 2: Same Class Maximum 2 Profiles
+  var sameClassCount = myAccounts.filter(function(a) { return a.className === className; }).length;
+  if (sameClassCount >= 2) {
+    alert("LIMIT EXCEEDED!\nIs mobile number par " + className + " ki 2 profiles pehle se hain. Same class me 2 se zyada register nahi ho sakti.");
+    return;
+  }
+
+  var newProf = {
+    name: name,
     mobile: mob,
-    className: clsEl ? clsEl.value : "Class 10",
-    board: brdEl ? brdEl.value : "CBSE",
+    className: className,
+    board: board,
     category: "Tuition Student",
     monthlyFee: 800,
     dues: 0,
@@ -801,45 +966,100 @@ function handleSaveStudentProfile(e) {
     joinedDate: new Date().toLocaleDateString()
   };
 
-  // Sync details if already exists in tuition ledger
+  // Sync details from tuition ledger if exists
   try {
     var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
-    var found = ledger.find(function(s) { return String(s.mobile).trim() === mob; });
-    if (found) {
-      prof.name = found.name || prof.name;
-      prof.category = found.category || prof.category;
-      prof.monthlyFee = found.monthlyFee || prof.monthlyFee;
-      prof.billingDate = found.startDate || prof.billingDate;
-      if (typeof calculateStudentFinancials === "function") {
-        var fin = calculateStudentFinancials(found);
-        prof.dues = fin.pendingBalance;
-      }
+    var foundLedger = ledger.find(function(s) { return String(s.mobile).trim() === mob; });
+    if (foundLedger) {
+      newProf.category = foundLedger.category || newProf.category;
+      newProf.monthlyFee = foundLedger.monthlyFee || newProf.monthlyFee;
+      newProf.billingDate = foundLedger.startDate || newProf.billingDate;
     }
-  } catch (err) {}
+  } catch(err) {}
 
-  // Multi-profile history save
-  var studentAccounts = [];
-  try {
-    studentAccounts = JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
-  } catch(err) { studentAccounts = []; }
+  // Save to accounts list
+  allAccounts.push(newProf);
+  saveRegisteredAccountsList(allAccounts);
 
-  var existingIdx = studentAccounts.findIndex(function(s) { return s.mobile === mob; });
-  if (existingIdx > -1) {
-    studentAccounts[existingIdx] = prof;
-  } else {
-    studentAccounts.push(prof);
-  }
-  localStorage.setItem("ak_saved_student_accounts", JSON.stringify(studentAccounts));
+  // Set active profile
+  setSafeAccountData("ak_student_profile", newProf);
 
-  // 1. Direct LocalStorage & AppInventor sync
-  setSafeAccountData("ak_student_profile", prof);
-
-  // 2. Clear Sign-In Setup Screen completely (Android App Fix)
+  // Clear modal and open dashboard
   var dv = document.getElementById("dynamicView");
   if (dv) dv.innerHTML = "";
+  
+  renderStudentAccountDashboard(newProf);
+}
 
-  // 3. Render Dashboard cleanly
-  renderStudentAccountDashboard(prof);
+// 7. Dashboard ke andar se "Add / Switch Profile" Modal
+function openSwitchStudentModal() {
+  var activeProf = window.currentStudentProfile || {};
+  var mob = activeProf.mobile || "";
+
+  var allAccounts = getRegisteredAccountsList();
+  var myAccounts = allAccounts.filter(function(a) { return String(a.mobile).trim() === mob; });
+
+  var listHtml = "";
+  myAccounts.forEach(function(acc) {
+    var isCurrent = (acc.name === activeProf.name && acc.className === activeProf.className);
+    listHtml += '<div onclick="switchToSpecificStudent(\'' + acc.name + '\', \'' + acc.className + '\')" style="background:' + (isCurrent ? '#ecfdf5' : '#f8fafc') + '; border:1.5px solid ' + (isCurrent ? '#10b981' : '#cbd5e1') + '; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">' +
+      '<div>' +
+      '<strong style="color:#0f172a; font-size:0.92rem;">' + acc.name + '</strong> ' + (isCurrent ? '<span style="background:#10b981; color:white; font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:800;">ACTIVE</span>' : '') + '<br>' +
+      '<small style="color:#64748b;">' + acc.className + ' • ' + (acc.board || 'CBSE') + '</small>' +
+      '</div>' +
+      '<i class="fas fa-check-circle" style="color:' + (isCurrent ? '#10b981' : '#cbd5e1') + ';"></i>' +
+      '</div>';
+  });
+
+  var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="switchStudentModal">' +
+    '<div class="modal-card" style="max-width:440px; width:92%; max-height:85vh; overflow-y:auto; padding:20px;">' +
+    '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
+    '<h3 style="margin:0; color:#0f172a; font-size:1.15rem;"><i class="fas fa-users" style="color:#0284c7;"></i> Switch Profile</h3>' +
+    '<button class="close-btn" onclick="document.getElementById(\'switchStudentModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+
+    '<div style="margin-top:12px;">' +
+    '<p style="color:#64748b; font-size:0.8rem; margin:0 0 10px 0;">Number: <strong>+91 ' + mob + '</strong> par registered profiles:</p>' +
+    listHtml +
+
+    '<div style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:12px; display:flex; gap:8px;">' +
+    '<button onclick="document.getElementById(\'switchStudentModal\').remove(); renderRegisterProfileModal(\'' + mob + '\');" style="flex:1; background:#059669; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.82rem; cursor:pointer;">' +
+    '<i class="fas fa-plus-circle"></i> + Add Profile' +
+    '</button>' +
+    '<button onclick="logoutCurrentStudent()" style="background:#fee2e2; color:#dc2626; border:none; padding:10px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; cursor:pointer;">' +
+    '<i class="fas fa-sign-out-alt"></i> Logout' +
+    '</button>' +
+    '</div>' +
+    '</div>' +
+    '</div></div>';
+
+  var div = document.createElement("div");
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+function switchToSpecificStudent(name, className) {
+  var activeProf = window.currentStudentProfile || {};
+  var accounts = getRegisteredAccountsList();
+  var target = accounts.find(function(a) { 
+    return String(a.mobile).trim() === String(activeProf.mobile).trim() && a.name === name && a.className === className; 
+  });
+
+  if (target) {
+    setSafeAccountData("ak_student_profile", target);
+    var modal = document.getElementById("switchStudentModal");
+    if (modal) modal.remove();
+    renderStudentAccountDashboard(target);
+  }
+}
+
+function logoutCurrentStudent() {
+  if (confirm("Kya aap logout karna chahte hain?")) {
+    localStorage.removeItem("ak_student_profile");
+    var modal = document.getElementById("switchStudentModal");
+    if (modal) modal.remove();
+    renderMobileCheckModal();
+  }
 }
 
 function renderStudentAccountDashboard(profile) {
