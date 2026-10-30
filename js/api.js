@@ -4,16 +4,34 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxgTvxwNwAPetNnU7Ccoa6oq2cP9k67l_yu3gewEVd8bR4dvTqsj1FRcGZgcaOKdG86/exec";
 
 const API = {
-  // GET Request (Fetch Quizzes, Results, Leaderboards)
+  // GET Request (Fetch Quizzes, Results, Leaderboards, Ledger, Notices)
   async get(action, params = {}) {
     try {
-      // Clean query string builder (Supports older Android webviews)
-      var queryParts = ["action=" + encodeURIComponent(action)];
+      var queryParts = [];
+
+      // Agar action ke sath "&" jud kar aaya ho (jaise "getLedger&_t=123"), to use sahi se split karein
+      if (typeof action === "string" && action.indexOf("&") !== -1) {
+        var rawParts = action.split("&");
+        queryParts.push("action=" + encodeURIComponent(rawParts[0]));
+        for (var p = 1; p < rawParts.length; p++) {
+          if (rawParts[p].indexOf("=") !== -1) {
+            var kv = rawParts[p].split("=");
+            queryParts.push(encodeURIComponent(kv[0]) + "=" + encodeURIComponent(kv[1]));
+          } else {
+            queryParts.push(encodeURIComponent(rawParts[p]));
+          }
+        }
+      } else {
+        queryParts.push("action=" + encodeURIComponent(action));
+      }
+
+      // Baaki params ko cleanly append karein
       Object.keys(params).forEach(function(key) {
         if (params[key] !== undefined && params[key] !== null) {
           queryParts.push(encodeURIComponent(key) + "=" + encodeURIComponent(params[key]));
         }
       });
+
       var finalUrl = API_URL + (API_URL.indexOf("?") === -1 ? "?" : "&") + queryParts.join("&");
 
       var response = await fetch(finalUrl, {
@@ -31,13 +49,13 @@ const API = {
     }
   },
 
-  // POST Request (Save Quizzes, Student Attempts - Mobile & Sheet Safe)
+  // POST Request (Save Quizzes, Student Attempts, Ledger, Proofs - Mobile & Sheet Safe)
   async post(action, payload = {}) {
     try {
-      var bodyData = JSON.stringify({ action: action, ...payload });
+      var bodyData = JSON.stringify(Object.assign({ action: action }, payload));
 
-      // Note: text/plain avoids browser preflight OPTIONS drop on mobile
-      var response = await fetch(API_URL, {
+      // Note: text/plain avoids browser preflight OPTIONS drop on older Android webviews
+      await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: {
@@ -46,11 +64,12 @@ const API = {
         body: bodyData
       });
 
-      // Successful network dispatch
+      // Save immediate optimistic local backup
+      this.saveLocalEmergencyFallback(action, payload);
+
       return { status: "success", synced: true };
     } catch (err) {
       console.warn("API POST background sync error:", err);
-      // Fail-safe local backup
       this.saveLocalEmergencyFallback(action, payload);
       return { status: "success", synced: false, error: err.message };
     }
@@ -58,7 +77,10 @@ const API = {
 
   // Local Storage Fallback Engine
   getLocalFallback(action, params) {
-    if (action === "getQuizzes" || action === "getAllQuizzes" || action === "getLiveQuizzes") {
+    var pureAction = typeof action === "string" ? action.split("&")[0] : "";
+
+    // 1. Quizzes Fallback
+    if (pureAction === "getQuizzes" || pureAction === "getAllQuizzes" || pureAction === "getLiveQuizzes") {
       var quizzes = [];
       try {
         quizzes = JSON.parse(localStorage.getItem("ak_teacher_quizzes") || localStorage.getItem("ak_quizzes_cache") || "[]");
@@ -79,7 +101,8 @@ const API = {
       return { status: "success", data: quizzes };
     }
 
-    if (action === "getStudentResults") {
+    // 2. Student Results Fallback
+    if (pureAction === "getStudentResults") {
       var attempts = [];
       try {
         attempts = JSON.parse(localStorage.getItem("ak_student_attempts") || localStorage.getItem("ak_quiz_results") || "[]");
@@ -91,7 +114,8 @@ const API = {
       return { status: "success", data: filtered };
     }
 
-    if (action === "getLeaderboard") {
+    // 3. Leaderboard Fallback
+    if (pureAction === "getLeaderboard") {
       var lAttempts = [];
       try {
         lAttempts = JSON.parse(localStorage.getItem("ak_student_attempts") || localStorage.getItem("ak_quiz_results") || "[]");
@@ -101,6 +125,33 @@ const API = {
         return String(a.quizId).trim() === String(params.quizId).trim();
       });
       return { status: "success", data: lFiltered };
+    }
+
+    // 4. Tuition Ledger Fallback
+    if (pureAction === "getLedger" || pureAction === "getStudentsLedger") {
+      var ledger = [];
+      try {
+        ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
+      } catch (e) { ledger = []; }
+      return { status: "success", data: ledger };
+    }
+
+    // 5. Notifications Fallback
+    if (pureAction === "getNotifications") {
+      var notifs = [];
+      try {
+        notifs = JSON.parse(localStorage.getItem("ak_notifications") || "[]");
+      } catch (e) { notifs = []; }
+      return { status: "success", data: notifs };
+    }
+
+    // 6. Materials Fallback
+    if (pureAction === "getMaterials") {
+      var materials = [];
+      try {
+        materials = JSON.parse(localStorage.getItem("ak_materials") || "[]");
+      } catch (e) { materials = []; }
+      return { status: "success", data: materials };
     }
 
     return { status: "success", data: [] };
@@ -113,7 +164,7 @@ const API = {
         var quizzes = JSON.parse(localStorage.getItem("ak_teacher_quizzes") || "[]");
         quizzes.unshift(payload);
         localStorage.setItem("ak_teacher_quizzes", JSON.stringify(quizzes));
-      } else if (action === "submitQuizAttempt") {
+      } else if (action === "submitQuizAttempt" || action === "saveAttempt") {
         var attempts = JSON.parse(localStorage.getItem("ak_student_attempts") || "[]");
         var exists = attempts.some(function(a) {
           return String(a.attemptId) === String(payload.attemptId);
@@ -122,6 +173,21 @@ const API = {
           attempts.unshift(payload);
           localStorage.setItem("ak_student_attempts", JSON.stringify(attempts));
         }
+      } else if (action === "saveStudentLedger") {
+        var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
+        var idx = ledger.findIndex(function(s) {
+          return String(s.mobile || s.Mobile) === String(payload.mobile);
+        });
+        if (idx > -1) {
+          ledger[idx] = Object.assign(ledger[idx], payload);
+        } else {
+          ledger.push(payload);
+        }
+        localStorage.setItem("ak_tuition_ledger", JSON.stringify(ledger));
+      } else if (action === "saveNotification") {
+        var notifs = JSON.parse(localStorage.getItem("ak_notifications") || "[]");
+        notifs.unshift(payload);
+        localStorage.setItem("ak_notifications", JSON.stringify(notifs));
       }
     } catch (e) {
       console.warn("Storage emergency write failed:", e);
