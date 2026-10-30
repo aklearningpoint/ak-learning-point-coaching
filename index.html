@@ -13,7 +13,7 @@
   <header class="app-header">
     <div class="header-left">
       <img id="appLogo" src="./assets/logo.png" alt="AK Learning Point Logo" class="app-logo" onerror="this.onerror=null; this.src='./assets/logo.png';">
-      <span class="app-title">AK Learning Point Coaching</span>
+      <span class="app-title">AK Learning Point </span>
     </div>
     <div class="header-right">
       <button class="nav-icon-btn" onclick="goHome()" title="Home"><i class="fas fa-home"></i></button>
@@ -55,126 +55,71 @@
     </div>
   </div>
 
- <!-- Main Scrollable Home View (Screen 1 Locked Design) -->
-  <main class="main-container" id="homeView" style="padding: 14px; max-width: 580px; margin: 0 auto;">
+ <!-- Main Scrollable Home View (Exact Locked Screenshot Match) -->
+  <main class="main-container" id="homeView" style="padding: 16px 14px 70px 14px; max-width: 480px; margin: 0 auto; min-height: calc(100vh - 120px); display: flex; flex-direction: column; gap: 16px;">
 
-    <!-- 1. LIVE FEATURED QUIZ AD BANNER -->
-    <div id="dynamicQuizAdBanner" style="display:none; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:white; border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:0 6px 18px rgba(49, 46, 129, 0.25); border:1px solid #4338ca; position:relative; overflow:hidden;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="background:#ef4444; color:white; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:12px; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px;">
-          <i class="fas fa-bolt"></i> TODAY'S FEATURED QUIZ
+    <!-- 1. TODAY'S FEATURED QUIZ CARD -->
+    <div id="dynamicQuizAdBanner" style="background: #17153b; color: white; border-radius: 18px; padding: 18px 16px; box-shadow: 0 8px 24px rgba(23, 21, 59, 0.25); text-align: center; position: relative;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #f87171; font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;">
+        <i class="fas fa-bullseye"></i>
+        <span id="quizAdHeader">Today's Featured Quiz: Ch-1 The Pace for Living</span>
+      </div>
+      <div id="quizAdMeta" style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 14px;">Class 10 • English • 50 Questions</div>
+      <button id="quizAdActionBtn" style="background: #eab308; color: #1e1b4b; border: none; border-radius: 25px; padding: 12px 24px; font-weight: 800; font-size: 0.95rem; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);">
+        <i class="fas fa-play"></i> Start Test Now
+      </button>
+    </div>
+
+    <!-- 2. STUDENT PORTAL CARD -->
+    <div onclick="openStudentAccountModal()" style="background: white; border-radius: 18px; padding: 18px 16px; border: 2px solid #38bdf8; border-left: 10px solid #0284c7; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.08); display: flex; align-items: center; gap: 16px; cursor: pointer;">
+      <div style="width: 60px; height: 60px; border-radius: 14px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;">
+        <i class="fas fa-graduation-cap"></i>
+      </div>
+      <div style="flex: 1;">
+        <h3 style="margin: 0 0 4px 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">Student Portal</h3>
+        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.85rem;">Login to access your dashboard & tests</p>
+        <span style="color: #d97706; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;">
+          Student Login <i class="fas fa-arrow-right"></i>
         </span>
-        <span id="quizAdTickerIndicator" style="font-size:0.75rem; color:#c7d2fe;">1/1</span>
       </div>
-      <div id="quizAdContent" style="min-height:50px; display:flex; flex-direction:column; justify-content:center;">
-        <h4 id="quizAdTitle" style="font-size:0.98rem; margin:0 0 4px 0; color:#fbbf24; font-weight:700;">Loading Today's Quizzes...</h4>
-        <p id="quizAdMeta" style="font-size:0.8rem; color:#e0e7ff; margin:0;">Class & Subject info</p>
+    </div>
+
+    <!-- 3. FACULTY PORTAL CARD -->
+    <div onclick="openTeacherPortal()" style="background: white; border-radius: 18px; padding: 18px 16px; border: 2px solid #6ee7b7; border-left: 10px solid #059669; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.08); display: flex; align-items: center; gap: 16px; cursor: pointer;">
+      <div style="width: 60px; height: 60px; border-radius: 14px; background: #d1fae5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;">
+        <i class="fas fa-briefcase"></i>
       </div>
-      <button id="quizAdActionBtn" class="btn-primary" style="margin-top:10px; padding:8px 12px; font-size:0.85rem; background:#fbbf24; color:#1e1b4b; font-weight:800; border:none; border-radius:10px; width:100%; cursor:pointer;">
-        <i class="fas fa-play-circle"></i> Start Test Now
+      <div style="flex: 1;">
+        <h3 style="margin: 0 0 4px 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">Faculty Portal</h3>
+        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.85rem;">Educator & staff login for grading & tools</p>
+        <span style="color: #059669; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;">
+          Faculty Login <i class="fas fa-arrow-right"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- 4. ADMIN PORTAL CARD -->
+    <div onclick="openAdminPortal()" style="background: white; border-radius: 18px; padding: 18px 16px; border: 2px solid #cbd5e1; border-left: 10px solid #1e293b; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); display: flex; align-items: center; gap: 16px; cursor: pointer;">
+      <div style="width: 60px; height: 60px; border-radius: 14px; background: #e2e8f0; color: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;">
+        <i class="fas fa-laptop-code"></i>
+      </div>
+      <div style="flex: 1;">
+        <h3 style="margin: 0 0 4px 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">Admin Portal</h3>
+        <p style="margin: 0 0 8px 0; color: #475569; font-size: 0.85rem;">Control panel & data management</p>
+        <span style="color: #1e293b; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;">
+          Admin Login <i class="fas fa-arrow-right"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- 5. FLOATING SHARE APP BUTTON -->
+    <div style="position: fixed; bottom: 18px; right: 18px; display: flex; align-items: center; gap: 8px; z-index: 2000;">
+      <button onclick="triggerSmartShare()" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; color: #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer;">
+        Share App
       </button>
-    </div>
-
-    <!-- 2. STUDENT PORTAL (MY ACCOUNT) -->
-    <div class="section-card" onclick="openStudentAccountModal()" style="border-left: 6px solid #059669; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); padding: 14px; border-radius: 14px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor:pointer;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:46px; height:46px; border-radius:12px; background:#dcfce7; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-          <i class="fas fa-user-graduate"></i>
-        </div>
-        <div>
-          <h3 style="color:#065f46; font-size:1rem; margin:0 0 2px 0; font-weight:800;">Student Portal (My Account)</h3>
-          <p style="color:#64748b; font-size:0.78rem; margin:0;">Profile, Quizzes, Fee Status & Results</p>
-        </div>
+      <div onclick="triggerSmartShare()" style="width: 48px; height: 48px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); cursor: pointer;">
+        <i class="fab fa-whatsapp"></i>
       </div>
-      <i class="fas fa-chevron-right" style="color:#059669;"></i>
-    </div>
-
-    <!-- 3. QUIZZES & TESTS -->
-    <div class="section-card" onclick="openBoardSelectModal()" style="border-left: 6px solid #2563eb; padding: 14px; border-radius: 14px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background:white; cursor:pointer;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:46px; height:46px; border-radius:12px; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-          <i class="fas fa-puzzle-piece"></i>
-        </div>
-        <div>
-          <h3 style="color:#0f172a; font-size:1rem; margin:0 0 2px 0; font-weight:700;">Quizzes & Tests</h3>
-          <p style="color:#64748b; font-size:0.78rem; margin:0;">CBSE & BSEB Chapter Practice Tests</p>
-        </div>
-      </div>
-      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
-    </div>
-
-    <!-- 4. STUDENT RESULTS LOOKUP -->
-    <div class="section-card" onclick="openResultLookupModal()" style="border-left: 6px solid #d97706; padding: 14px; border-radius: 14px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background:white; cursor:pointer;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:46px; height:46px; border-radius:12px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-          <i class="fas fa-poll"></i>
-        </div>
-        <div>
-          <h3 style="color:#0f172a; font-size:1rem; margin:0 0 2px 0; font-weight:700;">Student Results</h3>
-          <p style="color:#64748b; font-size:0.78rem; margin:0;">Instant Scorecard & Solution Analysis</p>
-        </div>
-      </div>
-      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
-    </div>
-
-    <!-- 5. REWARDING CONTESTS -->
-    <div class="section-card" onclick="openRewardingQuizzes()" style="border-left: 6px solid #dc2626; padding: 14px; border-radius: 14px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background:white; cursor:pointer;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:46px; height:46px; border-radius:12px; background:#fee2e2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-          <i class="fas fa-trophy"></i>
-        </div>
-        <div>
-          <h3 style="color:#0f172a; font-size:1rem; margin:0 0 2px 0; font-weight:700;">Rewarding Quizzes</h3>
-          <p style="color:#64748b; font-size:0.78rem; margin:0;">Special Passkey-Protected Prize Tests</p>
-        </div>
-      </div>
-      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
-    </div>
-
-    <!-- 6. STUDY MATERIAL & HUB -->
-    <div class="section-card" onclick="window.location.href='learning-hub.html'" style="border-left: 6px solid #0891b2; padding: 14px; border-radius: 14px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background:white; cursor:pointer;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:46px; height:46px; border-radius:12px; background:#cffafe; color:#0891b2; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-          <i class="fas fa-book-open"></i>
-        </div>
-        <div>
-          <h3 style="color:#0f172a; font-size:1rem; margin:0 0 2px 0; font-weight:700;">Study Notes & Books</h3>
-          <p style="color:#64748b; font-size:0.78rem; margin:0;">Formula Sheets, Slides & Concept Notes</p>
-        </div>
-      </div>
-      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
-    </div>
-
-    <!-- 7. ONLINE COACHING CLASSES -->
-    <div class="section-card" onclick="openOnlineCoachingModal()" style="border-left: 6px solid #7c3aed; padding: 14px; border-radius: 14px; margin-bottom: 12px; display:flex; align-items:center; justify-content:space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background:white; cursor:pointer;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:46px; height:46px; border-radius:12px; background:#ede9fe; color:#7c3aed; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-          <i class="fas fa-video"></i>
-        </div>
-        <div>
-          <h3 style="color:#0f172a; font-size:1rem; margin:0 0 2px 0; font-weight:700;">Online Coaching</h3>
-          <p style="color:#64748b; font-size:0.78rem; margin:0;">Tuition Batches & Free Concept Lectures</p>
-        </div>
-      </div>
-      <i class="fas fa-chevron-right" style="color:#94a3b8;"></i>
-    </div>
-
-    <!-- 8. SPONSORED PROMO SPACE -->
-    <div style="background:white; border-radius:14px; padding:14px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border:1px solid #e2e8f0; margin-bottom:12px;">
-      <small style="color:#64748b; font-weight:700; font-size:0.72rem; letter-spacing:0.5px;">SPONSORED PLATFORM SPACE</small>
-      <h4 style="margin:4px 0 6px 0; color:#1e293b; font-size:0.95rem;">Promote Your Brand With Us!</h4>
-      <a href="https://api.whatsapp.com/send?phone=918826011682&text=I%20am%20interested%20in%20advertising%20on%20your%20platform" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#25d366; color:white; padding:7px 14px; border-radius:8px; font-weight:700; text-decoration:none; font-size:0.8rem;">
-        <i class="fab fa-whatsapp"></i> Contact for Advertising
-      </a>
-    </div>
-
-    <!-- 9. OFFICIAL WHATSAPP COMMUNITY -->
-    <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:white; border-radius:16px; padding:16px; text-align:center; box-shadow:0 4px 12px rgba(30,58,138,0.2);">
-      <h3 style="font-size:1.05rem; font-weight:800; margin:0 0 4px 0;">Join Official WhatsApp Community</h3>
-      <p style="font-size:0.8rem; opacity:0.9; margin:0 0 10px 0;">"Gyan ki nayi shuruat, har vidyarthi ke vikas ke saath!"</p>
-      <button onclick="openCommunityModal()" style="background:#fbbf24; color:#1e3a8a; border:none; padding:8px 16px; border-radius:8px; font-weight:800; font-size:0.82rem; cursor:pointer;">
-        Register & Join Now
-      </button>
     </div>
 
   </main>
