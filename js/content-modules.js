@@ -1,4 +1,4 @@
-// Content Modules: Results, Rewarding Contests, Coaching, Flip-Book & A4 100-Q OMR Engine
+// Content Modules: Results, Rewarding Contests, Coaching, Flip-Book, A4 100-Q OMR Engine & Enhanced Student LMS Dashboard
 
 function getModuleData(key, fallback) {
   try {
@@ -15,7 +15,9 @@ function setModuleData(key, data) {
   } catch (e) {}
 }
 
-// 1. Student Result Lookup (History, Scorecard & Full Solution Analysis)
+// ==========================================
+// 1. STUDENT RESULT LOOKUP ENGINE
+// ==========================================
 function openResultLookupModal() {
   var html = '<div class="modal-overlay" style="display:flex;">' +
     '<div class="modal-card">' +
@@ -48,7 +50,6 @@ async function handleResultSearch(e) {
 
   var allRecords = [];
 
-  // 1. Live Fetch from Google Sheet
   try {
     if (typeof API !== "undefined" && API.get) {
       var cloudRes = await API.get("getAttempts");
@@ -60,7 +61,6 @@ async function handleResultSearch(e) {
     console.warn("Cloud fetch fallback:", err);
   }
 
-  // 2. Fallback to Local Storage
   if (allRecords.length === 0) {
     var localAttempts = [];
     try {
@@ -69,7 +69,6 @@ async function handleResultSearch(e) {
     allRecords = localAttempts;
   }
 
-  // 3. Filter by Mobile Number
   var matched = [];
   for (var i = 0; i < allRecords.length; i++) {
     var item = allRecords[i];
@@ -95,7 +94,6 @@ async function handleResultSearch(e) {
     return;
   }
 
-  // Sort: Latest attempt first
   matched.sort(function(a, b) {
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
@@ -158,18 +156,15 @@ function viewHistoricalScorecardByIndex(idx) {
   document.getElementById("dynamicView").innerHTML = html;
 }
 
-// 1.1 Detailed Solution & Question Analysis Engine
 async function viewQuizAnalysisByIndex(idx) {
   var att = window.activeSearchedAttempts[idx];
   var listContainer = document.getElementById("dynamicView");
   
-  // Parse student responses
   var userAns = {};
   try {
     userAns = typeof att.answers === "string" ? JSON.parse(att.answers) : (att.answers || {});
   } catch (e) { userAns = {}; }
 
-  // Load quiz questions
   var targetQuiz = null;
   try {
     if (typeof API !== "undefined" && API.get) {
@@ -256,11 +251,13 @@ async function viewQuizAnalysisByIndex(idx) {
 
   listContainer.innerHTML = html;
 }
-// 2. Rewarding Quiz Tab (With Live Cloud Sync)
+
+// ==========================================
+// 2. REWARDING QUIZ ENGINE
+// ==========================================
 async function openRewardingQuizzes() {
   var rewardingList = [];
 
-  // Try live fetch
   try {
     if (typeof API !== "undefined" && API.get) {
       var res = await API.get("getQuizzes");
@@ -274,7 +271,6 @@ async function openRewardingQuizzes() {
     console.warn("Rewarding quiz cloud fetch failed:", e);
   }
 
-  // Fallback to local
   if (rewardingList.length === 0) {
     var localQuizzes = getModuleData("ak_teacher_quizzes", []);
     for (var i = 0; i < localQuizzes.length; i++) {
@@ -330,7 +326,9 @@ async function openRewardingQuizzes() {
     '</div></div>';
 }
 
-// 3. Online Coaching Classes
+// ==========================================
+// 3. ONLINE COACHING CLASSES
+// ==========================================
 function openOnlineCoachingModal() {
   var html = '<div class="modal-overlay" style="display:flex;">' +
     '<div class="modal-card" style="text-align:center;">' +
@@ -398,7 +396,9 @@ function playInAppVideo(title, embedUrl) {
   document.getElementById("dynamicView").innerHTML = html;
 }
 
-// 4. Study Material Flip-Book
+// ==========================================
+// 4. STUDY MATERIAL FLIP-BOOK
+// ==========================================
 var sampleFlipPages = [
   { pageNo: 1, title: "Chapter 1: Nutrition in Plants", content: "All living organisms require food. Plants can synthesize food for themselves but animals including humans cannot. The mode of nutrition in which organisms make food themselves from simple substances is called autotrophic nutrition." },
   { pageNo: 2, title: "Photosynthesis Process", content: "Leaves are the food factories of plants. The synthesis of food occurs in leaves. Water and minerals present in the soil are absorbed by roots and transported to the leaves through vessels. Carbon dioxide from air is taken in through stomata." },
@@ -454,7 +454,9 @@ function nextFlipPage() {
   }
 }
 
-// 5. OMR Printable Sheet Engine (A4 100 Questions)
+// ==========================================
+// 5. OMR PRINTABLE SHEET ENGINE (A4 100 Q)
+// ==========================================
 function openOmrPrintModal() {
   if (typeof toggleDrawer === "function") toggleDrawer();
 
@@ -570,7 +572,9 @@ function generateA4OmrSheet() {
   );
 }
 
-// 6. WhatsApp Community Lead Handler
+// ==========================================
+// 6. WHATSAPP COMMUNITY LEAD HANDLER
+// ==========================================
 function openCommunityModal() {
   var modal = document.getElementById("communityModal");
   if (modal) modal.style.display = "flex";
@@ -628,8 +632,6 @@ async function initDynamicQuizAdBanner() {
     allQuizzes = getModuleData("ak_teacher_quizzes", []);
   }
 
-  // Filter: Published Quizzes marked for Advertising
-  // Agar koi specifically advertised nahi hai toh latest published quizzes ko auto-show karega
   var candidates = allQuizzes.filter(function(q) {
     return q.status === "published" || !q.status;
   });
@@ -654,7 +656,7 @@ async function initDynamicQuizAdBanner() {
     adBannerTimer = setInterval(function() {
       currentAdIndex = (currentAdIndex + 1) % activeAdQuizzes.length;
       renderCurrentAdQuiz();
-    }, 4500); // Har 4.5 seconds me slide hoga
+    }, 4500);
   }
 }
 
@@ -679,7 +681,6 @@ function renderCurrentAdQuiz() {
       if (typeof openQuizEntryModalByObject === "function") {
         openQuizEntryModalByObject(q);
       } else if (typeof startTeacherTestPreview === "function") {
-        // Direct examination open fallback
         var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
         window.location.href = appBaseUrl + "index.html?quizId=" + encodeURIComponent(q.id || q.title);
       }
@@ -687,16 +688,12 @@ function renderCurrentAdQuiz() {
   }
 }
 
+// =========================================================================
+// 8. ENHANCED STUDENT DASHBOARD (SCREEN 2): NOTIFICATION BELL & SUBJECT HUB
+// =========================================================================
 
-// ==========================================
-// 8. STUDENT "MY ACCOUNT" FULL-SCREEN LMS ENGINE
-// ==========================================
-var activeAccountSubTab = "tests";
-
-// Smart Storage: App Inventor TinyDB + Browser LocalStorage Bridge
 function getSafeAccountData(key) {
   try {
-    // 1. Pehle check karein agar App Inventor TinyDB ne data bheja hai
     if (window.AppInventor && window.AppInventor.getWebViewString) {
       var appData = window.AppInventor.getWebViewString();
       if (appData && appData.length > 5 && appData.indexOf("{") !== -1) {
@@ -704,8 +701,6 @@ function getSafeAccountData(key) {
         return JSON.parse(appData);
       }
     }
-
-    // 2. Agar app mein nahi hai ya normal browser hai, to LocalStorage use karein
     var d = localStorage.getItem(key);
     return d ? JSON.parse(d) : null;
   } catch(e) {
@@ -717,8 +712,6 @@ function setSafeAccountData(key, val) {
   try {
     var str = JSON.stringify(val);
     localStorage.setItem(key, str);
-
-    // Agar App ke andar chal raha hai, to TinyDB mein permanently lock karein
     if (window.AppInventor && window.AppInventor.setWebViewString) {
       window.AppInventor.setWebViewString(str);
     }
@@ -794,8 +787,28 @@ function handleSaveStudentProfile(e) {
     mobile: mobEl ? mobEl.value.trim() : "",
     className: clsEl ? clsEl.value : "Class 10",
     board: brdEl ? brdEl.value : "CBSE",
+    category: "Tuition Student",
+    monthlyFee: 800,
+    dues: 0,
+    billingDate: "15 Oct 2026",
     joinedDate: new Date().toLocaleDateString()
   };
+
+  // Check if admin has classified this student in ledger
+  try {
+    var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
+    var found = ledger.find(function(s) { return String(s.mobile).trim() === prof.mobile; });
+    if (found) {
+      prof.category = found.category || "Tuition Student";
+      prof.monthlyFee = found.monthlyFee || 800;
+      prof.billingDate = found.startDate || "15 Oct 2026";
+      if (typeof calculateStudentFinancials === "function") {
+        var fin = calculateStudentFinancials(found);
+        prof.dues = fin.pendingBalance;
+      }
+    }
+  } catch (err) {}
+
   setSafeAccountData("ak_student_profile", prof);
   renderStudentAccountDashboard(prof);
 }
@@ -804,30 +817,32 @@ function renderStudentAccountDashboard(profile) {
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
 
-  // 1. Quizzes fetch (from cache or localStorage)
+  // Refresh Classification & Dues from Ledger if available
+  try {
+    var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
+    var found = ledger.find(function(s) { return String(s.mobile).trim() === String(profile.mobile).trim(); });
+    if (found) {
+      profile.category = found.category || profile.category || "Tuition Student";
+      profile.monthlyFee = found.monthlyFee || profile.monthlyFee || 800;
+      profile.billingDate = found.startDate || profile.billingDate || "15 Oct 2026";
+      if (typeof calculateStudentFinancials === "function") {
+        var fin = calculateStudentFinancials(found);
+        profile.dues = fin.pendingBalance;
+      }
+    }
+  } catch (e) {}
+
+  // 1. Quizzes fetch
   var allQuizzes = getSafeAccountData("ak_teacher_quizzes") || [];
 
   // 2. Attempts fetch
   var allAttempts = getSafeAccountData("ak_student_attempts") || [];
 
-  // Filter attempts for this student mobile
   var myAttempts = allAttempts.filter(function(a) {
     return String(a.mobile || a.Mobile || "").trim() === String(profile.mobile).trim();
   });
 
-  // Stats calculation
-  var testsGiven = myAttempts.length;
-  var totalPct = 0;
-  var topScore = 0;
-  for (var i = 0; i < myAttempts.length; i++) {
-    var a = myAttempts[i];
-    totalPct += parseFloat(a.percentage || a.Percentage || 0);
-    var sc = parseFloat(a.score || a.Score || 0);
-    if (sc > topScore) topScore = sc;
-  }
-  var avgPct = testsGiven > 0 ? (totalPct / testsGiven).toFixed(1) : "0.0";
-
-  // Filter quizzes by student class & board
+  // Quizzes filtered by Class
   var myClassQuizzes = allQuizzes.filter(function(q) {
     var qClass = String(q.className || "").toLowerCase().trim();
     var pClass = String(profile.className || "").toLowerCase().trim();
@@ -835,236 +850,270 @@ function renderStudentAccountDashboard(profile) {
     return (qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all") && bMatch;
   });
 
+  // Calculate Notices Count for Target Class
+  var notices = [];
+  try {
+    notices = JSON.parse(localStorage.getItem("ak_notifications") || "[]");
+  } catch(e) { notices = []; }
+
+  var filteredNotices = notices.filter(function(n) {
+    var tc = String(n.targetClass || "All Classes").toLowerCase().trim();
+    var pc = String(profile.className || "").toLowerCase().trim();
+    return tc === "all classes" || tc === pc || tc.includes(pc);
+  });
+
   window.currentAccountQuizzes = myClassQuizzes;
   window.currentAccountAttempts = myAttempts;
   window.currentStudentProfile = profile;
-  window.accountStats = { testsGiven: testsGiven, avgPct: avgPct, topScore: topScore };
+  window.currentClassNotices = filteredNotices;
 
-  renderFullScreenAccountUI();
+  renderEnhancedStudentUI();
 }
 
-function renderFullScreenAccountUI() {
-  var profile = window.currentStudentProfile || { name: "Student", mobile: "", className: "Class 10", board: "CBSE" };
-  var stats = window.accountStats || { testsGiven: 0, avgPct: "0.0", topScore: 0 };
+// Full Render matching the Locked Screen 2 UI
+function renderEnhancedStudentUI() {
+  var profile = window.currentStudentProfile || { name: "Student", mobile: "9876543210", className: "Class 10", board: "CBSE", category: "Tuition Student", dues: 0, monthlyFee: 800, billingDate: "15 Oct 2026" };
+  var notices = window.currentClassNotices || [];
+  var quizzes = window.currentAccountQuizzes || [];
+  var featuredQuiz = quizzes.length > 0 ? quizzes[0] : null;
+
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
 
+  var subjectsList = [
+    { name: "Mathematics", icon: "fa-square-root-alt", color: "#3b82f6", bg: "#eff6ff" },
+    { name: "Science", icon: "fa-flask", color: "#10b981", bg: "#ecfdf5" },
+    { name: "English", icon: "fa-book", color: "#f59e0b", bg: "#fffbeb" },
+    { name: "Social Science", icon: "fa-globe-americas", color: "#8b5cf6", bg: "#f5f3ff" },
+    { name: "Hindi", icon: "fa-feather", color: "#ec4899", bg: "#fdf2f8" },
+    { name: "Computer", icon: "fa-laptop-code", color: "#06b6d4", bg: "#ecfeff" }
+  ];
+
+  var subjectsGridHtml = "";
+  subjectsList.forEach(function(sub) {
+    subjectsGridHtml += '<div onclick="openSubjectHubModal(\'' + sub.name + '\')" style="background:' + sub.bg + '; border:1.5px solid ' + sub.color + '40; border-radius:14px; padding:14px 10px; text-align:center; cursor:pointer; transition:transform 0.2s; box-shadow:0 2px 5px rgba(0,0,0,0.03);">' +
+      '<div style="width:42px; height:42px; border-radius:10px; background:' + sub.color + '; color:white; display:flex; align-items:center; justify-content:center; margin:0 auto 8px auto; font-size:1.2rem;">' +
+      '<i class="fas ' + sub.icon + '"></i>' +
+      '</div>' +
+      '<div style="font-weight:700; color:#1e293b; font-size:0.85rem;">' + sub.name + '</div>' +
+      '<small style="color:#64748b; font-size:0.7rem;">Quizzes & Notes</small>' +
+      '</div>';
+  });
+
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; flex-direction:column; overflow:hidden;">' +
-    
-    // Header Bar
+
+    // Top Header with Active Notification Bell & Home
     '<div style="height:56px; background:#0f172a; color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0;">' +
     '<div style="display:flex; align-items:center; gap:10px;">' +
     '<button onclick="closeDynamicView()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>' +
-    '<span style="font-weight:700; font-size:1rem;">My Learning Dashboard</span>' +
+    '<span style="font-weight:700; font-size:1.02rem;">Student Portal</span>' +
     '</div>' +
-    '<button onclick="switchStudentAccount()" style="background:#ef4444; border:none; color:white; padding:5px 12px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;"><i class="fas fa-sign-out-alt"></i> Logout</button>' +
-    '</div>' +
-
-    // Body
-    '<div style="flex:1; overflow-y:auto; padding:16px; max-width:850px; margin:0 auto; width:100%; box-sizing:border-box;">' +
-
-    // Student Profile Card
-    '<div style="background:linear-gradient(135deg, #065f46 0%, #059669 100%); color:white; border-radius:18px; padding:18px; margin-bottom:14px; box-shadow:0 6px 18px rgba(5,150,105,0.25);">' +
-    '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">' +
     '<div style="display:flex; align-items:center; gap:12px;">' +
-    '<div style="width:52px; height:52px; border-radius:50%; background:white; color:#059669; font-size:1.6rem; font-weight:800; display:flex; align-items:center; justify-content:center;">' +
+    // NOTIFICATION BELL (WITH LIVE BADGE)
+    '<div onclick="openStudentNoticeModal()" style="position:relative; cursor:pointer; padding:4px;">' +
+    '<i class="fas fa-bell" style="font-size:1.25rem; color:#fde047;"></i>' +
+    (notices.length > 0 ? '<span style="position:absolute; top:-2px; right:-4px; background:#ef4444; color:white; border-radius:50%; font-size:0.65rem; font-weight:800; width:17px; height:17px; display:flex; align-items:center; justify-content:center; border:2px solid #0f172a;">' + notices.length + '</span>' : '') +
+    '</div>' +
+    '<button onclick="switchStudentAccount()" style="background:none; border:none; color:#ef4444; font-size:1.15rem; cursor:pointer;" title="Logout"><i class="fas fa-sign-out-alt"></i></button>' +
+    '</div>' +
+    '</div>' +
+
+    // Scrollable Portal Content
+    '<div style="flex:1; overflow-y:auto; padding:14px; max-width:850px; margin:0 auto; width:100%; box-sizing:border-box;">' +
+
+    // 1. Student Identity Header
+    '<div style="background:white; border-radius:16px; padding:16px; border:1px solid #e2e8f0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.04);">' +
+    '<div style="display:flex; align-items:center; gap:12px;">' +
+    '<div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:white; font-size:1.5rem; font-weight:800; display:flex; align-items:center; justify-content:center;">' +
     (profile.name ? profile.name.charAt(0).toUpperCase() : 'S') +
     '</div>' +
     '<div>' +
-    '<h3 style="margin:0; font-size:1.15rem; font-weight:800;">' + profile.name + '</h3>' +
-    '<div style="font-size:0.82rem; opacity:0.95; margin-top:2px;">📱 +91 ' + profile.mobile + ' • <span style="background:rgba(255,255,255,0.2); padding:1px 6px; border-radius:4px; font-weight:700;">' + profile.className + ' (' + (profile.board || 'CBSE') + ')</span></div>' +
+    '<h3 style="margin:0; color:#0f172a; font-size:1.1rem; font-weight:800;">' + profile.name + '</h3>' +
+    '<div style="font-size:0.8rem; color:#64748b; margin-top:2px;">📱 +91 ' + profile.mobile + '</div>' +
     '</div>' +
     '</div>' +
-    '<button onclick="switchAccountSubTab(\'purchase\')" style="background:#fbbf24; color:#0f172a; border:none; padding:8px 14px; border-radius:10px; font-weight:800; font-size:0.82rem; cursor:pointer;"><i class="fas fa-crown"></i> Buy Courses</button>' +
-    '</div>' +
-
-    // Stats Grid
-    '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px; text-align:center;">' +
-    '<div><small style="opacity:0.85; font-size:0.75rem;">Tests Attempted</small><div style="font-size:1.25rem; font-weight:800;">' + stats.testsGiven + '</div></div>' +
-    '<div><small style="opacity:0.85; font-size:0.75rem;">Avg Accuracy</small><div style="font-size:1.25rem; font-weight:800; color:#86efac;">' + stats.avgPct + '%</div></div>' +
-    '<div><small style="opacity:0.85; font-size:0.75rem;">Top Score</small><div style="font-size:1.25rem; font-weight:800; color:#fde047;">' + stats.topScore + '</div></div>' +
+    '<div style="text-align:right;">' +
+    '<span style="background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; display:inline-block; margin-bottom:4px;">' + profile.className + ' (' + (profile.board || 'CBSE') + ')</span><br>' +
+    '<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.7rem;">' + (profile.category || 'Tuition Student') + '</span>' +
     '</div>' +
     '</div>' +
 
-    // Top Navigation Tabs
-    '<div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px;">' +
-    '<button id="actTab_tests" onclick="switchAccountSubTab(\'tests\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#059669; color:white;"><i class="fas fa-check-square"></i> My Tests</button>' +
-    '<button id="actTab_results" onclick="switchAccountSubTab(\'results\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-chart-pie"></i> Result Analysis</button>' +
-    '<button id="actTab_notes" onclick="switchAccountSubTab(\'notes\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-book-reader"></i> Study Notes</button>' +
-    '<button id="actTab_classes" onclick="switchAccountSubTab(\'classes\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-video"></i> Classes</button>' +
-    '<button id="actTab_purchase" onclick="switchAccountSubTab(\'purchase\')" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; border:none; cursor:pointer; background:#e2e8f0; color:#475569;"><i class="fas fa-qrcode"></i> Buy / Pay</button>' +
+    // 2. Tuition Fee & Dues Status Card
+    '<div style="background:linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color:white; border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 4px 14px rgba(30,58,138,0.2);">' +
+    '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
+    '<div>' +
+    '<small style="opacity:0.85; font-size:0.75rem; letter-spacing:0.5px;">TUITION FEE & DUES STATUS</small>' +
+    '<div style="font-size:1.45rem; font-weight:800; margin-top:2px;">' +
+    (Number(profile.dues) > 0 ? '<span style="color:#f87171;">₹' + profile.dues + ' Pending</span>' : '<span style="color:#4ade80;">₹0 (All Clear)</span>') +
+    '</div>' +
+    '</div>' +
+    '<button onclick="switchAccountSubTab(\'purchase\')" style="background:#fbbf24; color:#0f172a; border:none; padding:7px 14px; border-radius:8px; font-weight:800; font-size:0.8rem; cursor:pointer;"><i class="fas fa-wallet"></i> Pay Fee</button>' +
+    '</div>' +
+    '<div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.15); font-size:0.78rem; opacity:0.9;">' +
+    '<span>Monthly Fee: <strong>₹' + (profile.monthlyFee || 800) + '</strong></span>' +
+    '<span>Next Cycle: <strong>' + (profile.billingDate || '15 Oct 2026') + '</strong></span>' +
+    '</div>' +
     '</div>' +
 
-    // Dynamic Section Container
-    '<div id="accountTabContent"></div>' +
+    // 3. Featured Quiz Highlight Banner
+    (featuredQuiz ?
+    '<div style="background:white; border:1.5px solid #fed7aa; border-radius:14px; padding:14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.03);">' +
+    '<div>' +
+    '<span style="background:#ffedd5; color:#c2410c; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:10px;">TODAY\'S FEATURED QUIZ</span>' +
+    '<h4 style="margin:4px 0 2px 0; color:#0f172a; font-size:0.95rem;">' + featuredQuiz.title + '</h4>' +
+    '<small style="color:#64748b;">' + (featuredQuiz.subject || 'All') + ' • ' + (featuredQuiz.questions ? featuredQuiz.questions.length : 10) + ' Questions</small>' +
+    '</div>' +
+    '<button onclick="startQuizDirectlyFromAccount(\'' + featuredQuiz.id + '\')" style="background:#16a34a; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; cursor:pointer;">Start Now</button>' +
+    '</div>' : '') +
+
+    // 4. Class-Wise Subjects Grid
+    '<h3 style="color:#0f172a; font-size:1rem; margin:14px 0 10px 0; display:flex; align-items:center; gap:8px;">' +
+    '<i class="fas fa-layer-group" style="color:#2563eb;"></i> ' + profile.className + ' Subjects Hub' +
+    '</h3>' +
+    '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;">' +
+    subjectsGridHtml +
+    '</div>' +
+
+    // 5. Dual Action Shortcut Cards
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">' +
+    '<div class="section-card" onclick="openResultLookupModal()" style="padding:12px; margin:0; border-left:4px solid #d97706; cursor:pointer;">' +
+    '<div style="font-weight:700; color:#0f172a; font-size:0.85rem;"><i class="fas fa-poll" style="color:#d97706;"></i> My Results</div>' +
+    '<small style="color:#64748b; font-size:0.72rem;">Scorecard & Solutions</small>' +
+    '</div>' +
+    '<div class="section-card" onclick="openOnlineCoachingModal()" style="padding:12px; margin:0; border-left:4px solid #7c3aed; cursor:pointer;">' +
+    '<div style="font-weight:700; color:#0f172a; font-size:0.85rem;"><i class="fas fa-video" style="color:#7c3aed;"></i> Online Classes</div>' +
+    '<small style="color:#64748b; font-size:0.72rem;">Tuition & Lectures</small>' +
+    '</div>' +
+    '</div>' +
+
+    // 6. WhatsApp Doubt Clearance Banner
+    '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">' +
+    '<div style="display:flex; align-items:center; gap:10px;">' +
+    '<i class="fab fa-whatsapp" style="font-size:1.8rem; color:#16a34a;"></i>' +
+    '<div>' +
+    '<strong style="color:#14532d; font-size:0.88rem;">Have a Question or Doubt?</strong>' +
+    '<div style="color:#166534; font-size:0.75rem;">Chat directly with teachers on WhatsApp</div>' +
+    '</div>' +
+    '</div>' +
+    '<a href="https://api.whatsapp.com/send?phone=918826011682&text=Hello%20Teacher,%20mujhe%20ek%20question%20me%20doubt%20hai" target="_blank" style="background:#16a34a; color:white; text-decoration:none; padding:7px 12px; border-radius:8px; font-weight:700; font-size:0.78rem;">Ask Doubt</a>' +
+    '</div>' +
 
     '</div></div>';
 
   dv.innerHTML = html;
-  switchAccountSubTab(activeAccountSubTab);
 }
 
+// =========================================================================
+// 9. STUDENT NOTIFICATIONS MODAL & SUBJECTS HUB
+// =========================================================================
+
+function openStudentNoticeModal() {
+  var notices = window.currentClassNotices || [];
+  var listHtml = "";
+
+  if (notices.length === 0) {
+    listHtml = '<div style="text-align:center; padding:30px; color:#64748b;"><i class="fas fa-bell-slash fa-2x" style="color:#cbd5e1; margin-bottom:8px;"></i><p>Aapki class ke liye koi naya notification nahi hai.</p></div>';
+  } else {
+    for (var i = 0; i < notices.length; i++) {
+      var n = notices[i];
+      listHtml += '<div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:10px; text-align:left;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+        '<strong style="color:#0f172a; font-size:0.95rem;">' + n.title + '</strong>' +
+        '<small style="color:#94a3b8; font-size:0.75rem;">' + (n.date || 'Recent') + '</small>' +
+        '</div>' +
+        '<p style="color:#334155; font-size:0.85rem; margin:0 0 6px 0; line-height:1.4;">' + n.message + '</p>' +
+        '<span style="background:#e0f2fe; color:#0369a1; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:4px;">Class: ' + (n.targetClass || 'All Classes') + '</span>' +
+        '</div>';
+    }
+  }
+
+  var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="stNoticeModal">' +
+    '<div class="modal-card" style="max-width:520px; width:92%; max-height:85vh; overflow-y:auto;">' +
+    '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
+    '<h3 style="margin:0; color:#0f172a; font-size:1.1rem;"><i class="fas fa-bullhorn" style="color:#f59e0b;"></i> Class Announcements</h3>' +
+    '<button class="close-btn" onclick="document.getElementById(\'stNoticeModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+    '<div style="margin-top:12px;">' + listHtml + '</div>' +
+    '</div></div>';
+
+  var div = document.createElement("div");
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+// Subject Specific Hub (Quizzes + Study Materials Modal)
+function openSubjectHubModal(subjectName) {
+  var profile = window.currentStudentProfile || { className: "Class 10" };
+  var allQuizzes = window.currentAccountQuizzes || [];
+  var subQuizzes = allQuizzes.filter(function(q) {
+    return String(q.subject || "").toLowerCase().includes(subjectName.toLowerCase());
+  });
+
+  var qListHtml = "";
+  if (subQuizzes.length === 0) {
+    qListHtml = '<p style="color:#64748b; font-size:0.85rem; padding:10px 0;">Is subject ke liye abhi koi quiz schedule nahi hai.</p>';
+  } else {
+    subQuizzes.forEach(function(q) {
+      qListHtml += '<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">' +
+        '<div><strong style="color:#0f172a; font-size:0.9rem;">' + q.title + '</strong><br><small style="color:#64748b;">' + (q.questions ? q.questions.length : 10) + ' Questions</small></div>' +
+        '<button onclick="startQuizDirectlyFromAccount(\'' + q.id + '\')" style="background:#16a34a; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer;">Start</button>' +
+        '</div>';
+    });
+  }
+
+  var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="subHubModal">' +
+    '<div class="modal-card" style="max-width:540px; width:92%; max-height:85vh; overflow-y:auto;">' +
+    '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
+    '<h3 style="margin:0; color:#0f172a; font-size:1.1rem;"><i class="fas fa-book-reader" style="color:#2563eb;"></i> ' + profile.className + ' - ' + subjectName + '</h3>' +
+    '<button class="close-btn" onclick="document.getElementById(\'subHubModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+    '<div style="margin-top:12px;">' +
+    '<h4 style="margin:0 0 8px 0; color:#1e293b; font-size:0.95rem;">Subject Practice Tests</h4>' +
+    qListHtml +
+    '<div style="margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">' +
+    '<div><strong style="color:#0f766e; font-size:0.88rem;">' + subjectName + ' Revision Notes</strong><br><small style="color:#64748b;">Formula sheets & smart reading</small></div>' +
+    '<a href="learning-hub.html" style="background:#0d9488; color:white; text-decoration:none; padding:6px 14px; border-radius:6px; font-size:0.8rem; font-weight:700;">Open Hub</a>' +
+    '</div>' +
+    '</div>' +
+    '</div></div>';
+
+  var div = document.createElement("div");
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+// Payment Sub-Tab Loader (UPI QR & Proof Upload)
 function switchAccountSubTab(tabName) {
-  activeAccountSubTab = tabName;
-  var allTabs = ["tests", "results", "notes", "classes", "purchase"];
-  for (var i = 0; i < allTabs.length; i++) {
-    var t = allTabs[i];
-    var b = document.getElementById("actTab_" + t);
-    if (b) {
-      if (t === tabName) {
-        b.style.background = "#059669";
-        b.style.color = "white";
-      } else {
-        b.style.background = "#e2e8f0";
-        b.style.color = "#475569";
-      }
-    }
-  }
-
-  var container = document.getElementById("accountTabContent");
-  if (!container) return;
-
-  var profile = window.currentStudentProfile;
-
-  if (tabName === "tests") {
-    renderTabTests(container, profile);
-  } else if (tabName === "results") {
-    renderTabResults(container, profile);
-  } else if (tabName === "notes") {
-    renderTabNotes(container, profile);
-  } else if (tabName === "classes") {
-    renderTabClasses(container, profile);
-  } else if (tabName === "purchase") {
-    renderTabPurchase(container, profile);
-  }
-}
-
-// Sub Tab 1: Class Specific Quizzes
-function renderTabTests(container, profile) {
-  var quizzes = window.currentAccountQuizzes || [];
-  if (quizzes.length === 0) {
-    container.innerHTML = '<div style="background:white; border-radius:14px; padding:24px; text-align:center; border:1px solid #e2e8f0;">' +
-      '<p style="color:#64748b; margin:0 0 12px 0;">Aapki class (' + profile.className + ') ke liye abhi koi test schedule nahi hai.</p>' +
-      '<button onclick="closeDynamicView(); openBoardSelectModal();" style="background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer;">Explore All Subject Quizzes</button>' +
-      '</div>';
-    return;
-  }
-
-  var html = "";
-  for (var i = 0; i < quizzes.length; i++) {
-    var q = quizzes[i];
-    var attempted = null;
-    var attempts = window.currentAccountAttempts || [];
-    for (var j = 0; j < attempts.length; j++) {
-      var a = attempts[j];
-      var aId = String(a.quizId || a.Quiz_ID || "").trim();
-      var qId = String(q.id || "").trim();
-      if (aId && qId && (aId === qId)) {
-        attempted = a;
-        break;
-      }
-    }
-
-    var actionBtn = attempted
-      ? '<span style="color:#16a34a; font-weight:700; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Given (' + (attempted.score || attempted.Score) + '/' + (attempted.totalMarks || attempted.Total_Marks) + ')</span>'
-      : '<button onclick="startQuizDirectlyFromAccount(\'' + (q.id || '') + '\')" style="background:#059669; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.8rem; cursor:pointer;">Start Test</button>';
-
-    html += '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">' +
-      '<div>' +
-      '<h4 style="margin:0 0 4px 0; color:#0f172a; font-size:0.95rem;">' + q.title + '</h4>' +
-      '<small style="color:#64748b;">' + (q.subject || 'Subject') + ' • ' + (q.questions ? q.questions.length : 10) + ' Questions</small>' +
+  if (tabName === "purchase") {
+    var profile = window.currentStudentProfile;
+    var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="feePayModal">' +
+      '<div class="modal-card" style="max-width:480px; width:92%; max-height:90vh; overflow-y:auto;">' +
+      '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
+      '<h3 style="margin:0; color:#0f172a; font-size:1.1rem;"><i class="fas fa-qrcode" style="color:#16a34a;"></i> Tuition Fee Payment</h3>' +
+      '<button class="close-btn" onclick="document.getElementById(\'feePayModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
       '</div>' +
-      '<div>' + actionBtn + '</div>' +
-      '</div>';
-  }
-
-  container.innerHTML = html;
-}
-
-// Sub Tab 2: Results & Solutions Analysis
-function renderTabResults(container, profile) {
-  var attempts = window.currentAccountAttempts || [];
-  if (attempts.length === 0) {
-    container.innerHTML = '<div style="background:white; border-radius:14px; padding:24px; text-align:center; border:1px solid #e2e8f0;">' +
-      '<p style="color:#64748b; margin:0;">Abhi tak aapne koi test submit nahi kiya hai.</p></div>';
-    return;
-  }
-
-  var html = "";
-  for (var i = 0; i < attempts.length; i++) {
-    var att = attempts[i];
-    var sc = att.score !== undefined ? att.score : (att.Score || 0);
-    var tot = att.totalMarks !== undefined ? att.totalMarks : (att.Total_Marks || att.total || 0);
-    var pct = att.percentage !== undefined ? att.percentage : (att.Percentage || 0);
-    var title = att.quizTitle || att.Quiz_Title || 'Practice Test';
-    var dateStr = att.timestamp ? new Date(att.timestamp).toLocaleDateString() : (att.Timestamp ? new Date(att.Timestamp).toLocaleDateString() : 'Recent');
-
-    html += '<div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; border-left:4px solid #059669;">' +
-      '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-      '<div>' +
-      '<h4 style="margin:0 0 4px 0; color:#0f172a; font-size:0.92rem;">' + title + '</h4>' +
-      '<small style="color:#64748b;">Date: ' + dateStr + '</small>' +
+      '<div style="text-align:center; padding:12px 0;">' +
+      '<div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:14px; padding:14px; margin-bottom:12px;">' +
+      '<div style="font-weight:700; color:#1e293b; font-size:0.85rem; margin-bottom:8px;">Scan via PhonePe / GPay / Paytm</div>' +
+      '<img src="./assets/qr.png" onerror="this.src=\'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8826011682@upi&pn=AK%20Learning%20Point\'" style="width:160px; height:160px; border-radius:10px; background:white; padding:4px; border:1px solid #e2e8f0;">' +
+      '<div style="margin-top:8px; font-size:0.85rem; color:#334155;">UPI ID: <strong style="color:#059669;">8826011682@upi</strong></div>' +
       '</div>' +
-      '<span style="background:#dcfce7; color:#15803d; font-weight:800; font-size:0.85rem; padding:4px 8px; border-radius:6px;">' + pct + '%</span>' +
+      '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px; text-align:left;">' +
+      '<h4 style="margin:0 0 4px 0; color:#166534; font-size:0.88rem;"><i class="fas fa-file-invoice"></i> Upload Payment Screenshot</h4>' +
+      '<p style="color:#15803d; font-size:0.75rem; margin-bottom:8px;">Screenshot upload hone par payment verify ho jayegi.</p>' +
+      '<input type="file" id="payProofFile" accept="image/*" style="width:100%; font-size:0.8rem; margin-bottom:8px;">' +
+      '<button id="btnUploadProof" onclick="uploadPaymentProofToDrive()" style="background:#16a34a; color:white; border:none; padding:9px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; width:100%;">' +
+      '<i class="fas fa-cloud-upload-alt"></i> Confirm & Upload' +
+      '</button>' +
+      '<div id="uploadStatusMsg" style="margin-top:6px; font-size:0.78rem; text-align:center; font-weight:700;"></div>' +
       '</div>' +
-      '<div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">' +
-      '<span style="font-size:0.85rem; font-weight:700; color:#1e293b;">Marks: ' + sc + ' / ' + tot + '</span>' +
-      '<button onclick="downloadScoreCardDirect(\'' + (att.id || '') + '\')" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer;"><i class="fas fa-certificate"></i> Scorecard</button>' +
       '</div>' +
-      '</div>';
+      '</div></div>';
+
+    var div = document.createElement("div");
+    div.innerHTML = html;
+    document.body.appendChild(div.firstElementChild);
   }
-
-  container.innerHTML = html;
-}
-
-// Sub Tab 3: Study Notes
-function renderTabNotes(container, profile) {
-  container.innerHTML = '<div style="background:white; border-radius:14px; padding:18px; border:1px solid #e2e8f0;">' +
-    '<h3 style="margin:0 0 8px 0; color:#0f172a; font-size:1rem;"><i class="fas fa-book-open" style="color:#0891b2;"></i> ' + profile.className + ' Study Notes</h3>' +
-    '<p style="color:#64748b; font-size:0.82rem; margin-bottom:14px;">Smart chapter notes, formulas aur concept sheets.</p>' +
-    '<div style="display:flex; justify-content:space-between; align-items:center; background:#f0fdfa; padding:12px; border-radius:10px; border:1px solid #ccfbf1;">' +
-    '<div><strong style="color:#0f766e; font-size:0.88rem;">Learning Hub Library</strong><br><small style="color:#64748b;">Interactive Flip-Books & Notes</small></div>' +
-    '<a href="learning-hub.html" style="background:#0d9488; color:white; text-decoration:none; padding:6px 12px; border-radius:6px; font-size:0.8rem; font-weight:700;">Open Notes</a>' +
-    '</div>' +
-    '</div>';
-}
-
-// Sub Tab 4: Online Classes
-function renderTabClasses(container, profile) {
-  container.innerHTML = '<div style="background:white; border-radius:14px; padding:18px; border:1px solid #e2e8f0; text-align:center;">' +
-    '<i class="fab fa-youtube" style="font-size:2.4rem; color:#dc2626; margin-bottom:8px;"></i>' +
-    '<h4 style="margin:0 0 4px 0; color:#0f172a;">' + profile.className + ' Concept Lectures</h4>' +
-    '<p style="color:#64748b; font-size:0.82rem; margin-bottom:14px;">Video classes & concept explanations uploaded on our official channel.</p>' +
-    '<a href="https://youtube.com" target="_blank" style="background:#dc2626; color:white; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; display:inline-block;">Watch Videos</a>' +
-    '</div>';
-}
-
-// Sub Tab 5: Course Purchase, UPI QR & Google Drive Screenshot
-function renderTabPurchase(container, profile) {
-  container.innerHTML = '<div style="background:white; border-radius:16px; padding:18px; border:1px solid #e2e8f0;">' +
-    '<div style="text-align:center; margin-bottom:14px;">' +
-    '<h3 style="color:#0f172a; margin:0 0 4px 0; font-size:1.15rem;">Admission & Premium Test Series</h3>' +
-    '<p style="color:#64748b; font-size:0.82rem; margin:0;">Full test series, doubt clearing & verified certificate package.</p>' +
-    '</div>' +
-    
-    // QR Box
-    '<div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:14px; padding:14px; text-align:center; margin-bottom:14px;">' +
-    '<div style="font-weight:700; color:#1e293b; font-size:0.85rem; margin-bottom:8px;">Scan to Pay via PhonePe / GPay / Paytm</div>' +
-    '<img src="./assets/qr.png" onerror="this.src=\'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8826011682@upi&pn=AK%20Learning%20Point\'" style="width:160px; height:160px; border-radius:10px; background:white; padding:4px; border:1px solid #e2e8f0;">' +
-    '<div style="margin-top:8px; font-size:0.85rem; color:#334155;">UPI ID: <strong style="color:#059669;">8826011682@upi</strong></div>' +
-    '</div>' +
-
-    // Upload Box
-    '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px;">' +
-    '<h4 style="margin:0 0 4px 0; color:#166534; font-size:0.9rem;"><i class="fas fa-file-invoice"></i> Upload Payment Screenshot</h4>' +
-    '<p style="color:#15803d; font-size:0.78rem; margin-bottom:10px;">Payment ka screenshot select karein, yeh hamare Google Drive me secure store hoga.</p>' +
-    '<input type="file" id="payProofFile" accept="image/*" style="width:100%; font-size:0.82rem; margin-bottom:10px;">' +
-    '<button id="btnUploadProof" onclick="uploadPaymentProofToDrive()" style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; width:100%;">' +
-    '<i class="fas fa-cloud-upload-alt"></i> Upload Screenshot to Drive' +
-    '</button>' +
-    '<div id="uploadStatusMsg" style="margin-top:8px; font-size:0.8rem; text-align:center; font-weight:700;"></div>' +
-    '</div>' +
-    '</div>';
 }
 
 function uploadPaymentProofToDrive() {
@@ -1144,6 +1193,9 @@ function startQuizDirectlyFromAccount(quizId) {
   if (target && typeof openQuizEntryModalByIndex === "function") {
     window.activeLoadedQuizzes = [target];
     openQuizEntryModalByIndex(0);
+  } else if (target) {
+    var appBaseUrl = window.location.origin + window.location.pathname.replace("index.html", "");
+    window.location.href = appBaseUrl + "index.html?quizId=" + encodeURIComponent(target.id || target.title);
   }
 }
 
