@@ -784,6 +784,10 @@ function handleSaveStudentProfile(e) {
   var brdEl = document.getElementById("stpBoard");
 
   var mob = mobEl ? mobEl.value.trim() : "";
+  if (!mob) {
+    alert("Mobile number dalna zaroori hai!");
+    return;
+  }
 
   var prof = {
     name: nameEl ? nameEl.value.trim() : "Student",
@@ -827,7 +831,14 @@ function handleSaveStudentProfile(e) {
   }
   localStorage.setItem("ak_saved_student_accounts", JSON.stringify(studentAccounts));
 
+  // 1. Direct LocalStorage & AppInventor sync
   setSafeAccountData("ak_student_profile", prof);
+
+  // 2. Clear Sign-In Setup Screen completely (Android App Fix)
+  var dv = document.getElementById("dynamicView");
+  if (dv) dv.innerHTML = "";
+
+  // 3. Render Dashboard cleanly
   renderStudentAccountDashboard(prof);
 }
 
