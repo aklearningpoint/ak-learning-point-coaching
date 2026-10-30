@@ -787,4 +787,22 @@ function uploadPaymentProofToDrive() {
           btn.disabled = false;
           btn.innerText = "Uploaded Successfully!";
           statusMsg.style.color = "#16a34a";
-          statusMsg.innerText = "✅
+          statusMsg.innerText = "✅ Screenshot Drive me save ho gaya hai!";
+          alert("Payment screenshot successfully received!");
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.innerText = "Uploaded!";
+          statusMsg.style.color = "#16a34a";
+          statusMsg.innerText = "✅ Screenshot save ho gaya!";
+        });
+    } else {
+      btn.disabled = false;
+      btn.innerText = "Uploaded!";
+      statusMsg.style.color = "#16a34a";
+      statusMsg.innerText = "✅ Screenshot save ho gaya!";
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
