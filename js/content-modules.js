@@ -689,7 +689,7 @@ function renderCurrentAdQuiz() {
 }
 
 // =========================================================================
-// 8. ENHANCED STUDENT DASHBOARD (SCREEN 2): NOTIFICATION BELL & SUBJECT HUB
+// 8. ENHANCED STUDENT DASHBOARD (SCREEN 2): BOARD SWITCH & MULTI-ACCOUNT
 // =========================================================================
 
 function getSafeAccountData(key) {
@@ -740,7 +740,7 @@ function renderStudentProfileSetupModal() {
     '<div style="background:white; max-width:440px; width:100%; border-radius:24px; padding:28px; box-shadow:0 10px 25px rgba(0,0,0,0.1); text-align:center;">' +
     '<div style="font-size:3rem; margin-bottom:8px;">🎓</div>' +
     '<h2 style="color:#0f172a; margin:0 0 6px 0; font-size:1.35rem;">Student Sign-In / Setup</h2>' +
-    '<p style="color:#64748b; font-size:0.85rem; margin-bottom:18px;">Apna account banayein taaki aapke tests, results aur material device par saved rahein.</p>' +
+    '<p style="color:#64748b; font-size:0.85rem; margin-bottom:18px;">Apna account banayein ya switch karein taaki aapka board, test aur data save rahe.</p>' +
     '<form onsubmit="handleSaveStudentProfile(event)" style="display:flex; flex-direction:column; gap:12px; text-align:left;">' +
     '<div>' +
     '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Full Name</label>' +
@@ -763,7 +763,8 @@ function renderStudentProfileSetupModal() {
     '<div>' +
     '<label style="font-size:0.8rem; font-weight:700; color:#334155;">Board</label>' +
     '<select id="stpBoard" style="width:100%; padding:11px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box; margin-top:4px;">' +
-    '<option selected>CBSE</option><option>BSEB</option>' +
+    '<option value="CBSE" selected>CBSE Board</option>' +
+    '<option value="BSEB">BSEB (Bihar Board)</option>' +
     '</select>' +
     '</div>' +
     '</div>' +
@@ -782,9 +783,11 @@ function handleSaveStudentProfile(e) {
   var clsEl = document.getElementById("stpClass");
   var brdEl = document.getElementById("stpBoard");
 
+  var mob = mobEl ? mobEl.value.trim() : "";
+
   var prof = {
     name: nameEl ? nameEl.value.trim() : "Student",
-    mobile: mobEl ? mobEl.value.trim() : "",
+    mobile: mob,
     className: clsEl ? clsEl.value : "Class 10",
     board: brdEl ? brdEl.value : "CBSE",
     category: "Tuition Student",
@@ -794,20 +797,35 @@ function handleSaveStudentProfile(e) {
     joinedDate: new Date().toLocaleDateString()
   };
 
-  // Check if admin has classified this student in ledger
+  // Sync details if already exists in tuition ledger
   try {
     var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
-    var found = ledger.find(function(s) { return String(s.mobile).trim() === prof.mobile; });
+    var found = ledger.find(function(s) { return String(s.mobile).trim() === mob; });
     if (found) {
-      prof.category = found.category || "Tuition Student";
-      prof.monthlyFee = found.monthlyFee || 800;
-      prof.billingDate = found.startDate || "15 Oct 2026";
+      prof.name = found.name || prof.name;
+      prof.category = found.category || prof.category;
+      prof.monthlyFee = found.monthlyFee || prof.monthlyFee;
+      prof.billingDate = found.startDate || prof.billingDate;
       if (typeof calculateStudentFinancials === "function") {
         var fin = calculateStudentFinancials(found);
         prof.dues = fin.pendingBalance;
       }
     }
   } catch (err) {}
+
+  // Multi-profile history save
+  var studentAccounts = [];
+  try {
+    studentAccounts = JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
+  } catch(err) { studentAccounts = []; }
+
+  var existingIdx = studentAccounts.findIndex(function(s) { return s.mobile === mob; });
+  if (existingIdx > -1) {
+    studentAccounts[existingIdx] = prof;
+  } else {
+    studentAccounts.push(prof);
+  }
+  localStorage.setItem("ak_saved_student_accounts", JSON.stringify(studentAccounts));
 
   setSafeAccountData("ak_student_profile", prof);
   renderStudentAccountDashboard(prof);
@@ -817,7 +835,7 @@ function renderStudentAccountDashboard(profile) {
   var dv = document.getElementById("dynamicView");
   if (!dv) return;
 
-  // Refresh Classification & Dues from Ledger if available
+  // Refresh latest classification & ledger dues
   try {
     var ledger = JSON.parse(localStorage.getItem("ak_tuition_ledger") || "[]");
     var found = ledger.find(function(s) { return String(s.mobile).trim() === String(profile.mobile).trim(); });
@@ -838,19 +856,25 @@ function renderStudentAccountDashboard(profile) {
   // 2. Attempts fetch
   var allAttempts = getSafeAccountData("ak_student_attempts") || [];
 
+  // Filter attempts strictly by active student mobile
   var myAttempts = allAttempts.filter(function(a) {
     return String(a.mobile || a.Mobile || "").trim() === String(profile.mobile).trim();
   });
 
-  // Quizzes filtered by Class
+  // Filter quizzes by current student class AND current board
   var myClassQuizzes = allQuizzes.filter(function(q) {
     var qClass = String(q.className || "").toLowerCase().trim();
     var pClass = String(profile.className || "").toLowerCase().trim();
-    var bMatch = !q.board || !profile.board || String(q.board).toLowerCase().trim() === String(profile.board).toLowerCase().trim();
-    return (qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all") && bMatch;
+    var classMatch = (qClass.includes(pClass) || pClass.includes(qClass) || qClass === "all");
+    
+    var qBoard = String(q.board || "").toLowerCase().trim();
+    var pBoard = String(profile.board || "CBSE").toLowerCase().trim();
+    var boardMatch = (!q.board || qBoard === "all" || qBoard === pBoard);
+    
+    return classMatch && boardMatch;
   });
 
-  // Calculate Notices Count for Target Class
+  // Notifications for student's class
   var notices = [];
   try {
     notices = JSON.parse(localStorage.getItem("ak_notifications") || "[]");
@@ -870,7 +894,6 @@ function renderStudentAccountDashboard(profile) {
   renderEnhancedStudentUI();
 }
 
-// Full Render matching the Locked Screen 2 UI
 function renderEnhancedStudentUI() {
   var profile = window.currentStudentProfile || { name: "Student", mobile: "9876543210", className: "Class 10", board: "CBSE", category: "Tuition Student", dues: 0, monthlyFee: 800, billingDate: "15 Oct 2026" };
   var notices = window.currentClassNotices || [];
@@ -902,7 +925,7 @@ function renderEnhancedStudentUI() {
 
   var html = '<div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#f8fafc; z-index:9999; display:flex; flex-direction:column; overflow:hidden;">' +
 
-    // Top Header with Active Notification Bell & Home
+    // Top Header with Active Notification Bell & Switch Student Option
     '<div style="height:56px; background:#0f172a; color:white; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0;">' +
     '<div style="display:flex; align-items:center; gap:10px;">' +
     '<button onclick="closeDynamicView()" style="background:rgba(255,255,255,0.15); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>' +
@@ -914,14 +937,17 @@ function renderEnhancedStudentUI() {
     '<i class="fas fa-bell" style="font-size:1.25rem; color:#fde047;"></i>' +
     (notices.length > 0 ? '<span style="position:absolute; top:-2px; right:-4px; background:#ef4444; color:white; border-radius:50%; font-size:0.65rem; font-weight:800; width:17px; height:17px; display:flex; align-items:center; justify-content:center; border:2px solid #0f172a;">' + notices.length + '</span>' : '') +
     '</div>' +
-    '<button onclick="switchStudentAccount()" style="background:none; border:none; color:#ef4444; font-size:1.15rem; cursor:pointer;" title="Logout"><i class="fas fa-sign-out-alt"></i></button>' +
+    // SWITCH STUDENT BUTTON
+    '<button onclick="openSwitchStudentModal()" style="background:#0284c7; border:none; color:white; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Switch Account">' +
+    '<i class="fas fa-users"></i> Switch' +
+    '</button>' +
     '</div>' +
     '</div>' +
 
     // Scrollable Portal Content
     '<div style="flex:1; overflow-y:auto; padding:14px; max-width:850px; margin:0 auto; width:100%; box-sizing:border-box;">' +
 
-    // 1. Student Identity Header
+    // 1. Student Identity Header (With Interactive Board Switcher)
     '<div style="background:white; border-radius:16px; padding:16px; border:1px solid #e2e8f0; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.04);">' +
     '<div style="display:flex; align-items:center; gap:12px;">' +
     '<div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:white; font-size:1.5rem; font-weight:800; display:flex; align-items:center; justify-content:center;">' +
@@ -933,7 +959,10 @@ function renderEnhancedStudentUI() {
     '</div>' +
     '</div>' +
     '<div style="text-align:right;">' +
-    '<span style="background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; display:inline-block; margin-bottom:4px;">' + profile.className + ' (' + (profile.board || 'CBSE') + ')</span><br>' +
+    // BOARD SWITCH CHIP (CLICK KARKE BOARD CHANGE HOGA)
+    '<div onclick="toggleStudentBoard()" style="background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:12px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px; cursor:pointer; border:1px solid #bae6fd; margin-bottom:4px;" title="Click karke CBSE ya BSEB me switch karein">' +
+    profile.className + ' (' + (profile.board || 'CBSE') + ') <i class="fas fa-sync-alt" style="font-size:0.65rem;"></i>' +
+    '</div><br>' +
     '<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.7rem;">' + (profile.category || 'Tuition Student') + '</span>' +
     '</div>' +
     '</div>' +
@@ -955,20 +984,21 @@ function renderEnhancedStudentUI() {
     '</div>' +
     '</div>' +
 
-    // 3. Featured Quiz Highlight Banner
+    // 3. Featured Quiz Highlight Banner (Filtered for current board)
     (featuredQuiz ?
     '<div style="background:white; border:1.5px solid #fed7aa; border-radius:14px; padding:14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.03);">' +
     '<div>' +
-    '<span style="background:#ffedd5; color:#c2410c; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:10px;">TODAY\'S FEATURED QUIZ</span>' +
+    '<span style="background:#ffedd5; color:#c2410c; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:10px;">TODAY\'S FEATURED QUIZ (' + (profile.board || 'CBSE') + ')</span>' +
     '<h4 style="margin:4px 0 2px 0; color:#0f172a; font-size:0.95rem;">' + featuredQuiz.title + '</h4>' +
     '<small style="color:#64748b;">' + (featuredQuiz.subject || 'All') + ' • ' + (featuredQuiz.questions ? featuredQuiz.questions.length : 10) + ' Questions</small>' +
     '</div>' +
     '<button onclick="startQuizDirectlyFromAccount(\'' + featuredQuiz.id + '\')" style="background:#16a34a; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; cursor:pointer;">Start Now</button>' +
     '</div>' : '') +
 
-    // 4. Class-Wise Subjects Grid
-    '<h3 style="color:#0f172a; font-size:1rem; margin:14px 0 10px 0; display:flex; align-items:center; gap:8px;">' +
-    '<i class="fas fa-layer-group" style="color:#2563eb;"></i> ' + profile.className + ' Subjects Hub' +
+    // 4. Class & Board Specific Subjects Grid
+    '<h3 style="color:#0f172a; font-size:1rem; margin:14px 0 10px 0; display:flex; align-items:center; justify-content:space-between;">' +
+    '<span><i class="fas fa-layer-group" style="color:#2563eb;"></i> ' + profile.className + ' Subjects Hub</span>' +
+    '<span style="font-size:0.75rem; color:#2563eb; font-weight:700; cursor:pointer;" onclick="toggleStudentBoard()">Board: ' + (profile.board || 'CBSE') + ' (Change)</span>' +
     '</h3>' +
     '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;">' +
     subjectsGridHtml +
@@ -1001,6 +1031,101 @@ function renderEnhancedStudentUI() {
     '</div></div>';
 
   dv.innerHTML = html;
+}
+
+// TOGGLE BOARD (CBSE <-> BSEB) INSTANTLY
+function toggleStudentBoard() {
+  var prof = window.currentStudentProfile;
+  if (!prof) return;
+
+  var currentBoard = prof.board || "CBSE";
+  var newBoard = (currentBoard === "CBSE") ? "BSEB" : "CBSE";
+
+  prof.board = newBoard;
+  setSafeAccountData("ak_student_profile", prof);
+
+  // Saved accounts list me bhi update karein
+  try {
+    var accounts = JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
+    var idx = accounts.findIndex(function(a) { return a.mobile === prof.mobile; });
+    if (idx > -1) {
+      accounts[idx].board = newBoard;
+      localStorage.setItem("ak_saved_student_accounts", JSON.stringify(accounts));
+    }
+  } catch(e) {}
+
+  renderStudentAccountDashboard(prof);
+}
+
+// MULTI-ACCOUNT / SWITCH STUDENT MODAL
+function openSwitchStudentModal() {
+  var currentProf = window.currentStudentProfile || {};
+  var savedAccounts = [];
+  try {
+    savedAccounts = JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
+  } catch(e) { savedAccounts = []; }
+
+  var listHtml = "";
+  savedAccounts.forEach(function(acc) {
+    var isCurrent = (acc.mobile === currentProf.mobile);
+    listHtml += '<div onclick="switchToSpecificAccount(\'' + acc.mobile + '\')" style="background:' + (isCurrent ? '#ecfdf5' : '#f8fafc') + '; border:1.5px solid ' + (isCurrent ? '#10b981' : '#cbd5e1') + '; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">' +
+      '<div>' +
+      '<strong style="color:#0f172a; font-size:0.92rem;">' + acc.name + '</strong> ' + (isCurrent ? '<span style="background:#10b981; color:white; font-size:0.65rem; padding:1px 6px; border-radius:4px; font-weight:800;">ACTIVE</span>' : '') + '<br>' +
+      '<small style="color:#64748b;">+91 ' + acc.mobile + ' • ' + acc.className + ' (' + (acc.board || 'CBSE') + ')</small>' +
+      '</div>' +
+      '<i class="fas fa-chevron-right" style="color:#94a3b8;"></i>' +
+      '</div>';
+  });
+
+  var html = '<div class="modal-overlay" style="display:flex; z-index:10000;" id="switchStudentModal">' +
+    '<div class="modal-card" style="max-width:460px; width:92%; max-height:85vh; overflow-y:auto;">' +
+    '<div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">' +
+    '<h3 style="margin:0; color:#0f172a; font-size:1.1rem;"><i class="fas fa-users-cog" style="color:#0284c7;"></i> Switch Student Profile</h3>' +
+    '<button class="close-btn" onclick="document.getElementById(\'switchStudentModal\').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-times"></i></button>' +
+    '</div>' +
+
+    '<div style="margin-top:12px;">' +
+    '<p style="color:#64748b; font-size:0.82rem; margin:0 0 10px 0;">Kisi doosre student ke account par switch karein ya naya account jodein:</p>' +
+    (listHtml || '<p style="color:#94a3b8; font-size:0.8rem; text-align:center; padding:10px;">Koi doosra saved account nahi mila.</p>') +
+
+    '<div style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:12px; display:flex; gap:8px;">' +
+    '<button onclick="document.getElementById(\'switchStudentModal\').remove(); renderStudentProfileSetupModal();" style="flex:1; background:#059669; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;">' +
+    '<i class="fas fa-user-plus"></i> + Add / New Student' +
+    '</button>' +
+    '<button onclick="logoutCurrentStudent()" style="background:#fee2e2; color:#dc2626; border:none; padding:10px 14px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;">' +
+    '<i class="fas fa-sign-out-alt"></i> Logout' +
+    '</button>' +
+    '</div>' +
+    '</div>' +
+    '</div></div>';
+
+  var div = document.createElement("div");
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+}
+
+function switchToSpecificAccount(mobile) {
+  var savedAccounts = [];
+  try {
+    savedAccounts = JSON.parse(localStorage.getItem("ak_saved_student_accounts") || "[]");
+  } catch(e) { savedAccounts = []; }
+
+  var target = savedAccounts.find(function(a) { return a.mobile === mobile; });
+  if (target) {
+    setSafeAccountData("ak_student_profile", target);
+    var modal = document.getElementById("switchStudentModal");
+    if (modal) modal.remove();
+    renderStudentAccountDashboard(target);
+  }
+}
+
+function logoutCurrentStudent() {
+  if (confirm("Kya aap is device se apna active profile logout karna chahte hain?")) {
+    localStorage.removeItem("ak_student_profile");
+    var modal = document.getElementById("switchStudentModal");
+    if (modal) modal.remove();
+    renderStudentProfileSetupModal();
+  }
 }
 
 // =========================================================================
