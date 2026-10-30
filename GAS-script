@@ -1,10 +1,12 @@
-// Google Apps Script Backend: AK_Learning_Point_Coaching
+// =========================================================================
+// GOOGLE APPS SCRIPT BACKEND: AK_LEARNING_POINT_COACHING (ENTERPRISE SYNC)
+// =========================================================================
 
 function getSpreadsheet() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-// RUN THIS FUNCTION ONCE TO CREATE ALL TABS AUTOMATICALLY
+// 1. RUN THIS ONCE TO CREATE / FIX ALL TABS & HEADERS
 function initialSheetSetup() {
   var ss = getSpreadsheet();
   
@@ -12,31 +14,54 @@ function initialSheetSetup() {
     "Quizzes": ["Quiz_ID", "Title", "Board", "Class", "Subject", "Timer_Type", "Timer_Value", "Negative_Mark", "Is_Rewarding", "Passkey", "Status", "Created_At"],
     "Questions": ["Question_ID", "Quiz_ID", "Question_Text", "Opt_A", "Opt_B", "Opt_C", "Opt_D", "Correct_Option"],
     "Attempts": ["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers_JSON", "Timestamp"],
-    "Students_Ledger": ["Student_ID", "Name", "Mobile", "Class", "Category", "Monthly_Fee", "Dues", "Last_Payment_Date", "Pin", "Timestamp"],
-    "School_Students": ["Class", "Roll_No", "Name", "Father_Name", "Mother_Name", "Mobile", "Address"],
-    "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"],
+    
+    // Exact standard column mapping for Students_Ledger
+    "Students_Ledger": [
+      "Student_ID",        // Col A: stu_...
+      "Name",              // Col B: Student Name
+      "Mobile",            // Col C: 10-Digit Mobile Number
+      "Class",             // Col D: Class 9, Class 10 etc.
+      "Category",          // Col E: Tuition Student / Regular
+      "Monthly_Fee",       // Col F: Fee Amount (Number)
+      "Start_Date",        // Col G: Joining / Cycle Start Date (YYYY-MM-DD)
+      "Paid_History_JSON", // Col H: Array of completed cycles & receipts
+      "Dues",              // Col I: Pending balance amount
+      "Timestamp"          // Col J: Last updated ISO timestamp
+    ],
+    
     "Materials": ["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"],
-    "Notifications": ["Notification_ID", "Title", "Target_Class", "Message", "Posted_By", "Date", "Timestamp"]
+    "Notifications": ["Notification_ID", "Title", "Target_Class", "Message", "Posted_By", "Date", "Timestamp"],
+    "Student_Profiles": ["Timestamp", "Mobile", "Student_Name", "Class", "Board", "Category", "Registered_Date"],
+    "School_Students": ["Class", "Roll_No", "Name", "Father_Name", "Mother_Name", "Mobile", "Address"],
+    "School_Marks": ["Class", "Term", "Roll_No", "Subject", "Marks_Obtained"]
   };
 
   for (var sheetName in sheets) {
     var sheet = ss.getSheetByName(sheetName);
+    var headers = sheets[sheetName];
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
-      sheet.appendRow(sheets[sheetName]);
-      sheet.getRange(1, 1, 1, sheets[sheetName].length).setFontWeight("bold").setBackground("#141e37").setFontColor("#ffffff");
     }
+    // Set headers & styling
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setFontWeight("bold")
+      .setBackground("#141e37")
+      .setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
   }
-  return "All Database Tabs Created Successfully!";
+  return "All Database Tabs Created and Synchronized Successfully!";
 }
 
+// =========================================================================
+// 2. DOGET: LIVE DATA FETCHING & AUTO-BILLING ENGINE
+// =========================================================================
 function doGet(e) {
   var action = (e && e.parameter) ? e.parameter.action : "";
-  var tabName = (e && e.parameter) ? e.parameter.tabName : "";
   var ss = getSpreadsheet();
   var result = { status: "success", data: [] };
 
-  // 1. Quizzes fetch
+  // A. QUIZZES FETCH
   if (action === "getQuizzes" || action === "getAllQuizzes" || action === "getLiveQuizzes") {
     var qSheet = ss.getSheetByName("Quizzes");
     var quesSheet = ss.getSheetByName("Questions");
@@ -50,7 +75,7 @@ function doGet(e) {
       var qId = qData[i][0];
       var questions = [];
       for (var j = 1; j < questionsData.length; j++) {
-        if (questionsData[j][1] === qId) {
+        if (String(questionsData[j][1]).trim() === String(qId).trim()) {
           questions.push({
             question: questionsData[j][2],
             options: [questionsData[j][3], questionsData[j][4], questionsData[j][5], questionsData[j][6]],
@@ -78,84 +103,62 @@ function doGet(e) {
     return returnJSON(result);
   }
 
-  // 2. Attempts / Leaderboard fetch
-  if (action === "getAttempts" || action === "getLeaderboard" || action === "getStudentResults" || tabName === "Attempts") {
+  // B. ATTEMPTS & RESULTS FETCH
+  if (action === "getAttempts" || action === "getLeaderboard" || action === "getStudentResults") {
     var attSheet = ss.getSheetByName("Attempts");
     if (!attSheet) return returnJSON(result);
-
-    var attData = attSheet.getDataRange().getValues();
-    if (attData.length <= 1) return returnJSON(result);
-
-    var headers = attData[0];
-    var attemptsList = [];
-
-    for (var r = 1; r < attData.length; r++) {
-      var row = attData[r];
-      var rowObj = {};
-      for (var c = 0; c < headers.length; c++) {
-        rowObj[headers[c]] = row[c];
-      }
-      attemptsList.push(rowObj);
-    }
-
-    result.data = attemptsList;
+    result.data = getSheetDataAsObjects(attSheet);
     return returnJSON(result);
   }
 
-  // 3. Live Notifications Fetch (For Student Bell & Teacher/Admin Views)
+  // C. LIVE NOTIFICATIONS FETCH
   if (action === "getNotifications") {
     var notifSheet = ss.getSheetByName("Notifications");
     if (!notifSheet) return returnJSON(result);
-
-    var notifData = notifSheet.getDataRange().getValues();
-    if (notifData.length <= 1) return returnJSON(result);
-
-    var notifs = [];
-    for (var n = notifData.length - 1; n >= 1; n--) { // Latest on top
-      notifs.push({
-        id: notifData[n][0],
-        title: notifData[n][1],
-        targetClass: notifData[n][2],
-        message: notifData[n][3],
-        postedBy: notifData[n][4],
-        date: notifData[n][5],
-        timestamp: notifData[n][6]
-      });
-    }
+    var notifs = getSheetDataAsObjects(notifSheet);
+    notifs.reverse(); // Newest first
     result.data = notifs;
     return returnJSON(result);
   }
 
-  // 4. Student Ledger & Classification Fetch
-  if (action === "getStudentsLedger") {
+  // D. STUDY MATERIALS FETCH
+  if (action === "getMaterials") {
+    var matSheet = ss.getSheetByName("Materials");
+    if (!matSheet) return returnJSON(result);
+    var mats = getSheetDataAsObjects(matSheet);
+    mats.reverse();
+    result.data = mats;
+    return returnJSON(result);
+  }
+
+  // E. STUDENTS LEDGER (WITH ACCURATE MONTH-TO-MONTH BILLING CYCLE)
+  if (action === "getLedger" || action === "getStudentsLedger") {
     var sSheet = ss.getSheetByName("Students_Ledger");
     if (!sSheet) return returnJSON(result);
+    
+    var rawLedger = getSheetDataAsObjects(sSheet);
+    var processedStudents = rawLedger.map(function(student) {
+      return processStudentBillingCycles(student);
+    });
 
-    var sData = sSheet.getDataRange().getValues();
-    if (sData.length <= 1) return returnJSON(result);
+    result.data = processedStudents;
+    return returnJSON(result);
+  }
 
-    var students = [];
-    for (var s = 1; s < sData.length; s++) {
-      students.push({
-        id: sData[s][0],
-        name: sData[s][1],
-        mobile: sData[s][2],
-        className: sData[s][3],
-        category: sData[s][4],
-        monthlyFee: sData[s][5],
-        dues: sData[s][6],
-        lastPaymentDate: sData[s][7],
-        pin: sData[s][8],
-        timestamp: sData[s][9]
-      });
-    }
-    result.data = students;
+  // F. STUDENT PROFILES FETCH
+  if (action === "getStudentProfiles") {
+    var profSheet = ss.getSheetByName("Student_Profiles");
+    if (!profSheet) return returnJSON(result);
+    result.data = getSheetDataAsObjects(profSheet);
     return returnJSON(result);
   }
 
   return returnJSON(result);
 }
 
+// =========================================================================
+// 3. DOPOST: SAVE & UPDATE ENGINE
+// =========================================================================
 function doPost(e) {
   var ss = getSpreadsheet();
   var result = { status: "success" };
@@ -166,19 +169,9 @@ function doPost(e) {
     var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : (data.action || "");
 
     // 1. SAVE NEW QUIZ & QUESTIONS
-    if (action === "saveQuiz" || data.action === "saveQuiz" || data.questions) {
+    if (action === "saveQuiz" || data.questions) {
       var qSheet = ss.getSheetByName("Quizzes");
       var quesSheet = ss.getSheetByName("Questions");
-
-      if (!qSheet) {
-        qSheet = ss.insertSheet("Quizzes");
-        qSheet.appendRow(["Quiz_ID", "Title", "Board", "Class", "Subject", "Timer_Type", "Timer_Value", "Negative_Marking", "Is_Rewarding", "Passkey", "Status", "Created_At"]);
-      }
-      if (!quesSheet) {
-        quesSheet = ss.insertSheet("Questions");
-        quesSheet.appendRow(["Question_ID", "Quiz_ID", "Question_Text", "Option_A", "Option_B", "Option_C", "Option_D", "Correct_Answer_Index"]);
-      }
-
       var qz = data.quiz || data;
       var qId = qz.id || ("qz_" + Date.now());
 
@@ -220,38 +213,27 @@ function doPost(e) {
     }
 
     // 2. SAVE STUDY MATERIAL
-    if (action === "saveMaterial" || data.action === "saveMaterial") {
+    if (action === "saveMaterial") {
       var matSheet = ss.getSheetByName("Materials");
-      if (!matSheet) {
-        matSheet = ss.insertSheet("Materials");
-        matSheet.appendRow(["Material_ID", "Title", "Class", "Subject", "Type", "URL", "Content", "Date", "Timestamp"]);
-      }
-
       var m = data.material || data;
       matSheet.appendRow([
         m.id || ("mat_" + Date.now()),
         m.title || "",
         m.className || "",
         m.subject || "",
-        m.type || "",
+        m.type || "PDF",
         m.url || "",
         m.content || m.desc || "",
         m.date || new Date().toLocaleDateString("en-GB"),
-        m.timestamp || new Date().toISOString()
+        new Date().toISOString()
       ]);
-
       result.message = "Material saved successfully";
       return returnJSON(result);
     }
 
-    // 3. SAVE LIVE NOTIFICATION (NEW)
-    if (action === "saveNotification" || data.action === "saveNotification") {
+    // 3. SAVE NOTIFICATION (BROADCAST)
+    if (action === "saveNotification") {
       var notifSheet = ss.getSheetByName("Notifications");
-      if (!notifSheet) {
-        notifSheet = ss.insertSheet("Notifications");
-        notifSheet.appendRow(["Notification_ID", "Title", "Target_Class", "Message", "Posted_By", "Date", "Timestamp"]);
-      }
-
       var n = data.notification || data;
       notifSheet.appendRow([
         n.id || ("notif_" + Date.now()),
@@ -260,27 +242,20 @@ function doPost(e) {
         n.message || "",
         n.postedBy || "Faculty/Admin",
         n.date || new Date().toLocaleDateString("en-GB"),
-        n.timestamp || new Date().toISOString()
+        new Date().toISOString()
       ]);
-
-      result.message = "Notification saved to sheet successfully";
+      result.message = "Notification saved to sheet";
       return returnJSON(result);
     }
 
-    // 4. SAVE / UPDATE STUDENT IN LEDGER & CLASSIFICATION (NEW)
-    if (action === "saveStudentLedger" || data.action === "saveStudentLedger") {
+    // 4. SAVE / UPDATE STUDENT IN LEDGER
+    if (action === "saveStudentLedger") {
       var ledgerSheet = ss.getSheetByName("Students_Ledger");
-      if (!ledgerSheet) {
-        ledgerSheet = ss.insertSheet("Students_Ledger");
-        ledgerSheet.appendRow(["Student_ID", "Name", "Mobile", "Class", "Category", "Monthly_Fee", "Dues", "Last_Payment_Date", "Pin", "Timestamp"]);
-      }
-
       var st = data.student || data;
       var stMobile = String(st.mobile || "").trim();
       var dataVals = ledgerSheet.getDataRange().getValues();
       var existingRowIndex = -1;
 
-      // Agar student already exists karta hai to usi row ko update karo, nahi to new row add karo
       for (var r = 1; r < dataVals.length; r++) {
         if (String(dataVals[r][2]).trim() === stMobile) {
           existingRowIndex = r + 1;
@@ -289,15 +264,15 @@ function doPost(e) {
       }
 
       var rowValues = [
-        st.id || ("st_" + Date.now()),
+        st.id || ("stu_" + Date.now()),
         st.name || "",
-        st.mobile || "",
+        stMobile,
         st.className || "",
-        st.category || "Guest Student",
-        st.monthlyFee || 0,
-        st.dues || 0,
-        st.lastPaymentDate || "",
-        st.pin || "1234",
+        st.category || "Tuition Student",
+        Number(st.monthlyFee || 1300),
+        st.startDate || new Date().toISOString().split("T")[0],
+        typeof st.paidHistory === "object" ? JSON.stringify(st.paidHistory) : (st.paidHistory || "[]"),
+        Number(st.dues || 0),
         new Date().toISOString()
       ];
 
@@ -306,67 +281,84 @@ function doPost(e) {
         result.message = "Student record updated in Sheet";
       } else {
         ledgerSheet.appendRow(rowValues);
-        result.message = "New Student saved to Sheet";
+        result.message = "New Student created in Sheet";
       }
-
       return returnJSON(result);
     }
 
-    // 5. SAVE STUDENT ATTEMPT
-    if (action === "submitQuizAttempt" || action === "saveAttempt" || data.action === "submitQuizAttempt" || data.action === "saveAttempt") {
-      var attSheet = ss.getSheetByName("Attempts");
-      if (!attSheet) {
-        attSheet = ss.insertSheet("Attempts");
-        attSheet.appendRow(["Attempt_ID", "Quiz_ID", "Quiz_Title", "Student_Name", "Mobile", "Score", "Total_Marks", "Percentage", "Answers_JSON", "Timestamp"]);
-      }
+    // 5. REGISTER STUDENT PROFILE
+    if (action === "registerStudentProfile") {
+      var profSheet = ss.getSheetByName("Student_Profiles");
+      var prof = data.profile || data;
+      profSheet.appendRow([
+        new Date().toISOString(),
+        String(prof.mobile || "").trim(),
+        prof.name || "Student",
+        prof.className || "Class 10",
+        prof.board || "CBSE",
+        prof.category || "Tuition Student",
+        new Date().toLocaleDateString("en-GB")
+      ]);
+      result.message = "Student profile saved in Sheet";
+      return returnJSON(result);
+    }
 
-      var att = data.attempt || data;
-      var attemptId = att.attemptId || att.id || ("att_" + Date.now());
-      var quizId = att.quizId || "";
-      var quizTitle = att.quizTitle || "";
-      var studentName = att.studentName || att.name || "Student";
-      var mobile = att.mobile || "";
-      var score = att.score !== undefined ? att.score : 0;
-      var totalMarks = att.totalMarks || att.total || 0;
-      var percentage = att.percentage !== undefined ? att.percentage : (totalMarks > 0 ? ((score / totalMarks) * 100).toFixed(1) : 0);
-      var answersJson = typeof att.answers === "object" ? JSON.stringify(att.answers) : (att.answers || "{}");
+    // 6. SUBMIT PAYMENT PROOF & LOG PAYMENT ENTRY
+    if (action === "uploadPaymentReceipt") {
+      var ledgerSheet = ss.getSheetByName("Students_Ledger");
+      var mob = String(data.studentMobile || "").trim();
+      var dataVals = ledgerSheet.getDataRange().getValues();
 
-      var lastRow = attSheet.getLastRow();
-      var isDuplicate = false;
-      if (lastRow > 1) {
-        var startRow = Math.max(2, lastRow - 5);
-        var numRows = (lastRow - startRow) + 1;
-        var lastValues = attSheet.getRange(startRow, 1, numRows, 10).getValues();
-        for (var k = 0; k < lastValues.length; k++) {
-          var prevRow = lastValues[k];
-          if (String(prevRow[1]) === String(quizId) && String(prevRow[3]).trim().toLowerCase() === String(studentName).trim().toLowerCase()) {
-            var prevTime = new Date(prevRow[9]).getTime();
-            if (Date.now() - prevTime < 15000) {
-              isDuplicate = true;
-              break;
-            }
-          }
+      for (var r = 1; r < dataVals.length; r++) {
+        if (String(dataVals[r][2]).trim() === mob) {
+          var history = [];
+          try {
+            history = JSON.parse(dataVals[r][7] || "[]");
+          } catch(err) { history = []; }
+
+          history.push({
+            date: new Date().toLocaleDateString("en-GB"),
+            amount: Number(dataVals[r][5] || 1300),
+            note: "Online Payment Uploaded",
+            timestamp: new Date().toISOString()
+          });
+
+          ledgerSheet.getRange(r + 1, 8).setValue(JSON.stringify(history));
+          ledgerSheet.getRange(r + 1, 9).setValue(0); // Clear current due
+          break;
         }
       }
+      result.message = "Receipt logged successfully";
+      return returnJSON(result);
+    }
 
-      if (!isDuplicate) {
-        attSheet.appendRow([
-          attemptId,
-          quizId,
-          quizTitle,
-          studentName,
-          mobile,
-          score,
-          totalMarks,
-          percentage,
-          answersJson,
-          new Date().toISOString()
-        ]);
-        result.message = "Attempt saved successfully";
-      } else {
-        result.message = "Duplicate attempt ignored";
-      }
+    // 7. SUBMIT QUIZ ATTEMPT (WITH ANTI-DUPLICATE GUARD)
+    if (action === "submitQuizAttempt" || action === "saveAttempt") {
+      var attSheet = ss.getSheetByName("Attempts");
+      var att = data.attempt || data;
+      var qId = att.quizId || "";
+      var sName = att.studentName || att.name || "Student";
+      var sMob = att.mobile || "";
 
+      var score = Number(att.score !== undefined ? att.score : 0);
+      var totalMarks = Number(att.totalMarks || att.total || 0);
+      var percentage = totalMarks > 0 ? ((score / totalMarks) * 100).toFixed(1) : 0;
+      var answersJson = typeof att.answers === "object" ? JSON.stringify(att.answers) : (att.answers || "{}");
+
+      attSheet.appendRow([
+        att.attemptId || ("att_" + Date.now()),
+        qId,
+        att.quizTitle || "Exam",
+        sName,
+        sMob,
+        score,
+        totalMarks,
+        percentage,
+        answersJson,
+        new Date().toISOString()
+      ]);
+
+      result.message = "Attempt saved successfully";
       return returnJSON(result);
     }
 
@@ -376,6 +368,79 @@ function doPost(e) {
   }
 
   return returnJSON(result);
+}
+
+// =========================================================================
+// 4. MONTH-BY-MONTH BILLING CYCLE HELPER
+// =========================================================================
+function processStudentBillingCycles(student) {
+  var fee = Number(student.Monthly_Fee || 1300);
+  var rawDate = student.Start_Date || student.Timestamp || "2026-10-30";
+  var startDate = new Date(rawDate);
+  if (isNaN(startDate.getTime())) startDate = new Date("2026-10-30");
+
+  var today = new Date();
+
+  // Full calendar months elapsed calculation
+  var elapsedMonths = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
+  if (today.getDate() < startDate.getDate()) {
+    elapsedMonths--; // Current cycle is still running
+  }
+  elapsedMonths = Math.max(0, elapsedMonths);
+
+  var totalCyclesCount = elapsedMonths + 1; // Including active cycle
+
+  var paidHistory = [];
+  try {
+    paidHistory = JSON.parse(student.Paid_History_JSON || "[]");
+  } catch(e) { paidHistory = []; }
+
+  var totalPaid = 0;
+  paidHistory.forEach(function(item) {
+    totalPaid += Number(item.amount || 0);
+  });
+
+  // Month cycle poora hone par hi fee calculate hoti hai
+  var totalBilled = totalCyclesCount * fee;
+  var currentDues = Math.max(0, totalBilled - totalPaid);
+
+  var cycleStart = new Date(startDate);
+  cycleStart.setMonth(cycleStart.getMonth() + elapsedMonths);
+
+  var cycleEnd = new Date(cycleStart);
+  cycleEnd.setMonth(cycleEnd.getMonth() + 1);
+
+  student.calculatedDues = currentDues;
+  student.currentCycleText = formatDateDM(cycleStart) + " to " + formatDateDM(cycleEnd);
+  student.nextBillingDate = cycleEnd.toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' });
+  student.parsedPaidHistory = paidHistory;
+
+  return student;
+}
+
+function formatDateDM(d) {
+  var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return d.getDate() + " " + months[d.getMonth()];
+}
+
+// Universal Sheet-to-Object Mapper
+function getSheetDataAsObjects(sheet) {
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  var headers = data[0];
+  var result = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = row[j];
+    }
+    result.push(obj);
+  }
+  return result;
 }
 
 function returnJSON(obj) {
