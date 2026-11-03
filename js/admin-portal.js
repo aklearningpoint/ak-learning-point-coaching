@@ -66,14 +66,28 @@ async function syncCloudAppConfig() {
 
 window.addEventListener("DOMContentLoaded", syncCloudAppConfig);
 
+// UPDATED: Universal Password Modal Integration
 function openAdminPortal() {
   if (typeof toggleDrawer === "function") toggleDrawer();
 
-  var enteredPass = prompt("Enter Admin Password:");
-  if (enteredPass === appConfig.adminPass || enteredPass === "password") {
-    renderAdminDashboard();
-  } else if (enteredPass !== null) {
-    alert("Incorrect Admin Password!");
+  var correctPass = (appConfig && appConfig.adminPass) ? appConfig.adminPass : "password";
+
+  if (typeof openPasswordModal === "function") {
+    openPasswordModal("Admin Panel", "Enter Master Admin Password", function(enteredPass) {
+      if (enteredPass === correctPass || enteredPass === "password") {
+        renderAdminDashboard();
+        return true;
+      }
+      return false;
+    });
+  } else {
+    // Fallback if modal is unavailable
+    var enteredPass = prompt("Enter Admin Password:");
+    if (enteredPass === correctPass || enteredPass === "password") {
+      renderAdminDashboard();
+    } else if (enteredPass !== null) {
+      alert("Incorrect Admin Password!");
+    }
   }
 }
 
@@ -515,12 +529,12 @@ function renderPromoBannersSection(container) {
 
 function uploadPromoBanner(input) {
   if (input.files && input.files[0]) {
-    var title = prompt("Banner Title / Name:", "Offer Poster");
+    var title = "Offer Banner";
     var reader = new FileReader();
     reader.onload = function(e) {
       promoBanners.push({
         id: "b_" + Date.now(),
-        title: title || "Offer Banner",
+        title: title,
         imageData: e.target.result
       });
       setAdminData("ak_promo_banners", promoBanners);
