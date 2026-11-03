@@ -1,1 +1,1 @@
-2.0
+if [ contains text (text: get responseContent, piece: "2.0") ] = [ false ]
