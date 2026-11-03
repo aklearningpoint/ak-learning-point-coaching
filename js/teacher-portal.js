@@ -35,7 +35,7 @@ function openTeacherPortal() {
   if (enteredPass === correctPass || enteredPass === "pass") {
     renderTeacherDashboard();
   } else if (enteredPass !== null) {
-    alert("Incorrect Teacher Password!);
+    alert("Incorrect Teacher Password!");
   }
 }
 
