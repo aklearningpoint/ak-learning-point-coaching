@@ -25,17 +25,29 @@ var activeTeacherQuizzes = [];
 var currentLeaderboardParticipants = [];
 var currentLeaderboardQuiz = null;
 
+// UPDATED: Browser prompt/alert hatavine Universal Modal jodi didho chhe
 function openTeacherPortal() {
   if (typeof toggleDrawer === "function") toggleDrawer();
 
   var appConfig = getTeacherData("ak_app_config", { teacherPass: "pass" });
   var correctPass = (appConfig && appConfig.teacherPass) ? appConfig.teacherPass : "pass";
 
-  var enteredPass = prompt("Enter Teacher Access Password:");
-  if (enteredPass === correctPass || enteredPass === "pass") {
-    renderTeacherDashboard();
-  } else if (enteredPass !== null) {
-    alert("Incorrect Teacher Password!");
+  if (typeof openPasswordModal === "function") {
+    openPasswordModal("Faculty Portal", "Enter Faculty Access Password", function(enteredPass) {
+      if (enteredPass === correctPass || enteredPass === "pass") {
+        renderTeacherDashboard();
+        return true;
+      }
+      return false;
+    });
+  } else {
+    // Fallback jo index.html ma modal na male
+    var enteredPass = prompt("Enter Teacher Access Password:");
+    if (enteredPass === correctPass || enteredPass === "pass") {
+      renderTeacherDashboard();
+    } else if (enteredPass !== null) {
+      alert("Incorrect Teacher Password!");
+    }
   }
 }
 
