@@ -39,7 +39,7 @@
     </div>
   </div>
 
- <!-- Main Scrollable Home View (Exact Locked Screenshot Match) -->
+  <!-- Main Scrollable Home View -->
   <main class="main-container" id="homeView" style="padding: 16px 14px 70px 14px; max-width: 480px; margin: 0 auto; min-height: calc(100vh - 120px); display: flex; flex-direction: column; gap: 16px;">
 
     <!-- 1. TODAY'S FEATURED QUIZ CARD -->
@@ -96,31 +96,21 @@
       </div>
     </div>
 
-    <!-- 5. FLOATING SHARE APP BUTTON -->
-    <div style="position: fixed; bottom: 18px; right: 18px; display: flex; align-items: center; gap: 8px; z-index: 2000;">
+    <!-- Floating Action Buttons (Left: Download APK | Right: Share App) -->
+    <div style="position: fixed; bottom: 18px; left: 16px; z-index: 2000;">
+      <a href="./assets/app.apk" download style="background: #1e40af; color: white; text-decoration: none; padding: 8px 14px; border-radius: 20px; font-weight: 700; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.35);">
+        <i class="fas fa-download"></i> Get App
+      </a>
+    </div>
+
+    <div style="position: fixed; bottom: 18px; right: 16px; display: flex; align-items: center; gap: 8px; z-index: 2000;">
       <button onclick="triggerSmartShare()" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; color: #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer;">
         Share App
       </button>
-      <div onclick="triggerSmartShare()" style="width: 48px; height: 48px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); cursor: pointer;">
+      <div onclick="triggerSmartShare()" style="width: 46px; height: 46px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); cursor: pointer;">
         <i class="fab fa-whatsapp"></i>
       </div>
     </div>
-
-    <!-- Floating Action Buttons (Left: Download APK | Right: Share App) -->
-<div style="position: fixed; bottom: 18px; left: 16px; z-index: 2000;">
-  <a href="./assets/app.apk" download style="background: #1e40af; color: white; text-decoration: none; padding: 8px 14px; border-radius: 20px; font-weight: 700; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.35);">
-    <i class="fas fa-download"></i> Get App
-  </a>
-</div>
-
-<div style="position: fixed; bottom: 18px; right: 16px; display: flex; align-items: center; gap: 8px; z-index: 2000;">
-  <button onclick="triggerSmartShare()" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; color: #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer;">
-    Share App
-  </button>
-  <div onclick="triggerSmartShare()" style="width: 46px; height: 46px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); cursor: pointer;">
-    <i class="fab fa-whatsapp"></i>
-  </div>
-</div>
 
   </main>
 
@@ -165,6 +155,23 @@
   </div>
 
   <div id="dynamicView"></div>
+
+  <!-- Universal Security Password Modal (Clean Popup Engine) -->
+  <div id="universalAppModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
+    <div style="background:#ffffff; padding:22px; border-radius:14px; width:85%; max-width:320px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; font-family:sans-serif;">
+      <h3 id="uModalTitle" style="margin:0 0 8px 0; color:#1a1a1a; font-size:18px; font-weight:700;">Security Check</h3>
+      <p id="uModalDesc" style="font-size:13px; color:#666; margin:0 0 15px 0;">Enter password to continue</p>
+      
+      <input type="password" id="uModalInput" placeholder="Password" style="width:100%; padding:11px 12px; border:1.5px solid #dcdcdc; border-radius:8px; box-sizing:border-box; font-size:16px; margin-bottom:12px; outline:none;">
+      
+      <div id="uModalErr" style="display:none; color:#d93025; font-size:12px; margin-bottom:12px; font-weight:600;"></div>
+
+      <div style="display:flex; gap:10px;">
+        <button id="uModalCancelBtn" onclick="closeUniversalModal()" style="flex:1; padding:11px; background:#f1f3f4; border:none; border-radius:8px; font-weight:600; color:#444; font-size:14px; cursor:pointer;">Cancel</button>
+        <button id="uModalSubmitBtn" style="flex:1; padding:11px; background:#1a73e8; border:none; border-radius:8px; font-weight:600; color:#ffffff; font-size:14px; cursor:pointer;">Verify</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Standard Scripts Load Order -->
   <script>
@@ -217,6 +224,48 @@
       var d = document.getElementById("drawerOverlay");
       if (d) d.classList.remove("open");
       window.scrollTo(0, 0);
+    }
+
+    // Modal Helper Functions
+    function openPasswordModal(title, desc, onVerifySuccess) {
+      var modal = document.getElementById("universalAppModal");
+      var input = document.getElementById("uModalInput");
+      var err = document.getElementById("uModalErr");
+      var titleEl = document.getElementById("uModalTitle");
+      var descEl = document.getElementById("uModalDesc");
+      var submitBtn = document.getElementById("uModalSubmitBtn");
+
+      if (!modal) return;
+
+      titleEl.innerText = title;
+      descEl.innerText = desc;
+      input.value = "";
+      err.style.display = "none";
+      modal.style.display = "flex";
+      input.focus();
+
+      submitBtn.onclick = function() {
+        var pass = input.value;
+        var isSuccess = onVerifySuccess(pass);
+        if (isSuccess) {
+          closeUniversalModal();
+        } else {
+          err.innerText = "Incorrect Password!";
+          err.style.display = "block";
+          input.value = "";
+        }
+      };
+
+      input.onkeypress = function(e) {
+        if (e.key === "Enter") {
+          submitBtn.click();
+        }
+      };
+    }
+
+    function closeUniversalModal() {
+      var modal = document.getElementById("universalAppModal");
+      if (modal) modal.style.display = "none";
     }
   </script>
 </body>
