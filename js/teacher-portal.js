@@ -31,11 +31,11 @@ function openTeacherPortal() {
   var appConfig = getTeacherData("ak_app_config", { teacherPass: "pass" });
   var correctPass = (appConfig && appConfig.teacherPass) ? appConfig.teacherPass : "pass";
 
-  var enteredPass = prompt("Enter Teacher Access Password (Default: ****):");
+  var enteredPass = prompt("Enter Teacher Access Password:");
   if (enteredPass === correctPass || enteredPass === "pass") {
     renderTeacherDashboard();
   } else if (enteredPass !== null) {
-    alert("Incorrect Teacher Password! (Default is: pass)");
+    alert("Incorrect Teacher Password!);
   }
 }
 
